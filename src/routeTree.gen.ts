@@ -13,6 +13,7 @@ import { Route as MembersRouteImport } from './routes/members'
 import { Route as FleetRouteImport } from './routes/fleet'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/hooks/ogn-sync'
 
 const MembersRoute = MembersRouteImport.update({
   id: '/members',
@@ -34,18 +35,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksOgnSyncRoute = ApiPublicHooksOgnSyncRouteImport.update({
+  id: '/api/public/hooks/ogn-sync',
+  path: '/api/public/hooks/ogn-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/fleet': typeof FleetRoute
   '/members': typeof MembersRoute
+  '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/fleet': typeof FleetRoute
   '/members': typeof MembersRoute
+  '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,25 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/fleet': typeof FleetRoute
   '/members': typeof MembersRoute
+  '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/fleet' | '/members'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/fleet'
+    | '/members'
+    | '/api/public/hooks/ogn-sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/fleet' | '/members'
-  id: '__root__' | '/' | '/auth' | '/fleet' | '/members'
+  to: '/' | '/auth' | '/fleet' | '/members' | '/api/public/hooks/ogn-sync'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/fleet'
+    | '/members'
+    | '/api/public/hooks/ogn-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +87,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   FleetRoute: typeof FleetRoute
   MembersRoute: typeof MembersRoute
+  ApiPublicHooksOgnSyncRoute: typeof ApiPublicHooksOgnSyncRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +120,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/ogn-sync': {
+      id: '/api/public/hooks/ogn-sync'
+      path: '/api/public/hooks/ogn-sync'
+      fullPath: '/api/public/hooks/ogn-sync'
+      preLoaderRoute: typeof ApiPublicHooksOgnSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +135,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   FleetRoute: FleetRoute,
   MembersRoute: MembersRoute,
+  ApiPublicHooksOgnSyncRoute: ApiPublicHooksOgnSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

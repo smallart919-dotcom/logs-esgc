@@ -67,13 +67,22 @@ function FlightsPage() {
     return () => { supabase.removeChannel(ch); };
   }, [load]);
 
+  const [icao, setIcao] = useState<string>(() => (typeof window !== "undefined" ? localStorage.getItem("ogn_icao") || "" : ""));
+
   const syncOgn = async () => {
+    let code = icao;
+    if (!code) {
+      code = (prompt("Enter your airfield ICAO (e.g. EGHL, LFNB) — used to fetch OGN flights.") || "").toUpperCase().trim();
+      if (!code) return;
+      localStorage.setItem("ogn_icao", code);
+      setIcao(code);
+    }
     setSyncing(true);
     try {
-      const res = await fetch("/api/public/hooks/ogn-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const res = await fetch("/api/public/hooks/ogn-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icao: code, date }) });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
-      toast.success(`OGN sync: ${j.created} new, ${j.updated} updated`);
+      toast.success(`OGN ${code}: ${j.created} new, ${j.updated} updated, ${j.skipped} skipped`);
       load();
     } catch (e: any) { toast.error(e.message); }
     finally { setSyncing(false); }
