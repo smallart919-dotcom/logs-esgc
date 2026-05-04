@@ -1,24 +1,19 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Toaster } from "@/components/ui/sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Plane, Users, ListChecks, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
-        </div>
+        <h1 className="text-7xl font-bold">404</h1>
+        <p className="mt-2 text-muted-foreground">Page not found</p>
+        <Link to="/" className="mt-6 inline-block underline">Go home</Link>
       </div>
     </div>
   );
@@ -29,21 +24,10 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { title: "Gliding Club Daily Log" },
+      { name: "description", content: "Daily flight log for gliding clubs with OGN integration." },
     ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-    ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -53,9 +37,7 @@ export const Route = createRootRoute({
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
+      <head><HeadContent /></head>
       <body>
         {children}
         <Scripts />
@@ -65,5 +47,65 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const isAuth = path === "/auth";
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUserEmail(data.session?.user.email ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUserEmail(session?.user.email ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  if (isAuth) return <><Outlet /><Toaster /></>;
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+            <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-[var(--sky-deep)] flex items-center justify-center text-primary-foreground">
+              <Plane className="size-5" />
+            </div>
+            <span className="hidden sm:inline">Club Daily Log</span>
+          </Link>
+          <nav className="flex items-center gap-1">
+            <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" />
+            <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" />
+            <NavLink to="/members" icon={<Users className="size-4" />} label="Members" />
+          </nav>
+          <div className="flex items-center gap-2">
+            {userEmail ? (
+              <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }}>
+                <LogOut className="size-4 mr-1" /><span className="hidden sm:inline">Sign out</span>
+              </Button>
+            ) : (
+              <Link to="/auth"><Button size="sm">Sign in</Button></Link>
+            )}
+          </div>
+        </div>
+      </header>
+      <main className="flex-1 container mx-auto px-4 py-6">
+        <Outlet />
+      </main>
+      <Toaster />
+    </div>
+  );
+}
+
+function NavLink({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const active = path === to;
+  return (
+    <Link
+      to={to}
+      className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition ${
+        active ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+      }`}
+    >
+      {icon}<span className="hidden sm:inline">{label}</span>
+    </Link>
+  );
 }
