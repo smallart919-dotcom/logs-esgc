@@ -396,7 +396,7 @@ function FlightsPage() {
             <TableHeader><TableRow>
               <TableHead>Glider</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
               <TableHead>Dur</TableHead><TableHead>P1</TableHead><TableHead>P2</TableHead>
-              <TableHead>Launch</TableHead><TableHead>Source</TableHead><TableHead></TableHead>
+              <TableHead>Launch</TableHead><TableHead>LB</TableHead><TableHead>Source</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).map((f) => {
