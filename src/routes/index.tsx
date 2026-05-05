@@ -185,8 +185,8 @@ function FlightsPage() {
                     <TableCell className="font-mono text-sm">{f.takeoff_time ? format(new Date(f.takeoff_time), "HH:mm") : "—"}</TableCell>
                     <TableCell className="font-mono text-sm">{f.landing_time ? format(new Date(f.landing_time), "HH:mm") : "—"}</TableCell>
                     <TableCell className="text-sm">{dur}</TableCell>
-                    <TableCell>{f.p1_name ? <div><div>{f.p1_name}</div><div className="text-xs text-muted-foreground">{f.p1_membership}</div></div> : <span className="text-muted-foreground text-sm">—</span>}</TableCell>
-                    <TableCell>{f.p2_name ? <div><div>{f.p2_name}</div><div className="text-xs text-muted-foreground">{f.p2_membership}</div></div> : <span className="text-muted-foreground text-sm">—</span>}</TableCell>
+                    <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
+                    <TableCell><PilotCell name={f.p2_name} membership={f.p2_membership} kind={f.p2_kind} /></TableCell>
                     <TableCell>
                       {f.launch_type ? (
                         <Badge variant="secondary">
