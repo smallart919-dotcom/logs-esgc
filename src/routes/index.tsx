@@ -194,7 +194,7 @@ function FlightsPage() {
             <Label className="text-xs">Date</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40" />
           </div>
-          <Button onClick={syncOgn} disabled={syncing} variant="secondary"
+          <Button onClick={() => syncOgn(false)} disabled={syncing} variant="secondary"
             title={icao ? `Airfield: ${icao}. Right-click to change.` : "Click to set airfield"}
             onContextMenu={(e) => { e.preventDefault(); const v = prompt("Airfield ICAO", icao) || ""; if (v) { localStorage.setItem("ogn_icao", v.toUpperCase()); setIcao(v.toUpperCase()); } }}>
             <RefreshCw className={`size-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Sync OGN{icao && <span className="ml-1 text-xs opacity-70">({icao})</span>}
