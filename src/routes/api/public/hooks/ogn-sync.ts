@@ -104,10 +104,17 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           const landing = parseTimeOnDate(date, f.stop);
           const fleetMatch = flarm ? fleetByFlarm.get(flarm) : undefined;
 
-          // Excluded registrations (tow planes etc.) — never log
+          // Excluded registrations (tow planes / motor gliders) — never log
           const EXCLUDED_REGS = new Set(["G-ESGC", "G-KIAU"]);
           const regUpper = (dev?.registration || "").toUpperCase().trim();
           if (EXCLUDED_REGS.has(regUpper)) {
+            skipped++;
+            matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, launch_type: null, tow_height_ft: null, synced_at });
+            continue;
+          }
+          // Only log known club gliders (in the fleet table). Anything else (visitors, tugs,
+          // non-glider aircraft) is skipped so the daily log stays clean.
+          if (!fleetMatch) {
             skipped++;
             matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, launch_type: null, tow_height_ft: null, synced_at });
             continue;
@@ -204,9 +211,14 @@ function parseHtmlLogbook(html: string): OgnPayload {
   };
 
   const toHms = (s: string): string | undefined => {
-    const m = s.match(/(\d{1,2})h(\d{2})/);
+    // glidernet logbook formats: "10h32", "10h32:45", "10:32:45"
+    let m = s.match(/(\d{1,2})h(\d{2})(?::(\d{2}))?/);
+    if (!m) m = s.match(/(\d{1,2}):(\d{2}):(\d{2})/);
     if (!m) return undefined;
-    return `${m[1].padStart(2, "0")}:${m[2]}:00`;
+    const hh = m[1].padStart(2, "0");
+    const mm = m[2];
+    const ss = (m[3] ?? "00").padStart(2, "0");
+    return `${hh}:${mm}:${ss}`;
   };
   const stripTags = (s: string) => s.replace(/<[^>]*>/g, "").trim();
 
@@ -231,9 +243,14 @@ function parseHtmlLogbook(html: string): OgnPayload {
     const takeoff = toHms(cells[6]);
     const landing = toHms(cells[7]);
 
-    if (!gliderReg && !towReg) continue;
-    const reg = gliderReg || towReg;
-    const deviceIndex = ensureDevice(reg, cn || undefined);
+    // Only record glider flights — skip rows without a glider registration
+    // (tug-only / non-glider entries do not belong in the club log).
+    if (!gliderReg) continue;
+    const regUpper = gliderReg.toUpperCase().trim();
+    // Also exclude the tug and motor glider explicitly even if they appear in the glider column.
+    if (regUpper === "G-ESGC" || regUpper === "G-KIAU") continue;
+
+    const deviceIndex = ensureDevice(gliderReg, cn || undefined);
 
     flights.push({
       start: takeoff,

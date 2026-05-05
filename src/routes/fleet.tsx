@@ -23,12 +23,18 @@ type Glider = {
 function FleetPage() {
   const [items, setItems] = useState<Glider[]>([]);
   const [form, setForm] = useState({ registration: "", callsign: "", flarm_id: "", glider_type: "" });
+  const [isOffice, setIsOffice] = useState(false);
 
   const load = async () => {
     const { data, error } = await supabase.from("fleet_gliders").select("*").order("registration");
     if (error) toast.error(error.message); else setItems(data ?? []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    supabase.auth.getUser().then(({ data }) => {
+      setIsOffice((data.user?.email || "").toLowerCase() === "office@esgc.local");
+    });
+  }, []);
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,20 +61,22 @@ function FleetPage() {
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2"><Plane className="size-7 text-primary" /> Club Fleet</h1>
-        <p className="text-muted-foreground">Maintain registration, callsign and FLARM ID for OGN matching.</p>
+        <p className="text-muted-foreground">Maintain registration, callsign and FLARM ID for OGN matching.{!isOffice && " Read-only — sign in as the office account to edit."}</p>
       </div>
-      <Card>
-        <CardHeader><CardTitle>Add glider</CardTitle></CardHeader>
-        <CardContent>
-          <form onSubmit={add} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
-            <div><Label>Registration *</Label><Input value={form.registration} onChange={(e) => setForm({ ...form, registration: e.target.value })} placeholder="G-ABCD" /></div>
-            <div><Label>Callsign</Label><Input value={form.callsign} onChange={(e) => setForm({ ...form, callsign: e.target.value })} placeholder="K2" /></div>
-            <div><Label>FLARM ID</Label><Input value={form.flarm_id} onChange={(e) => setForm({ ...form, flarm_id: e.target.value })} placeholder="DD1234" /></div>
-            <div><Label>Type</Label><Input value={form.glider_type} onChange={(e) => setForm({ ...form, glider_type: e.target.value })} placeholder="ASK-21" /></div>
-            <Button type="submit"><Plus className="size-4 mr-1" />Add</Button>
-          </form>
-        </CardContent>
-      </Card>
+      {isOffice && (
+        <Card>
+          <CardHeader><CardTitle>Add glider</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={add} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+              <div><Label>Registration *</Label><Input value={form.registration} onChange={(e) => setForm({ ...form, registration: e.target.value })} placeholder="G-ABCD" /></div>
+              <div><Label>Callsign</Label><Input value={form.callsign} onChange={(e) => setForm({ ...form, callsign: e.target.value })} placeholder="K2" /></div>
+              <div><Label>FLARM ID</Label><Input value={form.flarm_id} onChange={(e) => setForm({ ...form, flarm_id: e.target.value })} placeholder="DD1234" /></div>
+              <div><Label>Type</Label><Input value={form.glider_type} onChange={(e) => setForm({ ...form, glider_type: e.target.value })} placeholder="ASK-21" /></div>
+              <Button type="submit"><Plus className="size-4 mr-1" />Add</Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader><CardTitle>Fleet ({items.length})</CardTitle></CardHeader>
         <CardContent>
@@ -84,7 +92,7 @@ function FleetPage() {
                   <TableCell>{g.callsign || "—"}</TableCell>
                   <TableCell className="font-mono">{g.flarm_id || <span className="text-muted-foreground">no FLARM</span>}</TableCell>
                   <TableCell>{g.glider_type || "—"}</TableCell>
-                  <TableCell className="text-right"><Button size="icon" variant="ghost" onClick={() => remove(g.id)}><Trash2 className="size-4" /></Button></TableCell>
+                  <TableCell className="text-right">{isOffice && <Button size="icon" variant="ghost" onClick={() => remove(g.id)}><Trash2 className="size-4" /></Button>}</TableCell>
                 </TableRow>
               ))}
               {items.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No gliders yet</TableCell></TableRow>}
