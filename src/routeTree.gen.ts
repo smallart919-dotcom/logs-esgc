@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MembersRouteImport } from './routes/members'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as FleetRouteImport } from './routes/fleet'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,6 +19,11 @@ import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/h
 const MembersRoute = MembersRouteImport.update({
   id: '/members',
   path: '/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FleetRoute = FleetRouteImport.update({
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/fleet': typeof FleetRoute
+  '/history': typeof HistoryRoute
   '/members': typeof MembersRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/fleet': typeof FleetRoute
+  '/history': typeof HistoryRoute
   '/members': typeof MembersRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
@@ -60,6 +68,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/fleet': typeof FleetRoute
+  '/history': typeof HistoryRoute
   '/members': typeof MembersRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
@@ -69,15 +78,23 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/fleet'
+    | '/history'
     | '/members'
     | '/api/public/hooks/ogn-sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/fleet' | '/members' | '/api/public/hooks/ogn-sync'
+  to:
+    | '/'
+    | '/auth'
+    | '/fleet'
+    | '/history'
+    | '/members'
+    | '/api/public/hooks/ogn-sync'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/fleet'
+    | '/history'
     | '/members'
     | '/api/public/hooks/ogn-sync'
   fileRoutesById: FileRoutesById
@@ -86,6 +103,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   FleetRoute: typeof FleetRoute
+  HistoryRoute: typeof HistoryRoute
   MembersRoute: typeof MembersRoute
   ApiPublicHooksOgnSyncRoute: typeof ApiPublicHooksOgnSyncRoute
 }
@@ -97,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/members'
       fullPath: '/members'
       preLoaderRoute: typeof MembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fleet': {
@@ -134,6 +159,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   FleetRoute: FleetRoute,
+  HistoryRoute: HistoryRoute,
   MembersRoute: MembersRoute,
   ApiPublicHooksOgnSyncRoute: ApiPublicHooksOgnSyncRoute,
 }

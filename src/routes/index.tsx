@@ -57,7 +57,10 @@ async function maybeAddMember(existing: Member[], kind: PilotKind | null | undef
 }
 
 function FlightsPage() {
-  const [date, setDate] = useState(todayStr());
+  const initialDate = typeof window !== "undefined"
+    ? (new URLSearchParams(window.location.search).get("date") || todayStr())
+    : todayStr();
+  const [date, setDate] = useState(initialDate);
   const [isOffice, setIsOffice] = useState(false);
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
