@@ -388,6 +388,7 @@ function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; on
                   <TableHead>P2</TableHead><TableHead>P2 Ch</TableHead>
                   <TableHead className="text-right">Normal</TableHead>
                   <TableHead className="text-right">U21</TableHead>
+                  <TableHead></TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {rows.map(({ f, std, u21, mins }) => (
