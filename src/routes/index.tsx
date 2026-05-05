@@ -338,6 +338,7 @@ function FlightsPage() {
 
       <MotorGliderCosts flights={flights} />
 
+      <FlightDialog
         open={!!editing || adding}
         onOpenChange={(o) => { if (!o) { setEditing(null); setAdding(false); } }}
         flight={editing}
