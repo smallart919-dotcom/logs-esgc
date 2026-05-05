@@ -219,8 +219,10 @@ function parseHtmlLogbook(html: string): OgnPayload {
   };
   const stripTags = (s: string) => s.replace(/<[^>]*>/g, "").trim();
 
-  // Match flight rows; skip the totals/header rows by requiring 13 cells.
-  const rowRe = /<TR>((?:\s*<TD[^>]*>[\s\S]*?<\/TD>\s*){13})<\/TR>/gi;
+  // Match each TR individually, then collect its TD cells. The previous
+  // pattern allowed TD content to span across TR boundaries which produced
+  // garbage rows when shorter rows (header / totals) appeared.
+  const rowRe = /<TR\b[^>]*>([\s\S]*?)<\/TR>/gi;
   const cellRe = /<TD[^>]*>([\s\S]*?)<\/TD>/gi;
 
   let m: RegExpExecArray | null;
