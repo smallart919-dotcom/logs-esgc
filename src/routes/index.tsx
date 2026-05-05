@@ -45,6 +45,16 @@ type Member = { id: string; full_name: string; membership_number: string };
 
 const todayStr = () => format(new Date(), "yyyy-MM-dd");
 
+async function maybeAddMember(existing: Member[], kind: PilotKind | null | undefined, name: string | null, membership: string | null) {
+  if (kind !== "member") return;
+  const n = (name || "").trim();
+  const m = (membership || "").trim();
+  if (!n || !m) return;
+  const exists = existing.some((e) => e.membership_number.trim().toLowerCase() === m.toLowerCase() || e.full_name.trim().toLowerCase() === n.toLowerCase());
+  if (exists) return;
+  await supabase.from("club_members").insert({ full_name: n, membership_number: m });
+}
+
 function FlightsPage() {
   const [date, setDate] = useState(todayStr());
   const [flights, setFlights] = useState<Flight[]>([]);
