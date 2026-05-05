@@ -183,7 +183,7 @@ function FlightsPage() {
                         </Badge>
                       ) : <span className="text-muted-foreground text-sm">—</span>}
                     </TableCell>
-                    <TableCell><Badge variant={f.manual ? "outline" : "default"}>{f.manual ? "Manual" : "OGN"}</Badge></TableCell>
+                    <TableCell><OgnSourceCell flight={f} /></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <Button size="icon" variant="ghost" onClick={() => setEditing(f)}><Pencil className="size-4" /></Button>
                       <Button size="icon" variant="ghost" onClick={() => remove(f.id)}><Trash2 className="size-4" /></Button>
