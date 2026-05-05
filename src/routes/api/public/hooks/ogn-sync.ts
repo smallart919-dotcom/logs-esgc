@@ -119,7 +119,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           const launchType: "aerotow" | "winch" | null = hasTow ? "aerotow" : null;
           const towHeightFt = hasTow && f.tow_height ? Math.round(f.tow_height) : null;
 
-          if (!takeoff) {
+          if (!takeoff && !landing) {
             skipped++;
             matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
             continue;
@@ -133,12 +133,14 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             match: { flarm, registration: matchedReg, confidence },
           };
 
-          // Stronger dedupe: match within ±90s on takeoff, by flarm OR registration (case-insensitive)
-          const takeoffMs = +new Date(takeoff);
+          // Dedupe within ±90s on takeoff (or landing if no takeoff), by flarm OR registration
+          const refTime = takeoff ?? landing;
+          const refMs = refTime ? +new Date(refTime) : null;
           const regKey = (matchedReg || "").trim().toUpperCase();
-          const existing = dayFlights.find((row) => {
-            if (!row.takeoff_time) return false;
-            const dt = Math.abs(+new Date(row.takeoff_time) - takeoffMs);
+          const existing = refMs === null ? undefined : dayFlights.find((row) => {
+            const rowRef = row.takeoff_time ?? row.landing_time;
+            if (!rowRef) return false;
+            const dt = Math.abs(+new Date(rowRef) - refMs);
             if (dt > TIME_WINDOW_MS) return false;
             const sameFlarm = flarm && row.flarm_id && row.flarm_id.toUpperCase() === flarm;
             const sameReg = regKey && row.glider_registration && row.glider_registration.trim().toUpperCase() === regKey;
