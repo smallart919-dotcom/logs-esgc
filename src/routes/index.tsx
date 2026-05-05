@@ -404,7 +404,8 @@ function FlightDialog({
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
           <div className="font-semibold text-sm">{label}</div>
-          <div className="flex gap-3 text-sm">
+          <div className="flex gap-3 text-sm flex-wrap">
+            <label className="flex items-center gap-1"><input type="checkbox" checked={!!(which === 1 ? form.p1_charge : form.p2_charge)} onChange={(e) => setForm((f) => ({ ...f, [`p${which}_charge`]: e.target.checked }))} /> Ch (charge)</label>
             <label className="flex items-center gap-1"><input type="checkbox" checked={kind === "visitor"} onChange={(e) => setKind(e.target.checked ? "visitor" : "member")} /> Visitor</label>
             <label className="flex items-center gap-1"><input type="checkbox" checked={kind === "gfe"} onChange={(e) => setKind(e.target.checked ? "gfe" : "member")} /> GFE</label>
           </div>
