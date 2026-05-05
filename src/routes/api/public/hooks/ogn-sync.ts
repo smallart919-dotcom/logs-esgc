@@ -119,11 +119,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           const launchType: "aerotow" | "winch" | null = hasTow ? "aerotow" : null;
           const towHeightFt = hasTow && f.tow_height ? Math.round(f.tow_height) : null;
 
-          if (!takeoff && !landing) {
-            skipped++;
-            matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
-            continue;
-          }
+          // Always log the row, even if takeoff or landing is missing.
 
           const matchedReg = fleetMatch?.registration ?? dev?.registration ?? null;
           const matchedId = fleetMatch?.id ?? null;
