@@ -6,9 +6,11 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 type OgnDevice = { address: string; registration?: string; cn?: string; aircraft?: string };
 type OgnFlight = {
   start?: string; stop?: string; duration?: string;
+  start_tsp?: number | null; stop_tsp?: number | null;
   device: number;
   start_airfield?: number; stop_airfield?: number;
   start_tow?: number | null; tow_height?: number | null;
+  tow?: number | null;
 };
 type OgnPayload = { airfield?: string; date?: string; devices: OgnDevice[]; flights: OgnFlight[] };
 
@@ -100,8 +102,8 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         for (const f of payload.flights || []) {
           const dev = payload.devices?.[f.device];
           const flarm = dev?.address ? dev.address.toUpperCase() : null;
-          const takeoff = parseTimeOnDate(date, f.start);
-          const landing = parseTimeOnDate(date, f.stop);
+          const takeoff = f.start_tsp ? new Date(f.start_tsp * 1000).toISOString() : parseTimeOnDate(date, f.start);
+          const landing = f.stop_tsp ? new Date(f.stop_tsp * 1000).toISOString() : parseTimeOnDate(date, f.stop);
           const fleetMatch = flarm ? fleetByFlarm.get(flarm) : undefined;
 
           // Excluded registrations (tow planes / motor gliders) — never log
@@ -121,7 +123,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
 
           // Tow plane present → assume aerotow
-          const hasTow = f.start_tow !== null && f.start_tow !== undefined;
+          const hasTow = (f.tow !== null && f.tow !== undefined) || (f.start_tow !== null && f.start_tow !== undefined);
           const launchType: "aerotow" | "winch" | null = hasTow ? "aerotow" : null;
           const towHeightFt = hasTow && f.tow_height ? Math.round(f.tow_height) : null;
 
