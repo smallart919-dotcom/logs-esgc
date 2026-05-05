@@ -2,7 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } f
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Plane, Users, ListChecks, LogOut } from "lucide-react";
+import { Plane, Users, ListChecks, LogOut, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import appCss from "../styles.css?url";
