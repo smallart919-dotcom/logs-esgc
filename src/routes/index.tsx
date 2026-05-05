@@ -90,26 +90,38 @@ function FlightsPage() {
 
   const [icao, setIcao] = useState<string>(() => (typeof window !== "undefined" ? localStorage.getItem("ogn_icao") || "" : ""));
 
-  const syncOgn = async () => {
+  const syncOgn = useCallback(async (silent = false) => {
     let code = icao;
     if (!code) {
+      if (silent) return;
       code = (prompt("Enter your airfield ICAO (e.g. EGHL, LFNB) — used to fetch OGN flights.") || "").toUpperCase().trim();
       if (!code) return;
       localStorage.setItem("ogn_icao", code);
       setIcao(code);
     }
-    setSyncing(true);
-    setSyncResult(null);
+    if (!silent) { setSyncing(true); setSyncResult(null); }
     try {
       const res = await fetch("/api/public/hooks/ogn-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icao: code, date }) });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
-      setSyncResult(j);
-      toast.success(`OGN ${code}: ${j.created} new, ${j.updated} updated, ${j.skipped} skipped${j.errors?.length ? `, ${j.errors.length} errors` : ""}`);
+      if (!silent) setSyncResult(j);
       load();
-    } catch (e: any) { toast.error(e.message); setSyncResult({ icao: code, date, created: 0, updated: 0, skipped: 0, total: 0, synced_at: new Date().toISOString(), errors: [{ flarm: null, registration: null, message: e.message }], matches: [] }); }
-    finally { setSyncing(false); }
-  };
+    } catch (e: any) {
+      if (!silent) {
+        toast.error(e.message);
+        setSyncResult({ icao: code, date, created: 0, updated: 0, skipped: 0, total: 0, synced_at: new Date().toISOString(), errors: [{ flarm: null, registration: null, message: e.message }], matches: [] });
+      }
+    }
+    finally { if (!silent) setSyncing(false); }
+  }, [icao, date, load]);
+
+  // Auto-sync every 30 seconds in the background.
+  useEffect(() => {
+    if (!icao) return;
+    const id = setInterval(() => { syncOgn(true); }, 30_000);
+    return () => clearInterval(id);
+  }, [icao, syncOgn]);
+
 
   const remove = async (id: string) => {
     if (!confirm("Delete this flight?")) return;
@@ -182,7 +194,7 @@ function FlightsPage() {
             <Label className="text-xs">Date</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40" />
           </div>
-          <Button onClick={syncOgn} disabled={syncing} variant="secondary"
+          <Button onClick={() => syncOgn(false)} disabled={syncing} variant="secondary"
             title={icao ? `Airfield: ${icao}. Right-click to change.` : "Click to set airfield"}
             onContextMenu={(e) => { e.preventDefault(); const v = prompt("Airfield ICAO", icao) || ""; if (v) { localStorage.setItem("ogn_icao", v.toUpperCase()); setIcao(v.toUpperCase()); } }}>
             <RefreshCw className={`size-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Sync OGN{icao && <span className="ml-1 text-xs opacity-70">({icao})</span>}
