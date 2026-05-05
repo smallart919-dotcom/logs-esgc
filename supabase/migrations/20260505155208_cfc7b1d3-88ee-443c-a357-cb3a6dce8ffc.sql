@@ -1,0 +1,1 @@
+ALTER TABLE public.club_members ADD COLUMN IF NOT EXISTS under_21 boolean NOT NULL DEFAULT false;
