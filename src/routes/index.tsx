@@ -563,11 +563,11 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <Label>Duty Instructor</Label>
-          <Input value={duty_instructor} onChange={(e) => setDI(e.target.value)} disabled={loading} />
+          <MemberNamePicker members={members} value={duty_instructor} onChange={setDI} disabled={loading} />
         </div>
         <div>
           <Label>Duty Pilot</Label>
-          <Input value={duty_pilot} onChange={(e) => setDP(e.target.value)} disabled={loading} />
+          <MemberNamePicker members={members} value={duty_pilot} onChange={setDP} disabled={loading} />
         </div>
         <div className="md:col-span-2">
           <Label>Notes</Label>
