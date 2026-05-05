@@ -286,7 +286,7 @@ function FlightsPage() {
 
       <DailyLogCard date={date} />
 
-      
+      <Card>
         <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {date}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
