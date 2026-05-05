@@ -234,7 +234,7 @@ function parseHtmlLogbook(html: string): OgnPayload {
     // Use glider reg if present, otherwise the tug reg (so tug-only flights are captured).
     const reg = gliderReg || towReg;
 
-    const deviceIndex = ensureDevice(gliderReg, cn || undefined);
+    const deviceIndex = ensureDevice(reg, cn || undefined);
 
     flights.push({
       start: takeoff,
