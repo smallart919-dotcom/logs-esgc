@@ -255,8 +255,8 @@ function FlightsPage() {
                       {f.glider_registration || <span className="text-muted-foreground">unknown</span>}
                       {f.flarm_id && <div className="text-xs font-mono text-muted-foreground">{f.flarm_id}</div>}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{f.takeoff_time ? new Date(f.takeoff_time).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
-                    <TableCell className="font-mono text-sm">{f.landing_time ? new Date(f.landing_time).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
+                    <TableCell className="font-mono text-sm">{f.takeoff_time ? new Date(f.takeoff_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
+                    <TableCell className="font-mono text-sm">{f.landing_time ? new Date(f.landing_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
                     <TableCell className="text-sm">{dur}</TableCell>
                     <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
                     <TableCell><PilotCell name={f.p2_name} membership={f.p2_membership} kind={f.p2_kind} /></TableCell>
