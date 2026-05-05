@@ -45,6 +45,10 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         const fleetByFlarm = new Map(
           (fleet ?? []).filter((g) => g.flarm_id).map((g) => [g.flarm_id!.toUpperCase(), g])
         );
+        const normReg = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const fleetByReg = new Map(
+          (fleet ?? []).filter((g) => g.registration).map((g) => [normReg(g.registration), g])
+        );
 
         // Always use the public HTML logbook so the times exactly match
         // https://logbook.glidernet.org/index.php?a=UKRIN&s=QFE&u=M&z=1&p=&t=0&td=15&d=DDMMYYYY
@@ -93,7 +97,9 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           const flarm = dev?.address ? dev.address.toUpperCase() : null;
           const takeoff = f.start_tsp ? new Date(f.start_tsp * 1000).toISOString() : parseTimeOnDate(date, f.start);
           const landing = f.stop_tsp ? new Date(f.stop_tsp * 1000).toISOString() : parseTimeOnDate(date, f.stop);
-          const fleetMatch = flarm ? fleetByFlarm.get(flarm) : undefined;
+          const fleetMatch =
+            (flarm ? fleetByFlarm.get(flarm) : undefined) ??
+            (dev?.registration ? fleetByReg.get(normReg(dev.registration)) : undefined);
 
           // Excluded registrations (tow planes / motor gliders) — never log
           const EXCLUDED_REGS = new Set(["G-ESGC", "G-KIAU"]);
