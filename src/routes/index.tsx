@@ -121,11 +121,20 @@ function FlightsPage() {
     finally { if (!silent) setSyncing(false); }
   }, [icao, date, load]);
 
-  // Auto-sync every 30 seconds in the background.
+  // Auto-sync every 10 seconds in the background.
+  const SYNC_INTERVAL = 10;
+  const [nextSync, setNextSync] = useState(SYNC_INTERVAL);
   useEffect(() => {
     if (!icao) return;
-    const id = setInterval(() => { syncOgn(true); }, 30_000);
-    return () => clearInterval(id);
+    syncOgn(true);
+    setNextSync(SYNC_INTERVAL);
+    const tick = setInterval(() => {
+      setNextSync((n) => {
+        if (n <= 1) { syncOgn(true); return SYNC_INTERVAL; }
+        return n - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
   }, [icao, syncOgn]);
 
 
@@ -217,11 +226,15 @@ function FlightsPage() {
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40"
               max={todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
-          <Button onClick={() => syncOgn(false)} disabled={syncing} variant="secondary"
-            title={icao ? `Airfield: ${icao}. Right-click to change.` : "Click to set airfield"}
-            onContextMenu={(e) => { e.preventDefault(); const v = prompt("Airfield ICAO", icao) || ""; if (v) { localStorage.setItem("ogn_icao", v.toUpperCase()); setIcao(v.toUpperCase()); } }}>
-            <RefreshCw className={`size-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Sync OGN{icao && <span className="ml-1 text-xs opacity-70">({icao})</span>}
-          </Button>
+          <div
+            className="text-xs text-muted-foreground px-2 py-1 rounded border bg-muted/40 cursor-pointer select-none"
+            title={icao ? `Auto-syncing ${icao} every ${SYNC_INTERVAL}s. Right-click to change airfield.` : "Click to set airfield"}
+            onClick={() => { if (!icao) { const v = (prompt("Airfield ICAO") || "").toUpperCase().trim(); if (v) { localStorage.setItem("ogn_icao", v); setIcao(v); } } }}
+            onContextMenu={(e) => { e.preventDefault(); const v = prompt("Airfield ICAO", icao) || ""; if (v) { localStorage.setItem("ogn_icao", v.toUpperCase()); setIcao(v.toUpperCase()); } }}
+          >
+            <RefreshCw className={`size-3 inline mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {icao ? `Next sync in ${nextSync}s` : "Set airfield"}
+          </div>
           <Button onClick={exportXlsx} variant="outline"><Download className="size-4 mr-1" />Export XLSX</Button>
           <Button onClick={() => setAdding(true)} variant="outline"><Plus className="size-4 mr-1" />Add manual</Button>
           <Button onClick={() => setBulkOpen(true)}><Plus className="size-4 mr-1" />Bulk add</Button>
@@ -353,14 +366,31 @@ function DailyLogCard({ date }: { date: string }) {
     return () => { active = false; };
   }, [date]);
 
-  const save = async () => {
+  const save = useCallback(async (silent = false) => {
+    if (loading) return;
     setSaving(true);
     const { error } = await supabase.from("daily_logs").upsert({
       flight_date: date, duty_instructor: duty_instructor || null, duty_pilot: duty_pilot || null, notes: notes || null,
     }, { onConflict: "flight_date" });
     setSaving(false);
-    if (error) toast.error(error.message); else toast.success("Daily log saved");
-  };
+    if (error) { if (!silent) toast.error(error.message); }
+    else if (!silent) toast.success("Daily log saved");
+  }, [loading, date, duty_instructor, duty_pilot, notes]);
+
+  // Debounced autosave whenever any field changes.
+  useEffect(() => {
+    if (loading) return;
+    const id = setTimeout(() => { save(true); }, 1500);
+    return () => clearTimeout(id);
+  }, [duty_instructor, duty_pilot, notes, loading, save]);
+
+  // Force-save at midnight so the day's log is always persisted.
+  useEffect(() => {
+    const now = new Date();
+    const next = new Date(now); next.setHours(24, 0, 5, 0);
+    const id = setTimeout(() => { save(true); }, next.getTime() - now.getTime());
+    return () => clearTimeout(id);
+  }, [save]);
 
   return (
     <Card>
@@ -378,8 +408,8 @@ function DailyLogCard({ date }: { date: string }) {
           <Label>Notes</Label>
           <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={loading} />
         </div>
-        <div className="md:col-span-2 flex justify-end">
-          <Button onClick={save} disabled={saving || loading}>Save daily log</Button>
+        <div className="md:col-span-2 flex justify-end items-center gap-2 text-xs text-muted-foreground">
+          {saving ? "Saving…" : "Auto-saved"}
         </div>
       </CardContent>
     </Card>
