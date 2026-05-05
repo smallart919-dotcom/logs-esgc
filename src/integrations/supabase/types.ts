@@ -80,8 +80,10 @@ export type Database = {
           manual: boolean
           notes: string | null
           ogn_source: Json | null
+          p1_kind: string | null
           p1_membership: string | null
           p1_name: string | null
+          p2_kind: string | null
           p2_membership: string | null
           p2_name: string | null
           takeoff_time: string | null
@@ -101,8 +103,10 @@ export type Database = {
           manual?: boolean
           notes?: string | null
           ogn_source?: Json | null
+          p1_kind?: string | null
           p1_membership?: string | null
           p1_name?: string | null
+          p2_kind?: string | null
           p2_membership?: string | null
           p2_name?: string | null
           takeoff_time?: string | null
@@ -122,8 +126,10 @@ export type Database = {
           manual?: boolean
           notes?: string | null
           ogn_source?: Json | null
+          p1_kind?: string | null
           p1_membership?: string | null
           p1_name?: string | null
+          p2_kind?: string | null
           p2_membership?: string | null
           p2_name?: string | null
           takeoff_time?: string | null
