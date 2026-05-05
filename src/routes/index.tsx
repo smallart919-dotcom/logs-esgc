@@ -33,8 +33,8 @@ type Flight = {
   id: string; flight_date: string;
   glider_id: string | null; glider_registration: string | null; flarm_id: string | null;
   takeoff_time: string | null; landing_time: string | null;
-  p1_name: string | null; p1_membership: string | null; p1_kind: PilotKind | null;
-  p2_name: string | null; p2_membership: string | null; p2_kind: PilotKind | null;
+  p1_name: string | null; p1_membership: string | null; p1_kind: PilotKind | null; p1_charge: boolean | null;
+  p2_name: string | null; p2_membership: string | null; p2_kind: PilotKind | null; p2_charge: boolean | null;
   launch_type: "aerotow" | "winch" | null;
   aerotow_height_ft: number | null;
   manual: boolean; notes: string | null;
