@@ -530,15 +530,16 @@ function PilotPicker({ label, members, value, onPick, onText }: {
 type BulkRow = {
   glider_id: string | null; glider_registration: string; flarm_id: string;
   takeoff_time: string; landing_time: string;
-  p1_name: string; p1_membership: string;
-  p2_name: string; p2_membership: string;
+  p1_name: string; p1_membership: string; p1_kind: PilotKind;
+  p2_name: string; p2_membership: string; p2_kind: PilotKind;
   launch_type: "aerotow" | "winch"; aerotow_height_ft: number;
 };
 
 const blankRow = (): BulkRow => ({
   glider_id: null, glider_registration: "", flarm_id: "",
   takeoff_time: "", landing_time: "",
-  p1_name: "", p1_membership: "", p2_name: "", p2_membership: "",
+  p1_name: "", p1_membership: "", p1_kind: "member",
+  p2_name: "", p2_membership: "", p2_kind: "member",
   launch_type: "aerotow", aerotow_height_ft: 2000,
 });
 
