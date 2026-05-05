@@ -2,7 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } f
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Plane, Users, ListChecks, LogOut, History } from "lucide-react";
+import { Plane, Users, ListChecks, LogOut, History, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import appCss from "../styles.css?url";
@@ -83,6 +83,9 @@ function RootComponent() {
             <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" />
             {(userEmail || "").toLowerCase() === "office@esgc.local" && (
               <NavLink to="/history" icon={<History className="size-4" />} label="History" />
+            )}
+            {["office@esgc.local", "caravan@esgc.local"].includes((userEmail || "").toLowerCase()) && (
+              <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" />
             )}
             <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" />
             <NavLink to="/members" icon={<Users className="size-4" />} label="Members" />

@@ -1,0 +1,187 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { requireAuth } from "@/lib/auth-guard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Receipt } from "lucide-react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
+import { computeFlightCharge, fmtGBP, type FlightLike } from "@/lib/pricing";
+
+export const Route = createFileRoute("/billing")({
+  beforeLoad: requireAuth,
+  component: BillingPage,
+});
+
+const ALLOWED_EMAILS = ["office@esgc.local", "caravan@esgc.local"];
+
+type Member = { id: string; full_name: string; membership_number: string; under_21: boolean };
+type Flight = FlightLike & {
+  id: string;
+  flight_date: string;
+  p1_name: string | null; p1_membership: string | null; p1_kind: string | null; p1_charge: boolean | null;
+  p2_name: string | null; p2_membership: string | null; p2_kind: string | null; p2_charge: boolean | null;
+};
+
+type Mode = "day" | "month";
+
+function BillingPage() {
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [mode, setMode] = useState<Mode>("day");
+  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [search, setSearch] = useState("");
+  const [members, setMembers] = useState<Member[]>([]);
+  const [flights, setFlights] = useState<Flight[]>([]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setAllowed(ALLOWED_EMAILS.includes((data.user?.email || "").toLowerCase()));
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!allowed) return;
+    (async () => {
+      const [from, to] = mode === "day"
+        ? [date, date]
+        : [format(startOfMonth(new Date(month + "-01")), "yyyy-MM-dd"),
+           format(endOfMonth(new Date(month + "-01")), "yyyy-MM-dd")];
+      const [{ data: m }, { data: f }] = await Promise.all([
+        supabase.from("club_members").select("*").order("full_name"),
+        supabase.from("flights").select("id, flight_date, glider_registration, takeoff_time, landing_time, launch_type, aerotow_height_ft, p1_name, p1_membership, p1_kind, p1_charge, p2_name, p2_membership, p2_kind, p2_charge")
+          .gte("flight_date", from).lte("flight_date", to),
+      ]);
+      setMembers((m as Member[]) ?? []);
+      setFlights((f as Flight[]) ?? []);
+    })();
+  }, [allowed, mode, date, month]);
+
+  const memberByKey = useMemo(() => {
+    const map = new Map<string, Member>();
+    for (const m of members) {
+      map.set(`m:${m.membership_number.trim().toUpperCase()}`, m);
+      map.set(`n:${m.full_name.trim().toUpperCase()}`, m);
+    }
+    return map;
+  }, [members]);
+
+  // Build per-pilot bills
+  type Row = {
+    member: Member;
+    flights: Array<{ flight: Flight; charge: ReturnType<typeof computeFlightCharge>; role: "P1" | "P2" }>;
+    total: number;
+  };
+
+  const rows = useMemo<Row[]>(() => {
+    const map = new Map<string, Row>();
+    const addCharge = (flight: Flight, role: "P1" | "P2") => {
+      const kind = role === "P1" ? flight.p1_kind : flight.p2_kind;
+      const charge = role === "P1" ? flight.p1_charge : flight.p2_charge;
+      const name = (role === "P1" ? flight.p1_name : flight.p2_name) || "";
+      const memNo = (role === "P1" ? flight.p1_membership : flight.p2_membership) || "";
+      if (!charge || kind !== "member") return;
+      const member =
+        memberByKey.get(`m:${memNo.trim().toUpperCase()}`) ??
+        memberByKey.get(`n:${name.trim().toUpperCase()}`);
+      if (!member) return;
+      const c = computeFlightCharge(flight, !!member.under_21);
+      if (c.total <= 0) return;
+      let row = map.get(member.id);
+      if (!row) { row = { member, flights: [], total: 0 }; map.set(member.id, row); }
+      row.flights.push({ flight, charge: c, role });
+      row.total = +(row.total + c.total).toFixed(2);
+    };
+    for (const f of flights) { addCharge(f, "P1"); addCharge(f, "P2"); }
+    let arr = [...map.values()].sort((a, b) => b.total - a.total);
+    const q = search.trim().toLowerCase();
+    if (q) arr = arr.filter((r) =>
+      r.member.full_name.toLowerCase().includes(q) ||
+      r.member.membership_number.toLowerCase().includes(q));
+    return arr;
+  }, [flights, memberByKey, search]);
+
+  const grandTotal = rows.reduce((s, r) => s + r.total, 0);
+
+  if (allowed === null) return <div className="text-muted-foreground">Loading…</div>;
+  if (!allowed) return (
+    <div className="max-w-md mx-auto text-center py-20">
+      <h1 className="text-2xl font-bold">Restricted</h1>
+      <p className="text-muted-foreground mt-2">Billing is only available to office and caravan accounts.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-bold flex items-center gap-2"><Receipt className="size-7 text-primary" /> Billing</h1>
+        <p className="text-muted-foreground">Charges per member, computed from the daily flight log using ESGC 2026 prices.</p>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>Period &amp; search</CardTitle></CardHeader>
+        <CardContent className="flex flex-wrap gap-3 items-end">
+          <div className="flex gap-1">
+            <button onClick={() => setMode("day")} className={`px-3 py-2 rounded-md text-sm border ${mode === "day" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>Day</button>
+            <button onClick={() => setMode("month")} className={`px-3 py-2 rounded-md text-sm border ${mode === "month" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>Month</button>
+          </div>
+          {mode === "day" ? (
+            <div><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-44" /></div>
+          ) : (
+            <div><Label className="text-xs">Month</Label><Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" /></div>
+          )}
+          <div className="flex-1 min-w-[200px]">
+            <Label className="text-xs">Search name or membership #</Label>
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Smith or 1234" />
+          </div>
+          <Badge variant="default" className="text-base px-3 py-1.5">Grand total {fmtGBP(grandTotal)}</Badge>
+        </CardContent>
+      </Card>
+
+      {rows.map((r) => (
+        <Card key={r.member.id}>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between flex-wrap gap-2">
+              <span className="flex items-center gap-2">
+                {r.member.full_name}
+                <span className="font-mono text-sm text-muted-foreground">#{r.member.membership_number}</span>
+                {r.member.under_21 && <Badge variant="secondary">U21</Badge>}
+              </span>
+              <Badge className="text-base">{fmtGBP(r.total)}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Date</TableHead><TableHead>Glider</TableHead><TableHead>Role</TableHead>
+                <TableHead>Launch</TableHead><TableHead>Soaring</TableHead><TableHead>TMG</TableHead>
+                <TableHead>Notes</TableHead><TableHead className="text-right">Total</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {r.flights.map(({ flight, charge, role }, i) => (
+                  <TableRow key={flight.id + role + i}>
+                    <TableCell className="font-mono text-xs">{flight.flight_date}</TableCell>
+                    <TableCell className="font-medium">{flight.glider_registration || "—"}</TableCell>
+                    <TableCell>{role}</TableCell>
+                    <TableCell>{charge.launch ? fmtGBP(charge.launch) : "—"}</TableCell>
+                    <TableCell>{charge.soaring ? fmtGBP(charge.soaring) : "—"}</TableCell>
+                    <TableCell>{charge.motorGlider ? fmtGBP(charge.motorGlider) : "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{charge.notes.join(" · ")}</TableCell>
+                    <TableCell className="text-right font-semibold">{fmtGBP(charge.total)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      ))}
+
+      {rows.length === 0 && (
+        <Card><CardContent className="text-center text-muted-foreground py-12">No charges in this period{search ? " for that search" : ""}.</CardContent></Card>
+      )}
+    </div>
+  );
+}

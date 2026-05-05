@@ -21,6 +21,7 @@ export type Database = {
           full_name: string
           id: string
           membership_number: string
+          under_21: boolean
         }
         Insert: {
           created_at?: string
@@ -28,6 +29,7 @@ export type Database = {
           full_name: string
           id?: string
           membership_number: string
+          under_21?: boolean
         }
         Update: {
           created_at?: string
@@ -35,6 +37,7 @@ export type Database = {
           full_name?: string
           id?: string
           membership_number?: string
+          under_21?: boolean
         }
         Relationships: []
       }
