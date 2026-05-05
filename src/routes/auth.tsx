@@ -84,16 +84,6 @@ function AuthPage() {
                   </button>
                 );
               })}
-              <button onClick={() => setPicked("other")}
-                className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-secondary transition text-left">
-                <div className="size-10 rounded-lg bg-muted flex items-center justify-center">
-                  <User className="size-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold">Other account</div>
-                  <div className="text-xs text-muted-foreground">Sign in or create a new account</div>
-                </div>
-              </button>
             </CardContent>
           </Card>
         ) : (
