@@ -209,6 +209,33 @@ function FlightsPage() {
         members={members}
         onSaved={() => { setEditing(null); setAdding(false); load(); }}
       />
+      <BulkAddDialog open={bulkOpen} onOpenChange={setBulkOpen} date={date} gliders={gliders} members={members} onSaved={() => { setBulkOpen(false); load(); }} />
+    </div>
+  );
+}
+
+function OgnSourceCell({ flight }: { flight: Flight }) {
+  if (flight.manual) return <Badge variant="outline">Manual</Badge>;
+  const src = flight.ogn_source;
+  const matched = !!src?.match?.flarm;
+  const conf = src?.match?.confidence ?? (matched ? "high" : "low");
+  const synced = src?.synced_at ? format(new Date(src.synced_at), "HH:mm:ss") : null;
+  return (
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-1">
+        <Badge variant="default">OGN</Badge>
+        {matched ? (
+          <Badge variant={conf === "high" ? "secondary" : "outline"} className="text-[10px]">{conf}</Badge>
+        ) : (
+          <Badge variant="outline" className="text-[10px]">no match</Badge>
+        )}
+      </div>
+      {src?.match?.flarm && (
+        <div className="text-[11px] font-mono text-muted-foreground">
+          {src.match.flarm}{src.device?.cn ? ` · ${src.device.cn}` : ""}
+        </div>
+      )}
+      {synced && <div className="text-[10px] text-muted-foreground">synced {synced}</div>}
     </div>
   );
 }
