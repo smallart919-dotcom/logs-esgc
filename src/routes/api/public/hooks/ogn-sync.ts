@@ -44,15 +44,33 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           (fleet ?? []).filter((g) => g.flarm_id).map((g) => [g.flarm_id!.toUpperCase(), g])
         );
 
-        // Fetch OGN flightbook
+        // Fetch OGN flightbook (today). For historical dates the JSON API returns
+        // empty arrays — fall back to scraping the public HTML logbook.
         const url = `https://flightbook.glidernet.org/api/logbook/${encodeURIComponent(icao)}/`;
         let payload: OgnPayload;
+        let source: "json" | "html" = "json";
         try {
           const r = await fetch(url, { headers: { Accept: "application/json" } });
           if (!r.ok) throw new Error(`OGN ${r.status}`);
           payload = (await r.json()) as OgnPayload;
         } catch (e: any) {
           return Response.json({ error: `OGN fetch failed: ${e.message}` }, { status: 502 });
+        }
+
+        const isToday = date === todayUTC();
+        if ((!payload.flights || payload.flights.length === 0) && !isToday) {
+          try {
+            const [y, m, d] = date.split("-");
+            const ddmmyyyy = `${d}${m}${y}`;
+            const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(icao)}&s=QFE&u=M&z=1&p=&t=0&td=15&d=${ddmmyyyy}`;
+            const hr = await fetch(htmlUrl);
+            if (!hr.ok) throw new Error(`HTML ${hr.status}`);
+            const html = await hr.text();
+            payload = parseHtmlLogbook(html);
+            source = "html";
+          } catch (e: any) {
+            return Response.json({ error: `OGN historical fetch failed: ${e.message}` }, { status: 502 });
+          }
         }
 
         const synced_at = new Date().toISOString();
