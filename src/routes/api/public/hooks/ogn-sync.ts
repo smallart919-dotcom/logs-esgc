@@ -101,17 +101,8 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             (flarm ? fleetByFlarm.get(flarm) : undefined) ??
             (dev?.registration ? fleetByReg.get(normReg(dev.registration)) : undefined);
 
-          // Excluded registrations (tow planes / motor gliders) — never log
-          const EXCLUDED_REGS = new Set(["G-ESGC", "G-KIAU"]);
-          const regUpper = (dev?.registration || "").toUpperCase().trim();
-          if (EXCLUDED_REGS.has(regUpper)) {
-            skipped++;
-            matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, launch_type: null, tow_height_ft: null, synced_at });
-            continue;
-          }
-          // Log every glider row from the logbook, even if it isn't in the
-          // fleet table yet. Excluded tugs / motor gliders are already filtered
-          // above and inside parseHtmlLogbook.
+          // Log every row including tugs (G-ESGC) and motor gliders (G-KIAU)
+          // so they can be exported as separate sheets.
 
 
           // Tow plane present → assume aerotow
@@ -238,14 +229,12 @@ function parseHtmlLogbook(html: string): OgnPayload {
     const takeoff = toHms(cells[6]);
     const landing = toHms(cells[7]);
 
-    // Only record glider flights — skip rows without a glider registration
-    // (tug-only / non-glider entries do not belong in the club log).
-    if (!gliderReg) continue;
-    const regUpper = gliderReg.toUpperCase().trim();
-    // Also exclude the tug and motor glider explicitly even if they appear in the glider column.
-    if (regUpper === "G-ESGC" || regUpper === "G-KIAU") continue;
+    // Skip rows without any aircraft registration in either column.
+    if (!gliderReg && !towReg) continue;
+    // Use glider reg if present, otherwise the tug reg (so tug-only flights are captured).
+    const reg = gliderReg || towReg;
 
-    const deviceIndex = ensureDevice(gliderReg, cn || undefined);
+    const deviceIndex = ensureDevice(reg, cn || undefined);
 
     flights.push({
       start: takeoff,
