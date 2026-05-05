@@ -613,17 +613,33 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
                 <Label className="text-xs">Landing</Label>
                 <Input type="datetime-local" value={r.landing_time} onChange={(e) => update(i, { landing_time: e.target.value })} />
               </div>
-              <div className="md:col-span-2">
-                <PilotPicker label="P1" members={members} value={r.p1_name}
-                  onPick={(m) => update(i, { p1_name: m.full_name, p1_membership: m.membership_number })}
-                  onText={(t) => update(i, { p1_name: t })} />
-                <Input className="mt-1" placeholder="P1 #" value={r.p1_membership} onChange={(e) => update(i, { p1_membership: e.target.value })} />
+              <div className="md:col-span-2 space-y-1">
+                <div className="flex gap-2 text-xs">
+                  <label className="flex items-center gap-1"><input type="checkbox" checked={r.p1_kind === "visitor"} onChange={(e) => update(i, { p1_kind: e.target.checked ? "visitor" : "member" })} />Visitor</label>
+                  <label className="flex items-center gap-1"><input type="checkbox" checked={r.p1_kind === "gfe"} onChange={(e) => update(i, { p1_kind: e.target.checked ? "gfe" : "member" })} />GFE</label>
+                </div>
+                {r.p1_kind !== "gfe" && (
+                  <PilotPicker label="P1" members={members} value={r.p1_name}
+                    onPick={(m) => update(i, { p1_name: m.full_name, p1_membership: m.membership_number })}
+                    onText={(t) => update(i, { p1_name: t })} />
+                )}
+                {r.p1_kind === "member" && (
+                  <Input className="mt-1" placeholder="P1 #" value={r.p1_membership} onChange={(e) => update(i, { p1_membership: e.target.value })} />
+                )}
               </div>
-              <div className="md:col-span-2">
-                <PilotPicker label="P2" members={members} value={r.p2_name}
-                  onPick={(m) => update(i, { p2_name: m.full_name, p2_membership: m.membership_number })}
-                  onText={(t) => update(i, { p2_name: t })} />
-                <Input className="mt-1" placeholder="P2 #" value={r.p2_membership} onChange={(e) => update(i, { p2_membership: e.target.value })} />
+              <div className="md:col-span-2 space-y-1">
+                <div className="flex gap-2 text-xs">
+                  <label className="flex items-center gap-1"><input type="checkbox" checked={r.p2_kind === "visitor"} onChange={(e) => update(i, { p2_kind: e.target.checked ? "visitor" : "member" })} />Visitor</label>
+                  <label className="flex items-center gap-1"><input type="checkbox" checked={r.p2_kind === "gfe"} onChange={(e) => update(i, { p2_kind: e.target.checked ? "gfe" : "member" })} />GFE</label>
+                </div>
+                {r.p2_kind !== "gfe" && (
+                  <PilotPicker label="P2" members={members} value={r.p2_name}
+                    onPick={(m) => update(i, { p2_name: m.full_name, p2_membership: m.membership_number })}
+                    onText={(t) => update(i, { p2_name: t })} />
+                )}
+                {r.p2_kind === "member" && (
+                  <Input className="mt-1" placeholder="P2 #" value={r.p2_membership} onChange={(e) => update(i, { p2_membership: e.target.value })} />
+                )}
               </div>
               <div className="md:col-span-1">
                 <Label className="text-xs">Launch</Label>
