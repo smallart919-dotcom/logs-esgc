@@ -271,7 +271,15 @@ function FlightsPage() {
             <RefreshCw className={`size-3 inline mr-1 ${syncing ? "animate-spin" : ""}`} />
             {icao ? `Next sync in ${nextSync}s` : "Set airfield"}
           </div>
-          <Button onClick={exportXlsx} variant="outline"><Download className="size-4 mr-1" />Export XLSX</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline"><Download className="size-4 mr-1" />Export</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportXlsx}>Excel (XLSX)</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportAeroLog}>AeroLog Cloud (CSV)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={() => setAdding(true)} variant="outline"><Plus className="size-4 mr-1" />Add manual</Button>
           <Button onClick={() => setBulkOpen(true)}><Plus className="size-4 mr-1" />Bulk add</Button>
         </div>
