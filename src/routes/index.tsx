@@ -261,7 +261,7 @@ function FlightsPage() {
           fmtTime(f.landing_time),
           dur(f.takeoff_time, f.landing_time),
           f.notes || "",
-          "",
+          f.logged_by || "",
         ];
         vals.forEach((v, c) => {
           const cell = row.getCell(c + 1);
