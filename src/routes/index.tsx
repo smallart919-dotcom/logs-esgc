@@ -117,29 +117,56 @@ function FlightsPage() {
   };
 
   const exportXlsx = () => {
-    const rows = flights.map((f, i) => ({
-      "#": i + 1,
-      Date: f.flight_date,
-      Glider: f.glider_registration || "",
-      "FLARM ID": f.flarm_id || "",
-      "Takeoff (UTC)": f.takeoff_time ? format(new Date(f.takeoff_time), "HH:mm:ss") : "",
-      "Landing (UTC)": f.landing_time ? format(new Date(f.landing_time), "HH:mm:ss") : "",
-      "Duration (min)": f.takeoff_time && f.landing_time
-        ? Math.round((+new Date(f.landing_time) - +new Date(f.takeoff_time)) / 60000)
-        : "",
-      "P1 Name": f.p1_kind === "gfe" ? "GFE" : f.p1_kind === "visitor" ? (f.p1_name ? `Visitor (${f.p1_name})` : "Visitor") : (f.p1_name || ""),
-      "P1 Membership #": f.p1_kind === "member" ? (f.p1_membership || "") : "",
-      "P2 Name": f.p2_kind === "gfe" ? "GFE" : f.p2_kind === "visitor" ? (f.p2_name ? `Visitor (${f.p2_name})` : "Visitor") : (f.p2_name || ""),
-      "P2 Membership #": f.p2_kind === "member" ? (f.p2_membership || "") : "",
-      Launch: f.launch_type || "",
-      "Tow Height (ft)": f.aerotow_height_ft ?? "",
-      Source: f.manual ? "Manual" : "OGN",
-      Notes: f.notes || "",
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
+    const fmtTime = (iso: string | null) => iso ? format(new Date(iso), "HH:mm") : "";
+    const dur = (a: string | null, b: string | null) => {
+      if (!a || !b) return "";
+      const m = Math.round((+new Date(b) - +new Date(a)) / 60000);
+      const h = Math.floor(m / 60), mm = m % 60;
+      return `${h}:${String(mm).padStart(2, "0")}`;
+    };
+    const pilotName = (kind: PilotKind | null, name: string | null) =>
+      kind === "gfe" ? "GFE" : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
+
+    // Header rows mirroring the paper form
+    const aoa: any[][] = [
+      ["East Sussex Gliding Club — Flight Log", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+      [`Date: ${date}`, "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+      [],
+      ["No", "Reg", "Type", "P1 No", "P1 Name", "Ch", "P2 No", "P2 Name", "Ch", "Height", "Take off", "Landing", "Time", "Comments", "LB", "Launch"],
+    ];
+    flights.forEach((f, i) => {
+      aoa.push([
+        i + 1,
+        f.glider_registration || "",
+        "",
+        f.p1_kind === "member" ? (f.p1_membership || "") : "",
+        pilotName(f.p1_kind, f.p1_name),
+        f.p1_charge ? "✓" : "",
+        f.p2_kind === "member" ? (f.p2_membership || "") : "",
+        pilotName(f.p2_kind, f.p2_name),
+        f.p2_charge ? "✓" : "",
+        f.launch_type === "aerotow" ? (f.aerotow_height_ft ?? "") : "",
+        fmtTime(f.takeoff_time),
+        fmtTime(f.landing_time),
+        dur(f.takeoff_time, f.landing_time),
+        f.notes || "",
+        "",
+        f.launch_type || "",
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [
+      { wch: 4 }, { wch: 8 }, { wch: 8 }, { wch: 7 }, { wch: 22 }, { wch: 4 },
+      { wch: 7 }, { wch: 22 }, { wch: 4 }, { wch: 7 }, { wch: 8 }, { wch: 8 },
+      { wch: 7 }, { wch: 24 }, { wch: 5 }, { wch: 8 },
+    ];
+    ws["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 15 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 15 } },
+    ];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Flights");
-    XLSX.writeFile(wb, `daily-log-${date}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Flight Log");
+    XLSX.writeFile(wb, `flight-log-${date}.xlsx`);
   };
 
   return (
