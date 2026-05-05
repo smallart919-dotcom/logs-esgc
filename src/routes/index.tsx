@@ -330,6 +330,32 @@ function FlightDialog({
     );
   };
 
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{flight ? "Edit flight" : "Add manual flight"}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <Label>Glider</Label>
+            <GliderPicker
+              gliders={gliders}
+              registration={form.glider_registration ?? ""}
+              onSelect={(g) => setForm({ ...form, glider_id: g?.id ?? null, glider_registration: g?.registration ?? form.glider_registration, flarm_id: g?.flarm_id ?? form.flarm_id })}
+              onChangeText={(t) => setForm({ ...form, glider_registration: t, glider_id: null })}
+            />
+          </div>
+          <div>
+            <Label>Takeoff time</Label>
+            <Input type="datetime-local" value={toLocalInput(form.takeoff_time)} onChange={(e) => setForm({ ...form, takeoff_time: fromLocal(e.target.value) })} />
+          </div>
+          <div>
+            <Label>Landing time</Label>
+            <Input type="datetime-local" value={toLocalInput(form.landing_time)} onChange={(e) => setForm({ ...form, landing_time: fromLocal(e.target.value) })} />
+          </div>
+
+          {renderPilot(1, "P1 (Pilot in command)")}
+          {renderPilot(2, "P2 (Second pilot)")}
+
           <div>
             <Label>Launch type</Label>
             <Select value={form.launch_type ?? ""} onValueChange={(v) => setForm({ ...form, launch_type: v as any })}>
