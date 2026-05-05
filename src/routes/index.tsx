@@ -165,6 +165,46 @@ function FlightsPage() {
         </div>
       </div>
 
+      {(syncing || syncResult) && (
+        <Card className="border-primary/40">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <RefreshCw className={`size-4 ${syncing ? "animate-spin text-primary" : "text-muted-foreground"}`} />
+                {syncing ? "Syncing OGN…" : `Sync complete — ${syncResult?.icao} · ${syncResult?.date}`}
+              </CardTitle>
+              {syncResult && !syncing && (
+                <Button size="sm" variant="ghost" onClick={() => setSyncResult(null)}>Dismiss</Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {syncing && <div className="text-sm text-muted-foreground">Fetching flights from OGN flightbook and reconciling with your fleet…</div>}
+            {syncResult && (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="default">Total {syncResult.total}</Badge>
+                  <Badge variant="secondary">Inserted {syncResult.created}</Badge>
+                  <Badge variant="secondary">Updated {syncResult.updated}</Badge>
+                  <Badge variant="outline">Skipped {syncResult.skipped}</Badge>
+                  {syncResult.errors.length > 0 && <Badge variant="destructive">Errors {syncResult.errors.length}</Badge>}
+                  <Badge variant="outline" className="ml-auto text-xs">at {format(new Date(syncResult.synced_at), "HH:mm:ss")}</Badge>
+                </div>
+                {syncResult.errors.length > 0 && (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1 text-xs">
+                    {syncResult.errors.map((e, i) => (
+                      <div key={i} className="font-mono">
+                        <span className="text-destructive font-semibold">{e.registration || e.flarm || "?"}</span>: {e.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader><CardTitle>{flights.length} flights on {date}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
