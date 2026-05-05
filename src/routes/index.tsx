@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { requireAuth } from "@/lib/auth-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -472,8 +473,8 @@ function FlightDialog({
             </div>
           )}
           <div className="md:col-span-2">
-            <Label>Notes</Label>
-            <Input value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <Label>Comments</Label>
+            <Textarea rows={3} placeholder="Add any comments about this flight…" value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
         </div>
         <DialogFooter>
