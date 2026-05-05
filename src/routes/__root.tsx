@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Plane, Users, ListChecks, LogOut, History, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import esgcLogo from "@/assets/esgc-logo.jpeg";
+import esgcLogo from "@/assets/esgc-logo.png";
 
 import appCss from "../styles.css?url";
 
@@ -36,7 +36,10 @@ export const Route = createRootRoute({
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -75,7 +78,7 @@ function RootComponent() {
       <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg">
-            <img src={esgcLogo} alt="ESGC" className="size-9 rounded-lg object-cover" />
+            <img src={esgcLogo} alt="ESGC" className="size-9 object-contain" />
             <span className="hidden sm:inline">ESGC Logs</span>
           </Link>
           <nav className="flex items-center gap-1">
