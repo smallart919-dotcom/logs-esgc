@@ -109,13 +109,10 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, launch_type: null, tow_height_ft: null, synced_at });
             continue;
           }
-          // Only log known club gliders (in the fleet table). Anything else (visitors, tugs,
-          // non-glider aircraft) is skipped so the daily log stays clean.
-          if (!fleetMatch) {
-            skipped++;
-            matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, launch_type: null, tow_height_ft: null, synced_at });
-            continue;
-          }
+          // Log every glider row from the logbook, even if it isn't in the
+          // fleet table yet. Excluded tugs / motor gliders are already filtered
+          // above and inside parseHtmlLogbook.
+
 
           // Tow plane present → assume aerotow
           const hasTow = (f.tow !== null && f.tow !== undefined) || (f.start_tow !== null && f.start_tow !== undefined);
