@@ -42,6 +42,7 @@ type Flight = {
   launch_type: "aerotow" | "winch" | null;
   aerotow_height_ft: number | null;
   manual: boolean; notes: string | null;
+  logged_by: string | null;
   ogn_source: OgnSource;
 };
 type Glider = { id: string; registration: string; callsign: string | null; flarm_id: string | null; glider_type: string | null };
@@ -260,7 +261,7 @@ function FlightsPage() {
           fmtTime(f.landing_time),
           dur(f.takeoff_time, f.landing_time),
           f.notes || "",
-          "",
+          f.logged_by || "",
         ];
         vals.forEach((v, c) => {
           const cell = row.getCell(c + 1);
@@ -395,7 +396,7 @@ function FlightsPage() {
             <TableHeader><TableRow>
               <TableHead>Glider</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
               <TableHead>Dur</TableHead><TableHead>P1</TableHead><TableHead>P2</TableHead>
-              <TableHead>Launch</TableHead><TableHead>Source</TableHead><TableHead></TableHead>
+              <TableHead>Launch</TableHead><TableHead>LB</TableHead><TableHead>Source</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).map((f) => {
@@ -423,6 +424,7 @@ function FlightsPage() {
                         </Badge>
                       ) : <span className="text-muted-foreground text-sm">—</span>}
                     </TableCell>
+                    <TableCell className="font-mono text-xs">{f.logged_by || <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell><OgnSourceCell flight={f} /></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <Button size="icon" variant="ghost" onClick={() => setEditing(f)}><Pencil className="size-4" /></Button>
@@ -431,7 +433,7 @@ function FlightsPage() {
                   </TableRow>
                 );
               })}
-              {flights.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">
+              {flights.length === 0 && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">
                 No flights yet. Click <strong>Sync OGN</strong> or <strong>Add manual</strong>.
               </TableCell></TableRow>}
             </TableBody>
@@ -674,6 +676,7 @@ function FlightDialog({
       aerotow_height_ft: form.launch_type === "aerotow" ? (form.aerotow_height_ft ?? null) : null,
       manual: !!form.manual,
       notes: form.notes || null,
+      logged_by: form.logged_by || null,
     };
     let error;
     if (flight?.id) ({ error } = await supabase.from("flights").update(payload).eq("id", flight.id));
@@ -771,6 +774,10 @@ function FlightDialog({
           <div className="md:col-span-2">
             <Label>Comments</Label>
             <Textarea rows={3} placeholder="Add any comments about this flight…" value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          </div>
+          <div>
+            <Label>Logged By (initials)</Label>
+            <Input maxLength={5} placeholder="e.g. RC" value={form.logged_by ?? ""} onChange={(e) => setForm({ ...form, logged_by: e.target.value.toUpperCase() })} />
           </div>
         </div>
         <DialogFooter>
