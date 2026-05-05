@@ -233,6 +233,8 @@ function FlightsPage() {
         </Card>
       )}
 
+      <DailyLogCard date={date} />
+
       <Card>
         <CardHeader><CardTitle>{flights.length} flights on {date}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
