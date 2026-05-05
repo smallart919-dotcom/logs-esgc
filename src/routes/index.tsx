@@ -336,7 +336,8 @@ function FlightsPage() {
         </CardContent>
       </Card>
 
-      <FlightDialog
+      <MotorGliderCosts flights={flights} />
+
         open={!!editing || adding}
         onOpenChange={(o) => { if (!o) { setEditing(null); setAdding(false); } }}
         flight={editing}
