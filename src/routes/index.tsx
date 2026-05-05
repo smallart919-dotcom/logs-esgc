@@ -353,7 +353,7 @@ function FlightsPage() {
   );
 }
 
-function MotorGliderCosts({ flights }: { flights: Flight[] }) {
+function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; onEdit: (f: Flight) => void; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const mg = flights.filter((f) => (f.glider_registration || "").toUpperCase().trim() === "G-KIAU");
   const rows = mg.map((f) => {
