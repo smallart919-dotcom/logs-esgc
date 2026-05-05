@@ -61,6 +61,7 @@ function FlightsPage() {
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<null | { icao: string; date: string; created: number; updated: number; skipped: number; total: number; synced_at: string; errors: Array<{ flarm: string | null; registration: string | null; message: string }>; matches: Array<any> }>(null);
   const [editing, setEditing] = useState<Flight | null>(null);
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -97,13 +98,15 @@ function FlightsPage() {
       setIcao(code);
     }
     setSyncing(true);
+    setSyncResult(null);
     try {
       const res = await fetch("/api/public/hooks/ogn-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icao: code, date }) });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
-      toast.success(`OGN ${code}: ${j.created} new, ${j.updated} updated, ${j.skipped} skipped`);
+      setSyncResult(j);
+      toast.success(`OGN ${code}: ${j.created} new, ${j.updated} updated, ${j.skipped} skipped${j.errors?.length ? `, ${j.errors.length} errors` : ""}`);
       load();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e.message); setSyncResult({ icao: code, date, created: 0, updated: 0, skipped: 0, total: 0, synced_at: new Date().toISOString(), errors: [{ flarm: null, registration: null, message: e.message }], matches: [] }); }
     finally { setSyncing(false); }
   };
 
@@ -161,6 +164,46 @@ function FlightsPage() {
           <Button onClick={() => setBulkOpen(true)}><Plus className="size-4 mr-1" />Bulk add</Button>
         </div>
       </div>
+
+      {(syncing || syncResult) && (
+        <Card className="border-primary/40">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <RefreshCw className={`size-4 ${syncing ? "animate-spin text-primary" : "text-muted-foreground"}`} />
+                {syncing ? "Syncing OGN…" : `Sync complete — ${syncResult?.icao} · ${syncResult?.date}`}
+              </CardTitle>
+              {syncResult && !syncing && (
+                <Button size="sm" variant="ghost" onClick={() => setSyncResult(null)}>Dismiss</Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {syncing && <div className="text-sm text-muted-foreground">Fetching flights from OGN flightbook and reconciling with your fleet…</div>}
+            {syncResult && (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="default">Total {syncResult.total}</Badge>
+                  <Badge variant="secondary">Inserted {syncResult.created}</Badge>
+                  <Badge variant="secondary">Updated {syncResult.updated}</Badge>
+                  <Badge variant="outline">Skipped {syncResult.skipped}</Badge>
+                  {syncResult.errors.length > 0 && <Badge variant="destructive">Errors {syncResult.errors.length}</Badge>}
+                  <Badge variant="outline" className="ml-auto text-xs">at {format(new Date(syncResult.synced_at), "HH:mm:ss")}</Badge>
+                </div>
+                {syncResult.errors.length > 0 && (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1 text-xs">
+                    {syncResult.errors.map((e, i) => (
+                      <div key={i} className="font-mono">
+                        <span className="text-destructive font-semibold">{e.registration || e.flarm || "?"}</span>: {e.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader><CardTitle>{flights.length} flights on {date}</CardTitle></CardHeader>
