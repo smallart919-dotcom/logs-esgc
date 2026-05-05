@@ -294,13 +294,17 @@ function FlightsPage() {
       };
     };
 
-    const aerotow = flights.filter((f) => f.launch_type === "aerotow");
-    const winch = flights.filter((f) => f.launch_type === "winch");
-    const other = flights.filter((f) => f.launch_type !== "aerotow" && f.launch_type !== "winch");
+    const reg = (f: Flight) => (f.glider_registration || "").toUpperCase().trim();
+    const isExcluded = (f: Flight) => reg(f) === "G-ESGC" || reg(f) === "G-KIAU";
+    const aerotow = flights.filter((f) => f.launch_type === "aerotow" && !isExcluded(f));
+    const winch = flights.filter((f) => f.launch_type === "winch" && !isExcluded(f));
+    const other = flights.filter((f) => f.launch_type !== "aerotow" && f.launch_type !== "winch" && !isExcluded(f));
+    const kiau = flights.filter((f) => reg(f) === "G-KIAU");
 
     buildSheet("Aerotow", aerotow, "aerotow");
     buildSheet("Winch", winch, "winch");
     if (other.length) buildSheet("Other", other, null);
+    if (kiau.length) buildSheet("G-KIAU", kiau, null);
 
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
