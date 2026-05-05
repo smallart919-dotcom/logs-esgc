@@ -336,7 +336,7 @@ function FlightsPage() {
         </CardContent>
       </Card>
 
-      <MotorGliderCosts flights={flights} />
+      <MotorGliderCosts flights={flights} onEdit={setEditing} onDelete={remove} />
 
       <FlightDialog
         open={!!editing || adding}
@@ -353,7 +353,7 @@ function FlightsPage() {
   );
 }
 
-function MotorGliderCosts({ flights }: { flights: Flight[] }) {
+function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; onEdit: (f: Flight) => void; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const mg = flights.filter((f) => (f.glider_registration || "").toUpperCase().trim() === "G-KIAU");
   const rows = mg.map((f) => {
@@ -388,6 +388,7 @@ function MotorGliderCosts({ flights }: { flights: Flight[] }) {
                   <TableHead>P2</TableHead><TableHead>P2 Ch</TableHead>
                   <TableHead className="text-right">Normal</TableHead>
                   <TableHead className="text-right">U21</TableHead>
+                  <TableHead></TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {rows.map(({ f, std, u21, mins }) => (
@@ -402,6 +403,10 @@ function MotorGliderCosts({ flights }: { flights: Flight[] }) {
                       <TableCell>{f.p2_charge ? <Badge variant="default">✓</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell className="text-right font-medium">{fmtGBP(std.total)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{fmtGBP(u21.total)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Button size="icon" variant="ghost" onClick={() => onEdit(f)}><Pencil className="size-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => onDelete(f.id)}><Trash2 className="size-4" /></Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
