@@ -443,32 +443,38 @@ function PilotPicker({ label, members, value, onPick, onText }: {
   label: string; members: Member[]; value: string;
   onPick: (m: Member) => void; onText: (t: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const filtered = useMemo(() => members.filter((m) => m.full_name.toLowerCase().includes(value.toLowerCase())).slice(0, 8), [members, value]);
+  const [focused, setFocused] = useState(false);
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return [];
+    return members.filter((m) => m.full_name.toLowerCase().includes(q)).slice(0, 6);
+  }, [members, value]);
+  const showList = focused && filtered.length > 0;
   return (
-    <div>
+    <div className="relative">
       <Label>{label}</Label>
-      <Popover open={open && filtered.length > 0} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Input value={value} onFocus={() => setOpen(true)} onChange={(e) => { onText(e.target.value); setOpen(true); }} placeholder="Type or select…" />
-        </PopoverTrigger>
-        <PopoverContent className="p-0 w-[280px]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <Command>
-            <CommandList>
-              <CommandGroup>
-                {filtered.map((m) => (
-                  <CommandItem key={m.id} value={m.full_name} onSelect={() => { onPick(m); setOpen(false); }}>
-                    <div>
-                      <div>{m.full_name}</div>
-                      <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <Input
+        value={value}
+        placeholder="Type a name…"
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onChange={(e) => onText(e.target.value)}
+      />
+      {showList && (
+        <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
+          {filtered.map((m) => (
+            <button
+              type="button"
+              key={m.id}
+              className="w-full text-left px-3 py-2 hover:bg-accent"
+              onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
+            >
+              <div className="text-sm">{m.full_name}</div>
+              <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
