@@ -399,9 +399,12 @@ function FlightsPage() {
             </TableRow></TableHeader>
             <TableBody>
               {flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).map((f) => {
-                const dur = f.takeoff_time && f.landing_time
-                  ? Math.round((+new Date(f.landing_time) - +new Date(f.takeoff_time)) / 60000) + "m"
-                  : f.takeoff_time ? "in air" : "—";
+                const dur = (() => {
+                  if (!f.takeoff_time) return "—";
+                  if (!f.landing_time) return "in air";
+                  const m = Math.round((+new Date(f.landing_time) - +new Date(f.takeoff_time)) / 60000);
+                  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
+                })();
                 return (
                   <TableRow key={f.id}>
                     <TableCell className="font-medium">
