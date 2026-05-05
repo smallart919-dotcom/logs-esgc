@@ -198,7 +198,8 @@ function FlightsPage() {
         <div className="flex flex-wrap gap-2 items-end">
           <div>
             <Label className="text-xs">Date</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40" />
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40"
+              max={todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
           <Button onClick={() => syncOgn(false)} disabled={syncing} variant="secondary"
             title={icao ? `Airfield: ${icao}. Right-click to change.` : "Click to set airfield"}
