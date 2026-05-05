@@ -75,7 +75,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           const landing = parseTimeOnDate(date, f.stop);
           const fleetMatch = flarm ? fleetByFlarm.get(flarm) : undefined;
 
-          if (!flarm || !takeoff) {
+          if (!takeoff) {
             skipped++;
             matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, synced_at });
             continue;
@@ -89,10 +89,14 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             match: { flarm, registration: matchedReg, confidence },
           };
 
-          const { data: existing } = await supabaseAdmin
+          // Dedupe: prefer flarm+takeoff; fallback to registration+takeoff when flarm is unknown
+          let existingQuery = supabaseAdmin
             .from("flights").select("id, landing_time, ogn_source")
-            .eq("flarm_id", flarm).eq("takeoff_time", takeoff).eq("manual", false)
-            .maybeSingle();
+            .eq("takeoff_time", takeoff).eq("manual", false);
+          existingQuery = flarm
+            ? existingQuery.eq("flarm_id", flarm)
+            : existingQuery.eq("glider_registration", matchedReg ?? "");
+          const { data: existing } = await existingQuery.maybeSingle();
 
           if (existing) {
             const patch: { ogn_source: any; landing_time?: string } = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
