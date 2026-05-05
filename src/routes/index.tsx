@@ -146,45 +146,61 @@ function FlightsPage() {
     const pilotName = (kind: PilotKind | null, name: string | null) =>
       kind === "gfe" ? "GFE" : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
 
-    // Header rows mirroring the paper form
-    const aoa: any[][] = [
-      ["East Sussex Gliding Club — Flight Log", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-      [`Date: ${date}`, "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-      [],
-      ["No", "Reg", "Type", "P1 No", "P1 Name", "Ch", "P2 No", "P2 Name", "Ch", "Height", "Take off", "Landing", "Time", "Comments", "LB", "Launch"],
-    ];
-    flights.forEach((f, i) => {
-      aoa.push([
-        i + 1,
-        f.glider_registration || "",
-        "",
-        f.p1_kind === "member" ? (f.p1_membership || "") : "",
-        pilotName(f.p1_kind, f.p1_name),
-        f.p1_charge ? "✓" : "",
-        f.p2_kind === "member" ? (f.p2_membership || "") : "",
-        pilotName(f.p2_kind, f.p2_name),
-        f.p2_charge ? "✓" : "",
-        f.launch_type === "aerotow" ? (f.aerotow_height_ft ?? "") : "",
-        fmtTime(f.takeoff_time),
-        fmtTime(f.landing_time),
-        dur(f.takeoff_time, f.landing_time),
-        f.notes || "",
-        "",
-        f.launch_type || "",
-      ]);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = [
-      { wch: 4 }, { wch: 8 }, { wch: 8 }, { wch: 7 }, { wch: 22 }, { wch: 4 },
-      { wch: 7 }, { wch: 22 }, { wch: 4 }, { wch: 7 }, { wch: 8 }, { wch: 8 },
-      { wch: 7 }, { wch: 24 }, { wch: 5 }, { wch: 8 },
-    ];
-    ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 15 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 15 } },
-    ];
+    const buildSheet = (rows: Flight[]) => {
+      const aoa: any[][] = [
+        ["East Sussex Gliding Club — Flight Log", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        [`Date: ${date}`, "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        [],
+        ["No", "Reg", "Type", "P1 No", "P1 Name", "Ch", "P2 No", "P2 Name", "Ch", "Height", "Take off", "Landing", "Time", "Comments", "LB", "Launch"],
+      ];
+      rows.forEach((f, i) => {
+        aoa.push([
+          i + 1,
+          f.glider_registration || "",
+          "",
+          f.p1_kind === "member" ? (f.p1_membership || "") : "",
+          pilotName(f.p1_kind, f.p1_name),
+          f.p1_charge ? "✓" : "",
+          f.p2_kind === "member" ? (f.p2_membership || "") : "",
+          pilotName(f.p2_kind, f.p2_name),
+          f.p2_charge ? "✓" : "",
+          f.launch_type === "aerotow" ? (f.aerotow_height_ft ?? "") : "",
+          fmtTime(f.takeoff_time),
+          fmtTime(f.landing_time),
+          dur(f.takeoff_time, f.landing_time),
+          f.notes || "",
+          "",
+          f.launch_type || "",
+        ]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = [
+        { wch: 4 }, { wch: 8 }, { wch: 8 }, { wch: 7 }, { wch: 22 }, { wch: 4 },
+        { wch: 7 }, { wch: 22 }, { wch: 4 }, { wch: 7 }, { wch: 8 }, { wch: 8 },
+        { wch: 7 }, { wch: 24 }, { wch: 5 }, { wch: 8 },
+      ];
+      ws["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 15 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 15 } },
+      ];
+      return ws;
+    };
+
+    const regOf = (f: Flight) => (f.glider_registration || "").toUpperCase().trim();
+    const tugs = flights.filter((f) => regOf(f) === "G-ESGC");
+    const motorGliders = flights.filter((f) => regOf(f) === "G-KIAU");
+    const gliderFlights = flights.filter((f) => regOf(f) !== "G-ESGC" && regOf(f) !== "G-KIAU");
+    const aerotow = gliderFlights.filter((f) => f.launch_type === "aerotow");
+    const winch = gliderFlights.filter((f) => f.launch_type === "winch");
+    const otherGliders = gliderFlights.filter((f) => f.launch_type !== "aerotow" && f.launch_type !== "winch");
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Flight Log");
+    if (aerotow.length) XLSX.utils.book_append_sheet(wb, buildSheet(aerotow), "Aerotow");
+    if (winch.length) XLSX.utils.book_append_sheet(wb, buildSheet(winch), "Winch");
+    if (otherGliders.length) XLSX.utils.book_append_sheet(wb, buildSheet(otherGliders), "Other");
+    if (tugs.length) XLSX.utils.book_append_sheet(wb, buildSheet(tugs), "Tugs");
+    if (motorGliders.length) XLSX.utils.book_append_sheet(wb, buildSheet(motorGliders), "Motor Gliders");
+    if (!wb.SheetNames.length) XLSX.utils.book_append_sheet(wb, buildSheet([]), "Flight Log");
     XLSX.writeFile(wb, `flight-log-${date}.xlsx`);
   };
 
