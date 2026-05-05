@@ -251,6 +251,15 @@ function OgnSourceCell({ flight }: { flight: Flight }) {
   );
 }
 
+function PilotCell({ name, membership, kind }: { name: string | null; membership: string | null; kind: PilotKind | null }) {
+  if (kind === "gfe") return <Badge variant="secondary">GFE</Badge>;
+  if (kind === "visitor") return (
+    <div><div>{name || <span className="text-muted-foreground">Visitor</span>}</div><Badge variant="outline" className="text-[10px]">Visitor</Badge></div>
+  );
+  if (!name) return <span className="text-muted-foreground text-sm">—</span>;
+  return <div><div>{name}</div><div className="text-xs text-muted-foreground">{membership}</div></div>;
+}
+
 function FlightDialog({
   open, onOpenChange, flight, manual, date, gliders, members, onSaved,
 }: {
