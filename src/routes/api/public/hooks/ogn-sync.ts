@@ -101,17 +101,8 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             (flarm ? fleetByFlarm.get(flarm) : undefined) ??
             (dev?.registration ? fleetByReg.get(normReg(dev.registration)) : undefined);
 
-          // Excluded registrations (tow planes / motor gliders) — never log
-          const EXCLUDED_REGS = new Set(["G-ESGC", "G-KIAU"]);
-          const regUpper = (dev?.registration || "").toUpperCase().trim();
-          if (EXCLUDED_REGS.has(regUpper)) {
-            skipped++;
-            matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, launch_type: null, tow_height_ft: null, synced_at });
-            continue;
-          }
-          // Log every glider row from the logbook, even if it isn't in the
-          // fleet table yet. Excluded tugs / motor gliders are already filtered
-          // above and inside parseHtmlLogbook.
+          // Log every row including tugs (G-ESGC) and motor gliders (G-KIAU)
+          // so they can be exported as separate sheets.
 
 
           // Tow plane present → assume aerotow
