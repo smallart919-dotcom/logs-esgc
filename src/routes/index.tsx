@@ -378,7 +378,7 @@ function FlightsPage() {
         </Card>
       )}
 
-      <DailyLogCard date={date} />
+      <DailyLogCard date={date} members={members} />
 
       <Card>
         <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {date}</CardTitle></CardHeader>
