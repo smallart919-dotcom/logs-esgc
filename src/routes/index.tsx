@@ -910,7 +910,12 @@ function MemberNamePicker({ members, value, onChange, disabled }: {
   const filtered = useMemo(() => {
     const q = value.trim().toLowerCase();
     if (!q) return [];
-    return members.filter((m) => m.full_name.toLowerCase().includes(q)).slice(0, 6);
+    return members.filter((m) => {
+      const name = m.full_name.toLowerCase();
+      if (name.includes(q)) return true;
+      const initials = m.full_name.split(/\s+/).filter(Boolean).map((p) => p[0]?.toLowerCase() ?? "").join("");
+      return initials.startsWith(q.replace(/\s+/g, ""));
+    }).slice(0, 6);
   }, [members, value]);
   const showList = focused && filtered.length > 0;
   return (
