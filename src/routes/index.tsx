@@ -858,12 +858,18 @@ function PilotPicker({ label, members, value, onPick, onText }: {
   onPick: (m: Member) => void; onText: (t: string) => void;
 }) {
   const [focused, setFocused] = useState(false);
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const filtered = useMemo(() => {
     const q = value.trim().toLowerCase();
     if (!q) return [];
     return members.filter((m) => m.full_name.toLowerCase().includes(q)).slice(0, 6);
   }, [members, value]);
   const showList = focused && filtered.length > 0;
+  const handleText = (t: string) => {
+    onText(t);
+    const exact = members.find((m) => norm(m.full_name) === norm(t));
+    if (exact) onPick(exact);
+  };
   return (
     <div className="relative">
       <Label>{label}</Label>
@@ -872,7 +878,7 @@ function PilotPicker({ label, members, value, onPick, onText }: {
         placeholder="Type a name…"
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 150)}
-        onChange={(e) => onText(e.target.value)}
+        onChange={(e) => handleText(e.target.value)}
       />
       {showList && (
         <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
@@ -882,6 +888,45 @@ function PilotPicker({ label, members, value, onPick, onText }: {
               key={m.id}
               className="w-full text-left px-3 py-2 hover:bg-accent"
               onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
+            >
+              <div className="text-sm">{m.full_name}</div>
+              <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MemberNamePicker({ members, value, onChange, disabled }: {
+  members: Member[]; value: string; onChange: (name: string) => void; disabled?: boolean;
+}) {
+  const [focused, setFocused] = useState(false);
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return [];
+    return members.filter((m) => m.full_name.toLowerCase().includes(q)).slice(0, 6);
+  }, [members, value]);
+  const showList = focused && filtered.length > 0;
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        placeholder="Type a name…"
+        disabled={disabled}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {showList && (
+        <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
+          {filtered.map((m) => (
+            <button
+              type="button"
+              key={m.id}
+              className="w-full text-left px-3 py-2 hover:bg-accent"
+              onMouseDown={(e) => { e.preventDefault(); onChange(m.full_name); setFocused(false); }}
             >
               <div className="text-sm">{m.full_name}</div>
               <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
