@@ -193,6 +193,17 @@ function BillingPage() {
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Smith or 1234" />
           </div>
           <Badge variant="default" className="text-base px-3 py-1.5">Grand total {fmtGBP(grandTotal)}</Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={rows.length === 0}>
+                <Download className="size-4 mr-1" /> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportGeneric}>Generic CSV (Excel)</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportAeroLog}>AeroLog Cloud CSV</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardContent>
       </Card>
 
