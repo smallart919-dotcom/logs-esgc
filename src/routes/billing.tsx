@@ -69,11 +69,20 @@ function BillingPage() {
     return map;
   }, [members]);
 
-  // Build per-pilot bills
+  // Build per-pilot bills — show both standard and U21 prices
+  type FlightEntry = {
+    flight: Flight;
+    role: "P1" | "P2";
+    standard: ReturnType<typeof computeFlightCharge>;
+    u21: ReturnType<typeof computeFlightCharge>;
+    applied: ReturnType<typeof computeFlightCharge>;
+  };
   type Row = {
     member: Member;
-    flights: Array<{ flight: Flight; charge: ReturnType<typeof computeFlightCharge>; role: "P1" | "P2" }>;
-    total: number;
+    flights: FlightEntry[];
+    totalStandard: number;
+    totalU21: number;
+    totalApplied: number;
   };
 
   const rows = useMemo<Row[]>(() => {
@@ -88,15 +97,19 @@ function BillingPage() {
         memberByKey.get(`m:${memNo.trim().toUpperCase()}`) ??
         memberByKey.get(`n:${name.trim().toUpperCase()}`);
       if (!member) return;
-      const c = computeFlightCharge(flight, !!member.under_21);
-      if (c.total <= 0) return;
+      const standard = computeFlightCharge(flight, false);
+      const u21 = computeFlightCharge(flight, true);
+      const applied = member.under_21 ? u21 : standard;
+      if (applied.total <= 0) return;
       let row = map.get(member.id);
-      if (!row) { row = { member, flights: [], total: 0 }; map.set(member.id, row); }
-      row.flights.push({ flight, charge: c, role });
-      row.total = +(row.total + c.total).toFixed(2);
+      if (!row) { row = { member, flights: [], totalStandard: 0, totalU21: 0, totalApplied: 0 }; map.set(member.id, row); }
+      row.flights.push({ flight, role, standard, u21, applied });
+      row.totalStandard = +(row.totalStandard + standard.total).toFixed(2);
+      row.totalU21 = +(row.totalU21 + u21.total).toFixed(2);
+      row.totalApplied = +(row.totalApplied + applied.total).toFixed(2);
     };
     for (const f of flights) { addCharge(f, "P1"); addCharge(f, "P2"); }
-    let arr = [...map.values()].sort((a, b) => b.total - a.total);
+    let arr = [...map.values()].sort((a, b) => b.totalApplied - a.totalApplied);
     const q = search.trim().toLowerCase();
     if (q) arr = arr.filter((r) =>
       r.member.full_name.toLowerCase().includes(q) ||
@@ -104,7 +117,8 @@ function BillingPage() {
     return arr;
   }, [flights, memberByKey, search]);
 
-  const grandTotal = rows.reduce((s, r) => s + r.total, 0);
+  const grandTotal = rows.reduce((s, r) => s + r.totalApplied, 0);
+
 
   if (allowed === null) return <div className="text-muted-foreground">Loading…</div>;
   if (!allowed) return (
