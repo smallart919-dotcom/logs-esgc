@@ -256,7 +256,8 @@ function FlightDialog({
       flight_date: date, manual: true, launch_type: "aerotow",
       glider_id: null, glider_registration: "", flarm_id: "",
       takeoff_time: null, landing_time: null,
-      p1_name: "", p1_membership: "", p2_name: "", p2_membership: "",
+      p1_name: "", p1_membership: "", p1_kind: "member",
+      p2_name: "", p2_membership: "", p2_kind: "member",
       aerotow_height_ft: 2000, notes: "",
     });
   }, [flight, manual, date, open]);
@@ -266,6 +267,8 @@ function FlightDialog({
   };
 
   const save = async () => {
+    const p1Kind = (form.p1_kind ?? "member") as PilotKind;
+    const p2Kind = (form.p2_kind ?? "member") as PilotKind;
     const payload: any = {
       flight_date: form.flight_date || date,
       glider_id: form.glider_id || null,
@@ -273,8 +276,12 @@ function FlightDialog({
       flarm_id: form.flarm_id || null,
       takeoff_time: form.takeoff_time || null,
       landing_time: form.landing_time || null,
-      p1_name: form.p1_name || null, p1_membership: form.p1_membership || null,
-      p2_name: form.p2_name || null, p2_membership: form.p2_membership || null,
+      p1_kind: p1Kind,
+      p1_name: p1Kind === "gfe" ? null : (form.p1_name || null),
+      p1_membership: p1Kind === "member" ? (form.p1_membership || null) : null,
+      p2_kind: p2Kind,
+      p2_name: p2Kind === "gfe" ? null : (form.p2_name || null),
+      p2_membership: p2Kind === "member" ? (form.p2_membership || null) : null,
       launch_type: form.launch_type || null,
       aerotow_height_ft: form.launch_type === "aerotow" ? (form.aerotow_height_ft ?? null) : null,
       manual: !!form.manual,
@@ -283,50 +290,45 @@ function FlightDialog({
     let error;
     if (flight?.id) ({ error } = await supabase.from("flights").update(payload).eq("id", flight.id));
     else ({ error } = await supabase.from("flights").insert(payload));
-    if (error) toast.error(error.message); else { toast.success("Saved"); onSaved(); }
+    if (error) return toast.error(error.message);
+    // Auto-add new members
+    await Promise.all([
+      maybeAddMember(members, p1Kind, payload.p1_name, payload.p1_membership),
+      maybeAddMember(members, p2Kind, payload.p2_name, payload.p2_membership),
+    ]);
+    toast.success("Saved");
+    onSaved();
   };
 
   // local time -> ISO helper
   const toLocalInput = (iso: string | null | undefined) => iso ? format(new Date(iso), "yyyy-MM-dd'T'HH:mm") : "";
   const fromLocal = (s: string) => s ? new Date(s).toISOString() : null;
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{flight ? "Edit flight" : "Add manual flight"}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <Label>Glider</Label>
-            <GliderPicker
-              gliders={gliders}
-              registration={form.glider_registration ?? ""}
-              onSelect={(g) => setForm({ ...form, glider_id: g?.id ?? null, glider_registration: g?.registration ?? form.glider_registration, flarm_id: g?.flarm_id ?? form.flarm_id })}
-              onChangeText={(t) => setForm({ ...form, glider_registration: t, glider_id: null })}
-            />
+  const renderPilot = (which: 1 | 2, label: string) => {
+    const kind = ((which === 1 ? form.p1_kind : form.p2_kind) ?? "member") as PilotKind;
+    const name = (which === 1 ? form.p1_name : form.p2_name) ?? "";
+    const mem = (which === 1 ? form.p1_membership : form.p2_membership) ?? "";
+    const setKind = (k: PilotKind) => setForm((f) => ({ ...f, [`p${which}_kind`]: k }));
+    return (
+      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
+        <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
+          <div className="font-semibold text-sm">{label}</div>
+          <div className="flex gap-3 text-sm">
+            <label className="flex items-center gap-1"><input type="checkbox" checked={kind === "visitor"} onChange={(e) => setKind(e.target.checked ? "visitor" : "member")} /> Visitor</label>
+            <label className="flex items-center gap-1"><input type="checkbox" checked={kind === "gfe"} onChange={(e) => setKind(e.target.checked ? "gfe" : "member")} /> GFE</label>
           </div>
-          <div>
-            <Label>Takeoff time</Label>
-            <Input type="datetime-local" value={toLocalInput(form.takeoff_time)} onChange={(e) => setForm({ ...form, takeoff_time: fromLocal(e.target.value) })} />
-          </div>
-          <div>
-            <Label>Landing time</Label>
-            <Input type="datetime-local" value={toLocalInput(form.landing_time)} onChange={(e) => setForm({ ...form, landing_time: fromLocal(e.target.value) })} />
-          </div>
-
-          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
-            <div className="md:col-span-2 font-semibold text-sm">P1 (Pilot in command)</div>
-            <PilotPicker label="Name" members={members} value={form.p1_name ?? ""}
-              onPick={(m) => setPilot(1, m.full_name, m.membership_number)}
-              onText={(t) => setForm({ ...form, p1_name: t })} />
-            <div><Label>Membership #</Label><Input value={form.p1_membership ?? ""} onChange={(e) => setForm({ ...form, p1_membership: e.target.value })} /></div>
-          </div>
-          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
-            <div className="md:col-span-2 font-semibold text-sm">P2 (Second pilot)</div>
-            <PilotPicker label="Name" members={members} value={form.p2_name ?? ""}
-              onPick={(m) => setPilot(2, m.full_name, m.membership_number)}
-              onText={(t) => setForm({ ...form, p2_name: t })} />
-            <div><Label>Membership #</Label><Input value={form.p2_membership ?? ""} onChange={(e) => setForm({ ...form, p2_membership: e.target.value })} /></div>
-          </div>
+        </div>
+        {kind !== "gfe" && (
+          <PilotPicker label="Name" members={members} value={name}
+            onPick={(m) => setPilot(which, m.full_name, m.membership_number)}
+            onText={(t) => setForm({ ...form, [`p${which}_name`]: t })} />
+        )}
+        {kind === "member" && (
+          <div><Label>Membership #</Label><Input value={mem} onChange={(e) => setForm({ ...form, [`p${which}_membership`]: e.target.value })} /></div>
+        )}
+      </div>
+    );
+  };
 
           <div>
             <Label>Launch type</Label>
