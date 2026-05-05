@@ -336,7 +336,7 @@ function FlightsPage() {
         </CardContent>
       </Card>
 
-      <MotorGliderCosts flights={flights} />
+      <MotorGliderCosts flights={flights} onEdit={setEditing} onDelete={remove} />
 
       <FlightDialog
         open={!!editing || adding}
