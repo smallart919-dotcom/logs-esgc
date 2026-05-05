@@ -44,15 +44,33 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           (fleet ?? []).filter((g) => g.flarm_id).map((g) => [g.flarm_id!.toUpperCase(), g])
         );
 
-        // Fetch OGN flightbook
+        // Fetch OGN flightbook (today). For historical dates the JSON API returns
+        // empty arrays — fall back to scraping the public HTML logbook.
         const url = `https://flightbook.glidernet.org/api/logbook/${encodeURIComponent(icao)}/`;
         let payload: OgnPayload;
+        let source: "json" | "html" = "json";
         try {
           const r = await fetch(url, { headers: { Accept: "application/json" } });
           if (!r.ok) throw new Error(`OGN ${r.status}`);
           payload = (await r.json()) as OgnPayload;
         } catch (e: any) {
           return Response.json({ error: `OGN fetch failed: ${e.message}` }, { status: 502 });
+        }
+
+        const isToday = date === todayUTC();
+        if ((!payload.flights || payload.flights.length === 0) && !isToday) {
+          try {
+            const [y, m, d] = date.split("-");
+            const ddmmyyyy = `${d}${m}${y}`;
+            const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(icao)}&s=QFE&u=M&z=1&p=&t=0&td=15&d=${ddmmyyyy}`;
+            const hr = await fetch(htmlUrl);
+            if (!hr.ok) throw new Error(`HTML ${hr.status}`);
+            const html = await hr.text();
+            payload = parseHtmlLogbook(html);
+            source = "html";
+          } catch (e: any) {
+            return Response.json({ error: `OGN historical fetch failed: ${e.message}` }, { status: 502 });
+          }
         }
 
         const synced_at = new Date().toISOString();
@@ -155,8 +173,68 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
         }
 
-        return Response.json({ ok: true, icao, date, created, updated, skipped, total: payload.flights?.length ?? 0, synced_at, matches, errors });
+        return Response.json({ ok: true, icao, date, source, created, updated, skipped, total: payload.flights?.length ?? 0, synced_at, matches, errors });
       },
     },
   },
 });
+
+// Parse the public HTML logbook (logbook.glidernet.org) into the same shape as the JSON API.
+// Columns: # | TowPlane reg | TowPlane type | Glider reg | CN | Glider type | Take Off | Landing | Time | Plane Landing | Plane Time | TowMaxAlt | Remarks
+function parseHtmlLogbook(html: string): OgnPayload {
+  const devices: OgnDevice[] = [];
+  const flights: OgnFlight[] = [];
+  const deviceIdx = new Map<string, number>(); // registration -> index
+
+  const ensureDevice = (registration: string, cn?: string): number => {
+    const key = registration.toUpperCase();
+    if (deviceIdx.has(key)) return deviceIdx.get(key)!;
+    const i = devices.length;
+    devices.push({ address: "", registration, cn });
+    deviceIdx.set(key, i);
+    return i;
+  };
+
+  const toHms = (s: string): string | undefined => {
+    const m = s.match(/(\d{1,2})h(\d{2})/);
+    if (!m) return undefined;
+    return `${m[1].padStart(2, "0")}:${m[2]}:00`;
+  };
+  const stripTags = (s: string) => s.replace(/<[^>]*>/g, "").trim();
+
+  // Match flight rows; skip the totals/header rows by requiring 13 cells.
+  const rowRe = /<TR>((?:\s*<TD[^>]*>[\s\S]*?<\/TD>\s*){13})<\/TR>/gi;
+  const cellRe = /<TD[^>]*>([\s\S]*?)<\/TD>/gi;
+
+  let m: RegExpExecArray | null;
+  while ((m = rowRe.exec(html))) {
+    const rowHtml = m[1];
+    const cells: string[] = [];
+    let cm: RegExpExecArray | null;
+    cellRe.lastIndex = 0;
+    while ((cm = cellRe.exec(rowHtml))) cells.push(stripTags(cm[1]));
+    if (cells.length !== 13) continue;
+    const idx = cells[0];
+    if (!/^\d+$/.test(idx)) continue;
+
+    const towReg = cells[1];
+    const gliderReg = cells[3];
+    const cn = cells[4];
+    const takeoff = toHms(cells[6]);
+    const landing = toHms(cells[7]);
+
+    if (!gliderReg && !towReg) continue;
+    const reg = gliderReg || towReg;
+    const deviceIndex = ensureDevice(reg, cn || undefined);
+
+    flights.push({
+      start: takeoff,
+      stop: landing,
+      device: deviceIndex,
+      start_tow: towReg ? 0 : null,
+      tow_height: null,
+    });
+  }
+
+  return { devices, flights };
+}
