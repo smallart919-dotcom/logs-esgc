@@ -226,11 +226,15 @@ function FlightsPage() {
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40"
               max={todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
-          <Button onClick={() => syncOgn(false)} disabled={syncing} variant="secondary"
-            title={icao ? `Airfield: ${icao}. Right-click to change.` : "Click to set airfield"}
-            onContextMenu={(e) => { e.preventDefault(); const v = prompt("Airfield ICAO", icao) || ""; if (v) { localStorage.setItem("ogn_icao", v.toUpperCase()); setIcao(v.toUpperCase()); } }}>
-            <RefreshCw className={`size-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Sync OGN{icao && <span className="ml-1 text-xs opacity-70">({icao})</span>}
-          </Button>
+          <div
+            className="text-xs text-muted-foreground px-2 py-1 rounded border bg-muted/40 cursor-pointer select-none"
+            title={icao ? `Auto-syncing ${icao} every ${SYNC_INTERVAL}s. Right-click to change airfield.` : "Click to set airfield"}
+            onClick={() => { if (!icao) { const v = (prompt("Airfield ICAO") || "").toUpperCase().trim(); if (v) { localStorage.setItem("ogn_icao", v); setIcao(v); } } }}
+            onContextMenu={(e) => { e.preventDefault(); const v = prompt("Airfield ICAO", icao) || ""; if (v) { localStorage.setItem("ogn_icao", v.toUpperCase()); setIcao(v.toUpperCase()); } }}
+          >
+            <RefreshCw className={`size-3 inline mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {icao ? `Next sync in ${nextSync}s` : "Set airfield"}
+          </div>
           <Button onClick={exportXlsx} variant="outline"><Download className="size-4 mr-1" />Export XLSX</Button>
           <Button onClick={() => setAdding(true)} variant="outline"><Plus className="size-4 mr-1" />Add manual</Button>
           <Button onClick={() => setBulkOpen(true)}><Plus className="size-4 mr-1" />Bulk add</Button>
