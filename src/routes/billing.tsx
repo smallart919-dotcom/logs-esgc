@@ -175,9 +175,14 @@ function BillingPage() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Date</TableHead><TableHead>Glider</TableHead><TableHead>Role</TableHead>
-                <TableHead>Launch</TableHead><TableHead>Soaring</TableHead><TableHead>TMG</TableHead>
                 <TableHead>Notes</TableHead>
-                <TableHead className="text-right">Normal</TableHead>
+                <TableHead className="text-right">Launch (N)</TableHead>
+                <TableHead className="text-right">Soaring (N)</TableHead>
+                <TableHead className="text-right">TMG (N)</TableHead>
+                <TableHead className="text-right border-l">Launch (U21)</TableHead>
+                <TableHead className="text-right">Soaring (U21)</TableHead>
+                <TableHead className="text-right">TMG (U21)</TableHead>
+                <TableHead className="text-right border-l">Normal</TableHead>
                 <TableHead className="text-right">U21</TableHead>
               </TableRow></TableHeader>
               <TableBody>
@@ -186,11 +191,14 @@ function BillingPage() {
                     <TableCell className="font-mono text-xs">{flight.flight_date}</TableCell>
                     <TableCell className="font-medium">{flight.glider_registration || "—"}</TableCell>
                     <TableCell>{role}</TableCell>
-                    <TableCell>{standard.launch ? fmtGBP(standard.launch) : "—"}</TableCell>
-                    <TableCell>{standard.soaring ? fmtGBP(standard.soaring) : "—"}</TableCell>
-                    <TableCell>{standard.motorGlider ? fmtGBP(standard.motorGlider) : "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{standard.notes.join(" · ")}</TableCell>
-                    <TableCell className={`text-right font-semibold ${!r.member.under_21 ? "text-primary" : ""}`}>{fmtGBP(standard.total)}</TableCell>
+                    <TableCell className="text-right">{standard.launch ? fmtGBP(standard.launch) : "—"}</TableCell>
+                    <TableCell className="text-right">{standard.soaring ? fmtGBP(standard.soaring) : "—"}</TableCell>
+                    <TableCell className="text-right">{standard.motorGlider ? fmtGBP(standard.motorGlider) : "—"}</TableCell>
+                    <TableCell className="text-right border-l">{u21.launch ? fmtGBP(u21.launch) : "—"}</TableCell>
+                    <TableCell className="text-right">{u21.soaring ? fmtGBP(u21.soaring) : "—"}</TableCell>
+                    <TableCell className="text-right">{u21.motorGlider ? fmtGBP(u21.motorGlider) : "—"}</TableCell>
+                    <TableCell className={`text-right font-semibold border-l ${!r.member.under_21 ? "text-primary" : ""}`}>{fmtGBP(standard.total)}</TableCell>
                     <TableCell className={`text-right font-semibold ${r.member.under_21 ? "text-primary" : ""}`}>{fmtGBP(u21.total)}</TableCell>
                   </TableRow>
                 ))}
