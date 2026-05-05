@@ -145,6 +145,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
 
           if (existing) {
             const patch: any = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
+            if (takeoff && !existing.takeoff_time) patch.takeoff_time = takeoff;
             if (landing && !existing.landing_time) patch.landing_time = landing;
             // Backfill flarm/registration if previously missing
             if (flarm && !existing.flarm_id) patch.flarm_id = flarm;
