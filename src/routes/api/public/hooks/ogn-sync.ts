@@ -57,8 +57,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           return Response.json({ error: `OGN fetch failed: ${e.message}` }, { status: 502 });
         }
 
-        const isToday = date === todayUTC();
-        if ((!payload.flights || payload.flights.length === 0) && !isToday) {
+        if (!payload.flights || payload.flights.length === 0) {
           try {
             const [y, m, d] = date.split("-");
             const ddmmyyyy = `${d}${m}${y}`;
