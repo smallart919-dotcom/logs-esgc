@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Briefcase, Caravan, ArrowLeft } from "lucide-react";
-import esgcLogo from "@/assets/esgc-logo.jpeg";
+import esgcLogo from "@/assets/esgc-logo.png";
 
 export const Route = createFileRoute("/auth")({ component: AuthPage });
 
@@ -58,7 +58,7 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
-          <img src={esgcLogo} alt="ESGC" className="size-14 rounded-xl object-cover mb-3" />
+          <img src={esgcLogo} alt="ESGC" className="size-20 object-contain mb-3" />
           <h1 className="text-2xl font-bold">ESGC Logs</h1>
           <p className="text-muted-foreground text-sm">Sign in to log today's flights</p>
         </div>
