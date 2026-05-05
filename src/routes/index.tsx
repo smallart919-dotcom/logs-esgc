@@ -33,8 +33,8 @@ type Flight = {
   id: string; flight_date: string;
   glider_id: string | null; glider_registration: string | null; flarm_id: string | null;
   takeoff_time: string | null; landing_time: string | null;
-  p1_name: string | null; p1_membership: string | null; p1_kind: PilotKind | null;
-  p2_name: string | null; p2_membership: string | null; p2_kind: PilotKind | null;
+  p1_name: string | null; p1_membership: string | null; p1_kind: PilotKind | null; p1_charge: boolean | null;
+  p2_name: string | null; p2_membership: string | null; p2_kind: PilotKind | null; p2_charge: boolean | null;
   launch_type: "aerotow" | "winch" | null;
   aerotow_height_ft: number | null;
   manual: boolean; notes: string | null;
@@ -117,29 +117,56 @@ function FlightsPage() {
   };
 
   const exportXlsx = () => {
-    const rows = flights.map((f, i) => ({
-      "#": i + 1,
-      Date: f.flight_date,
-      Glider: f.glider_registration || "",
-      "FLARM ID": f.flarm_id || "",
-      "Takeoff (UTC)": f.takeoff_time ? format(new Date(f.takeoff_time), "HH:mm:ss") : "",
-      "Landing (UTC)": f.landing_time ? format(new Date(f.landing_time), "HH:mm:ss") : "",
-      "Duration (min)": f.takeoff_time && f.landing_time
-        ? Math.round((+new Date(f.landing_time) - +new Date(f.takeoff_time)) / 60000)
-        : "",
-      "P1 Name": f.p1_kind === "gfe" ? "GFE" : f.p1_kind === "visitor" ? (f.p1_name ? `Visitor (${f.p1_name})` : "Visitor") : (f.p1_name || ""),
-      "P1 Membership #": f.p1_kind === "member" ? (f.p1_membership || "") : "",
-      "P2 Name": f.p2_kind === "gfe" ? "GFE" : f.p2_kind === "visitor" ? (f.p2_name ? `Visitor (${f.p2_name})` : "Visitor") : (f.p2_name || ""),
-      "P2 Membership #": f.p2_kind === "member" ? (f.p2_membership || "") : "",
-      Launch: f.launch_type || "",
-      "Tow Height (ft)": f.aerotow_height_ft ?? "",
-      Source: f.manual ? "Manual" : "OGN",
-      Notes: f.notes || "",
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
+    const fmtTime = (iso: string | null) => iso ? format(new Date(iso), "HH:mm") : "";
+    const dur = (a: string | null, b: string | null) => {
+      if (!a || !b) return "";
+      const m = Math.round((+new Date(b) - +new Date(a)) / 60000);
+      const h = Math.floor(m / 60), mm = m % 60;
+      return `${h}:${String(mm).padStart(2, "0")}`;
+    };
+    const pilotName = (kind: PilotKind | null, name: string | null) =>
+      kind === "gfe" ? "GFE" : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
+
+    // Header rows mirroring the paper form
+    const aoa: any[][] = [
+      ["East Sussex Gliding Club — Flight Log", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+      [`Date: ${date}`, "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+      [],
+      ["No", "Reg", "Type", "P1 No", "P1 Name", "Ch", "P2 No", "P2 Name", "Ch", "Height", "Take off", "Landing", "Time", "Comments", "LB", "Launch"],
+    ];
+    flights.forEach((f, i) => {
+      aoa.push([
+        i + 1,
+        f.glider_registration || "",
+        "",
+        f.p1_kind === "member" ? (f.p1_membership || "") : "",
+        pilotName(f.p1_kind, f.p1_name),
+        f.p1_charge ? "✓" : "",
+        f.p2_kind === "member" ? (f.p2_membership || "") : "",
+        pilotName(f.p2_kind, f.p2_name),
+        f.p2_charge ? "✓" : "",
+        f.launch_type === "aerotow" ? (f.aerotow_height_ft ?? "") : "",
+        fmtTime(f.takeoff_time),
+        fmtTime(f.landing_time),
+        dur(f.takeoff_time, f.landing_time),
+        f.notes || "",
+        "",
+        f.launch_type || "",
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [
+      { wch: 4 }, { wch: 8 }, { wch: 8 }, { wch: 7 }, { wch: 22 }, { wch: 4 },
+      { wch: 7 }, { wch: 22 }, { wch: 4 }, { wch: 7 }, { wch: 8 }, { wch: 8 },
+      { wch: 7 }, { wch: 24 }, { wch: 5 }, { wch: 8 },
+    ];
+    ws["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 15 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 15 } },
+    ];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Flights");
-    XLSX.writeFile(wb, `daily-log-${date}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Flight Log");
+    XLSX.writeFile(wb, `flight-log-${date}.xlsx`);
   };
 
   return (
@@ -318,8 +345,8 @@ function FlightDialog({
       flight_date: date, manual: true, launch_type: "aerotow",
       glider_id: null, glider_registration: "", flarm_id: "",
       takeoff_time: null, landing_time: null,
-      p1_name: "", p1_membership: "", p1_kind: "member",
-      p2_name: "", p2_membership: "", p2_kind: "member",
+      p1_name: "", p1_membership: "", p1_kind: "member", p1_charge: false,
+      p2_name: "", p2_membership: "", p2_kind: "member", p2_charge: false,
       aerotow_height_ft: 2000, notes: "",
     });
   }, [flight, manual, date, open]);
@@ -341,9 +368,11 @@ function FlightDialog({
       p1_kind: p1Kind,
       p1_name: p1Kind === "gfe" ? null : (form.p1_name || null),
       p1_membership: p1Kind === "member" ? (form.p1_membership || null) : null,
+      p1_charge: !!form.p1_charge,
       p2_kind: p2Kind,
       p2_name: p2Kind === "gfe" ? null : (form.p2_name || null),
       p2_membership: p2Kind === "member" ? (form.p2_membership || null) : null,
+      p2_charge: !!form.p2_charge,
       launch_type: form.launch_type || null,
       aerotow_height_ft: form.launch_type === "aerotow" ? (form.aerotow_height_ft ?? null) : null,
       manual: !!form.manual,
@@ -375,7 +404,8 @@ function FlightDialog({
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
           <div className="font-semibold text-sm">{label}</div>
-          <div className="flex gap-3 text-sm">
+          <div className="flex gap-3 text-sm flex-wrap">
+            <label className="flex items-center gap-1"><input type="checkbox" checked={!!(which === 1 ? form.p1_charge : form.p2_charge)} onChange={(e) => setForm((f) => ({ ...f, [`p${which}_charge`]: e.target.checked }))} /> Ch (charge)</label>
             <label className="flex items-center gap-1"><input type="checkbox" checked={kind === "visitor"} onChange={(e) => setKind(e.target.checked ? "visitor" : "member")} /> Visitor</label>
             <label className="flex items-center gap-1"><input type="checkbox" checked={kind === "gfe"} onChange={(e) => setKind(e.target.checked ? "gfe" : "member")} /> GFE</label>
           </div>
