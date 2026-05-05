@@ -22,6 +22,12 @@ export const Route = createFileRoute("/")({
   component: FlightsPage,
 });
 
+type OgnSource = {
+  airfield?: string;
+  synced_at?: string;
+  match?: { flarm?: string; registration?: string; confidence?: "high" | "low" };
+  device?: { address?: string; registration?: string; cn?: string };
+} | null;
 type Flight = {
   id: string; flight_date: string;
   glider_id: string | null; glider_registration: string | null; flarm_id: string | null;
@@ -31,6 +37,7 @@ type Flight = {
   launch_type: "aerotow" | "winch" | null;
   aerotow_height_ft: number | null;
   manual: boolean; notes: string | null;
+  ogn_source: OgnSource;
 };
 type Glider = { id: string; registration: string; callsign: string | null; flarm_id: string | null; glider_type: string | null };
 type Member = { id: string; full_name: string; membership_number: string };
@@ -45,6 +52,7 @@ function FlightsPage() {
   const [syncing, setSyncing] = useState(false);
   const [editing, setEditing] = useState<Flight | null>(null);
   const [adding, setAdding] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [{ data: f }, { data: g }, { data: m }] = await Promise.all([
@@ -138,7 +146,8 @@ function FlightsPage() {
             <RefreshCw className={`size-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Sync OGN{icao && <span className="ml-1 text-xs opacity-70">({icao})</span>}
           </Button>
           <Button onClick={exportXlsx} variant="outline"><Download className="size-4 mr-1" />Export XLSX</Button>
-          <Button onClick={() => setAdding(true)}><Plus className="size-4 mr-1" />Add manual</Button>
+          <Button onClick={() => setAdding(true)} variant="outline"><Plus className="size-4 mr-1" />Add manual</Button>
+          <Button onClick={() => setBulkOpen(true)}><Plus className="size-4 mr-1" />Bulk add</Button>
         </div>
       </div>
 
@@ -174,7 +183,7 @@ function FlightsPage() {
                         </Badge>
                       ) : <span className="text-muted-foreground text-sm">—</span>}
                     </TableCell>
-                    <TableCell><Badge variant={f.manual ? "outline" : "default"}>{f.manual ? "Manual" : "OGN"}</Badge></TableCell>
+                    <TableCell><OgnSourceCell flight={f} /></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <Button size="icon" variant="ghost" onClick={() => setEditing(f)}><Pencil className="size-4" /></Button>
                       <Button size="icon" variant="ghost" onClick={() => remove(f.id)}><Trash2 className="size-4" /></Button>
@@ -200,6 +209,33 @@ function FlightsPage() {
         members={members}
         onSaved={() => { setEditing(null); setAdding(false); load(); }}
       />
+      <BulkAddDialog open={bulkOpen} onOpenChange={setBulkOpen} date={date} gliders={gliders} members={members} onSaved={() => { setBulkOpen(false); load(); }} />
+    </div>
+  );
+}
+
+function OgnSourceCell({ flight }: { flight: Flight }) {
+  if (flight.manual) return <Badge variant="outline">Manual</Badge>;
+  const src = flight.ogn_source;
+  const matched = !!src?.match?.flarm;
+  const conf = src?.match?.confidence ?? (matched ? "high" : "low");
+  const synced = src?.synced_at ? format(new Date(src.synced_at), "HH:mm:ss") : null;
+  return (
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-1">
+        <Badge variant="default">OGN</Badge>
+        {matched ? (
+          <Badge variant={conf === "high" ? "secondary" : "outline"} className="text-[10px]">{conf}</Badge>
+        ) : (
+          <Badge variant="outline" className="text-[10px]">no match</Badge>
+        )}
+      </div>
+      {src?.match?.flarm && (
+        <div className="text-[11px] font-mono text-muted-foreground">
+          {src.match.flarm}{src.device?.cn ? ` · ${src.device.cn}` : ""}
+        </div>
+      )}
+      {synced && <div className="text-[10px] text-muted-foreground">synced {synced}</div>}
     </div>
   );
 }
@@ -328,13 +364,31 @@ function FlightDialog({
   );
 }
 
-function GliderPicker({ gliders, registration, onSelect, onChangeText }: {
+function GliderPicker({ gliders, registration, onSelect, onChangeText, onCreated }: {
   gliders: Glider[]; registration: string;
   onSelect: (g: Glider | null) => void; onChangeText: (t: string) => void;
+  onCreated?: (g: Glider) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [draft, setDraft] = useState({ registration: "", callsign: "", flarm_id: "", glider_type: "" });
+  const create = async () => {
+    if (!draft.registration.trim()) return toast.error("Registration required");
+    const { data, error } = await supabase.from("fleet_gliders").insert({
+      registration: draft.registration.trim(),
+      callsign: draft.callsign.trim() || null,
+      flarm_id: draft.flarm_id.trim().toUpperCase() || null,
+      glider_type: draft.glider_type.trim() || null,
+    }).select().single();
+    if (error) return toast.error(error.message);
+    toast.success("Glider added to fleet");
+    setAddOpen(false);
+    setDraft({ registration: "", callsign: "", flarm_id: "", glider_type: "" });
+    onCreated?.(data as Glider);
+    onSelect(data as Glider);
+  };
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" role="combobox" className="justify-between min-w-[200px]">
@@ -357,12 +411,30 @@ function GliderPicker({ gliders, registration, onSelect, onChangeText }: {
                     </div>
                   </CommandItem>
                 ))}
+                <CommandItem value="__add__" onSelect={() => { setOpen(false); setAddOpen(true); }}>
+                  <Plus className="size-4 mr-2" /> Add new glider…
+                </CommandItem>
               </CommandGroup>
             </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
-      <Input placeholder="Or type registration manually" value={registration} onChange={(e) => onChangeText(e.target.value)} />
+      <Input placeholder="Or type registration manually" value={registration} onChange={(e) => onChangeText(e.target.value)} className="flex-1 min-w-[180px]" />
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add glider to fleet</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2"><Label>Registration *</Label><Input value={draft.registration} onChange={(e) => setDraft({ ...draft, registration: e.target.value })} placeholder="G-ABCD" /></div>
+            <div><Label>Callsign</Label><Input value={draft.callsign} onChange={(e) => setDraft({ ...draft, callsign: e.target.value })} /></div>
+            <div><Label>FLARM ID</Label><Input value={draft.flarm_id} onChange={(e) => setDraft({ ...draft, flarm_id: e.target.value })} placeholder="DD1234" /></div>
+            <div className="col-span-2"><Label>Type</Label><Input value={draft.glider_type} onChange={(e) => setDraft({ ...draft, glider_type: e.target.value })} placeholder="ASK-21" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={create}>Add to fleet</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -398,5 +470,134 @@ function PilotPicker({ label, members, value, onPick, onText }: {
         </PopoverContent>
       </Popover>
     </div>
+  );
+}
+
+type BulkRow = {
+  glider_id: string | null; glider_registration: string; flarm_id: string;
+  takeoff_time: string; landing_time: string;
+  p1_name: string; p1_membership: string;
+  p2_name: string; p2_membership: string;
+  launch_type: "aerotow" | "winch"; aerotow_height_ft: number;
+};
+
+const blankRow = (): BulkRow => ({
+  glider_id: null, glider_registration: "", flarm_id: "",
+  takeoff_time: "", landing_time: "",
+  p1_name: "", p1_membership: "", p2_name: "", p2_membership: "",
+  launch_type: "aerotow", aerotow_height_ft: 2000,
+});
+
+function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: {
+  open: boolean; onOpenChange: (v: boolean) => void;
+  date: string; gliders: Glider[]; members: Member[]; onSaved: () => void;
+}) {
+  const [rows, setRows] = useState<BulkRow[]>([blankRow(), blankRow(), blankRow()]);
+
+  useEffect(() => { if (open) setRows([blankRow(), blankRow(), blankRow()]); }, [open]);
+
+  const update = (i: number, patch: Partial<BulkRow>) => {
+    setRows((r) => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
+  };
+
+  const fromLocal = (s: string) => s ? new Date(s).toISOString() : null;
+
+  const saveAll = async () => {
+    const valid = rows.filter((r) => r.glider_registration.trim() || r.flarm_id.trim() || r.takeoff_time);
+    if (valid.length === 0) return toast.error("Add at least one row");
+    const payload = valid.map((r) => ({
+      flight_date: date,
+      glider_id: r.glider_id || null,
+      glider_registration: r.glider_registration || null,
+      flarm_id: r.flarm_id ? r.flarm_id.toUpperCase() : null,
+      takeoff_time: fromLocal(r.takeoff_time),
+      landing_time: fromLocal(r.landing_time),
+      p1_name: r.p1_name || null, p1_membership: r.p1_membership || null,
+      p2_name: r.p2_name || null, p2_membership: r.p2_membership || null,
+      launch_type: r.launch_type,
+      aerotow_height_ft: r.launch_type === "aerotow" ? r.aerotow_height_ft : null,
+      manual: true,
+    }));
+    const { error } = await supabase.from("flights").insert(payload);
+    if (error) return toast.error(error.message);
+    toast.success(`${payload.length} flights logged`);
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Bulk add flights — {date}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          {rows.map((r, i) => (
+            <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 p-3 border rounded-lg">
+              <div className="md:col-span-3">
+                <Label className="text-xs">Glider</Label>
+                <GliderPicker
+                  gliders={gliders}
+                  registration={r.glider_registration}
+                  onSelect={(g) => update(i, { glider_id: g?.id ?? null, glider_registration: g?.registration ?? r.glider_registration, flarm_id: g?.flarm_id ?? r.flarm_id })}
+                  onChangeText={(t) => update(i, { glider_registration: t, glider_id: null })}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-xs">Takeoff</Label>
+                <Input type="datetime-local" value={r.takeoff_time} onChange={(e) => update(i, { takeoff_time: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-xs">Landing</Label>
+                <Input type="datetime-local" value={r.landing_time} onChange={(e) => update(i, { landing_time: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <PilotPicker label="P1" members={members} value={r.p1_name}
+                  onPick={(m) => update(i, { p1_name: m.full_name, p1_membership: m.membership_number })}
+                  onText={(t) => update(i, { p1_name: t })} />
+                <Input className="mt-1" placeholder="P1 #" value={r.p1_membership} onChange={(e) => update(i, { p1_membership: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <PilotPicker label="P2" members={members} value={r.p2_name}
+                  onPick={(m) => update(i, { p2_name: m.full_name, p2_membership: m.membership_number })}
+                  onText={(t) => update(i, { p2_name: t })} />
+                <Input className="mt-1" placeholder="P2 #" value={r.p2_membership} onChange={(e) => update(i, { p2_membership: e.target.value })} />
+              </div>
+              <div className="md:col-span-1">
+                <Label className="text-xs">Launch</Label>
+                <Select value={r.launch_type} onValueChange={(v) => update(i, { launch_type: v as "aerotow" | "winch" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="aerotow">Aerotow</SelectItem>
+                    <SelectItem value="winch">Winch</SelectItem>
+                  </SelectContent>
+                </Select>
+                {r.launch_type === "aerotow" && (
+                  <Select value={String(r.aerotow_height_ft)} onValueChange={(v) => update(i, { aerotow_height_ft: parseInt(v) })}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000].map((h) => (
+                        <SelectItem key={h} value={String(h)}>{h}ft</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <div className="md:col-span-12 flex justify-end">
+                <Button size="sm" variant="ghost" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="size-4 mr-1" />Remove row
+                </Button>
+              </div>
+            </div>
+          ))}
+          <Button variant="outline" onClick={() => setRows((r) => [...r, blankRow()])}>
+            <Plus className="size-4 mr-1" />Add another row
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={saveAll}>Save {rows.length} flights</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
