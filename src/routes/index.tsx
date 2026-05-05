@@ -204,12 +204,12 @@ function FlightsPage() {
     const otherGliders = gliderFlights.filter((f) => f.launch_type !== "aerotow" && f.launch_type !== "winch");
 
     const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, buildSheet(flights), "All Flights");
     if (aerotow.length) XLSX.utils.book_append_sheet(wb, buildSheet(aerotow), "Aerotow");
     if (winch.length) XLSX.utils.book_append_sheet(wb, buildSheet(winch), "Winch");
     if (otherGliders.length) XLSX.utils.book_append_sheet(wb, buildSheet(otherGliders), "Other");
-    if (tugs.length) XLSX.utils.book_append_sheet(wb, buildSheet(tugs), "Tugs");
     if (motorGliders.length) XLSX.utils.book_append_sheet(wb, buildSheet(motorGliders), "Motor Gliders");
-    if (!wb.SheetNames.length) XLSX.utils.book_append_sheet(wb, buildSheet([]), "Flight Log");
+    if (tugs.length) XLSX.utils.book_append_sheet(wb, buildSheet(tugs), "Tugs");
     XLSX.writeFile(wb, `flight-log-${date}.xlsx`);
   };
 
