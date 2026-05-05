@@ -160,6 +160,13 @@ function FlightsPage() {
     };
     const pilotName = (kind: PilotKind | null, name: string | null) =>
       kind === "gfe" ? "GFE" : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
+    const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const memberByName = new Map(members.map((m) => [norm(m.full_name), m.membership_number]));
+    const lookupMembership = (kind: PilotKind | null, name: string | null, stored: string | null) => {
+      if (kind !== "member") return "";
+      if (stored) return stored;
+      return memberByName.get(norm(name)) || "";
+    };
 
     const wb = new ExcelJS.Workbook();
 
@@ -245,10 +252,10 @@ function FlightsPage() {
           i + 1,
           f.glider_registration || "",
           "",
-          f.p1_kind === "member" ? (f.p1_membership || "") : "",
+          lookupMembership(f.p1_kind, f.p1_name, f.p1_membership),
           pilotName(f.p1_kind, f.p1_name),
           f.p1_charge ? "✓" : "",
-          f.p2_kind === "member" ? (f.p2_membership || "") : "",
+          lookupMembership(f.p2_kind, f.p2_name, f.p2_membership),
           pilotName(f.p2_kind, f.p2_name),
           f.p2_charge ? "✓" : "",
           f.launch_type === "aerotow" ? (f.aerotow_height_ft ?? "") : "",
