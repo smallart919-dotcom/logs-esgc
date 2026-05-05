@@ -433,7 +433,7 @@ function FlightsPage() {
                   </TableRow>
                 );
               })}
-              {flights.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">
+              {flights.length === 0 && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">
                 No flights yet. Click <strong>Sync OGN</strong> or <strong>Add manual</strong>.
               </TableCell></TableRow>}
             </TableBody>
