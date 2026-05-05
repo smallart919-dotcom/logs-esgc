@@ -164,7 +164,11 @@ function BillingPage() {
                 <span className="font-mono text-sm text-muted-foreground">#{r.member.membership_number}</span>
                 {r.member.under_21 && <Badge variant="secondary">U21</Badge>}
               </span>
-              <Badge className="text-base">{fmtGBP(r.total)}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-sm">Normal {fmtGBP(r.totalStandard)}</Badge>
+                <Badge variant="outline" className="text-sm">U21 {fmtGBP(r.totalU21)}</Badge>
+                <Badge className="text-base">{r.member.under_21 ? "U21" : "Normal"} {fmtGBP(r.totalApplied)}</Badge>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -172,19 +176,22 @@ function BillingPage() {
               <TableHeader><TableRow>
                 <TableHead>Date</TableHead><TableHead>Glider</TableHead><TableHead>Role</TableHead>
                 <TableHead>Launch</TableHead><TableHead>Soaring</TableHead><TableHead>TMG</TableHead>
-                <TableHead>Notes</TableHead><TableHead className="text-right">Total</TableHead>
+                <TableHead>Notes</TableHead>
+                <TableHead className="text-right">Normal</TableHead>
+                <TableHead className="text-right">U21</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {r.flights.map(({ flight, charge, role }, i) => (
+                {r.flights.map(({ flight, standard, u21, role }, i) => (
                   <TableRow key={flight.id + role + i}>
                     <TableCell className="font-mono text-xs">{flight.flight_date}</TableCell>
                     <TableCell className="font-medium">{flight.glider_registration || "—"}</TableCell>
                     <TableCell>{role}</TableCell>
-                    <TableCell>{charge.launch ? fmtGBP(charge.launch) : "—"}</TableCell>
-                    <TableCell>{charge.soaring ? fmtGBP(charge.soaring) : "—"}</TableCell>
-                    <TableCell>{charge.motorGlider ? fmtGBP(charge.motorGlider) : "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{charge.notes.join(" · ")}</TableCell>
-                    <TableCell className="text-right font-semibold">{fmtGBP(charge.total)}</TableCell>
+                    <TableCell>{standard.launch ? fmtGBP(standard.launch) : "—"}</TableCell>
+                    <TableCell>{standard.soaring ? fmtGBP(standard.soaring) : "—"}</TableCell>
+                    <TableCell>{standard.motorGlider ? fmtGBP(standard.motorGlider) : "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{standard.notes.join(" · ")}</TableCell>
+                    <TableCell className={`text-right font-semibold ${!r.member.under_21 ? "text-primary" : ""}`}>{fmtGBP(standard.total)}</TableCell>
+                    <TableCell className={`text-right font-semibold ${r.member.under_21 ? "text-primary" : ""}`}>{fmtGBP(u21.total)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
