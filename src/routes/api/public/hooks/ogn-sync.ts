@@ -6,9 +6,11 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 type OgnDevice = { address: string; registration?: string; cn?: string; aircraft?: string };
 type OgnFlight = {
   start?: string; stop?: string; duration?: string;
+  start_tsp?: number | null; stop_tsp?: number | null;
   device: number;
   start_airfield?: number; stop_airfield?: number;
   start_tow?: number | null; tow_height?: number | null;
+  tow?: number | null;
 };
 type OgnPayload = { airfield?: string; date?: string; devices: OgnDevice[]; flights: OgnFlight[] };
 
