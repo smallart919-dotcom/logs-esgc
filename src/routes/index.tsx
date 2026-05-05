@@ -118,7 +118,7 @@ function FlightsPage() {
   };
 
   const exportXlsx = () => {
-    const fmtTime = (iso: string | null) => iso ? format(new Date(iso), "HH:mm") : "";
+    const fmtTime = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }) : "";
     const dur = (a: string | null, b: string | null) => {
       if (!a || !b) return "";
       const m = Math.round((+new Date(b) - +new Date(a)) / 60000);
