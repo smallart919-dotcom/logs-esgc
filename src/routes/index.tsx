@@ -52,6 +52,7 @@ function FlightsPage() {
   const [syncing, setSyncing] = useState(false);
   const [editing, setEditing] = useState<Flight | null>(null);
   const [adding, setAdding] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [{ data: f }, { data: g }, { data: m }] = await Promise.all([
