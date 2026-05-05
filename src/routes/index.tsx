@@ -511,7 +511,7 @@ function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; on
   );
 }
 
-function DailyLogCard({ date }: { date: string }) {
+function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
   const [duty_instructor, setDI] = useState("");
   const [duty_pilot, setDP] = useState("");
   const [notes, setNotes] = useState("");
