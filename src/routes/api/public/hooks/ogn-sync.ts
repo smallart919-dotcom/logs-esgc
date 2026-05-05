@@ -96,7 +96,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             .maybeSingle();
 
           if (existing) {
-            const patch: Record<string, unknown> = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
+            const patch: { ogn_source: any; landing_time?: string } = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
             if (landing && !existing.landing_time) patch.landing_time = landing;
             await supabaseAdmin.from("flights").update(patch).eq("id", existing.id);
             updated++;
