@@ -364,13 +364,31 @@ function FlightDialog({
   );
 }
 
-function GliderPicker({ gliders, registration, onSelect, onChangeText }: {
+function GliderPicker({ gliders, registration, onSelect, onChangeText, onCreated }: {
   gliders: Glider[]; registration: string;
   onSelect: (g: Glider | null) => void; onChangeText: (t: string) => void;
+  onCreated?: (g: Glider) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [draft, setDraft] = useState({ registration: "", callsign: "", flarm_id: "", glider_type: "" });
+  const create = async () => {
+    if (!draft.registration.trim()) return toast.error("Registration required");
+    const { data, error } = await supabase.from("fleet_gliders").insert({
+      registration: draft.registration.trim(),
+      callsign: draft.callsign.trim() || null,
+      flarm_id: draft.flarm_id.trim().toUpperCase() || null,
+      glider_type: draft.glider_type.trim() || null,
+    }).select().single();
+    if (error) return toast.error(error.message);
+    toast.success("Glider added to fleet");
+    setAddOpen(false);
+    setDraft({ registration: "", callsign: "", flarm_id: "", glider_type: "" });
+    onCreated?.(data as Glider);
+    onSelect(data as Glider);
+  };
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" role="combobox" className="justify-between min-w-[200px]">
@@ -393,12 +411,30 @@ function GliderPicker({ gliders, registration, onSelect, onChangeText }: {
                     </div>
                   </CommandItem>
                 ))}
+                <CommandItem value="__add__" onSelect={() => { setOpen(false); setAddOpen(true); }}>
+                  <Plus className="size-4 mr-2" /> Add new glider…
+                </CommandItem>
               </CommandGroup>
             </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
-      <Input placeholder="Or type registration manually" value={registration} onChange={(e) => onChangeText(e.target.value)} />
+      <Input placeholder="Or type registration manually" value={registration} onChange={(e) => onChangeText(e.target.value)} className="flex-1 min-w-[180px]" />
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add glider to fleet</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2"><Label>Registration *</Label><Input value={draft.registration} onChange={(e) => setDraft({ ...draft, registration: e.target.value })} placeholder="G-ABCD" /></div>
+            <div><Label>Callsign</Label><Input value={draft.callsign} onChange={(e) => setDraft({ ...draft, callsign: e.target.value })} /></div>
+            <div><Label>FLARM ID</Label><Input value={draft.flarm_id} onChange={(e) => setDraft({ ...draft, flarm_id: e.target.value })} placeholder="DD1234" /></div>
+            <div className="col-span-2"><Label>Type</Label><Input value={draft.glider_type} onChange={(e) => setDraft({ ...draft, glider_type: e.target.value })} placeholder="ASK-21" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={create}>Add to fleet</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
