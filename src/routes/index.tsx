@@ -473,8 +473,8 @@ function FlightDialog({
             </div>
           )}
           <div className="md:col-span-2">
-            <Label>Notes</Label>
-            <Input value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <Label>Comments</Label>
+            <Textarea rows={3} placeholder="Add any comments about this flight…" value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
         </div>
         <DialogFooter>
