@@ -675,6 +675,7 @@ function FlightDialog({
       aerotow_height_ft: form.launch_type === "aerotow" ? (form.aerotow_height_ft ?? null) : null,
       manual: !!form.manual,
       notes: form.notes || null,
+      logged_by: form.logged_by || null,
     };
     let error;
     if (flight?.id) ({ error } = await supabase.from("flights").update(payload).eq("id", flight.id));
