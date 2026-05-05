@@ -774,6 +774,10 @@ function FlightDialog({
             <Label>Comments</Label>
             <Textarea rows={3} placeholder="Add any comments about this flight…" value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
+          <div>
+            <Label>Logged By (initials)</Label>
+            <Input maxLength={5} placeholder="e.g. RC" value={form.logged_by ?? ""} onChange={(e) => setForm({ ...form, logged_by: e.target.value.toUpperCase() })} />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
