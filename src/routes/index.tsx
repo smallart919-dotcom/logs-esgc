@@ -61,6 +61,7 @@ function FlightsPage() {
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<null | { icao: string; date: string; created: number; updated: number; skipped: number; total: number; synced_at: string; errors: Array<{ flarm: string | null; registration: string | null; message: string }>; matches: Array<any> }>(null);
   const [editing, setEditing] = useState<Flight | null>(null);
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
