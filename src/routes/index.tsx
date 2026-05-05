@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 import { toast } from "sonner";
 import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -219,35 +219,7 @@ function FlightsPage() {
     XLSX.writeFile(wb, `flight-log-${date}.xlsx`);
   };
 
-  const exportAeroLog = () => {
-    const csvEscape = (v: string | number) => {
-      const s = String(v);
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const headers = ["MemberNumber","Date","Description","Amount","Reference"];
-    const lines = [headers.join(",")];
-    let count = 0;
-    const addLine = (f: Flight, role: "P1" | "P2") => {
-      const kind = role === "P1" ? f.p1_kind : f.p2_kind;
-      const charge = role === "P1" ? f.p1_charge : f.p2_charge;
-      const memNo = (role === "P1" ? f.p1_membership : f.p2_membership) || "";
-      if (kind !== "member" || !charge || !memNo.trim()) return;
-      // Default to standard pricing for the export (treasurer can apply U21 in AeroLog)
-      const c = computeFlightCharge(f, false);
-      if (c.total <= 0) return;
-      const desc = `${f.glider_registration || "Flight"} ${role} — ${c.notes.join("; ")}`;
-      lines.push([memNo, f.flight_date, desc, c.total.toFixed(2), f.id.slice(0, 8)].map(csvEscape).join(","));
-      count++;
-    };
-    for (const f of flights) { addLine(f, "P1"); addLine(f, "P2"); }
-    if (count === 0) { toast.info("No chargeable member flights to export"); return; }
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `aerolog-${date}.csv`; a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`Exported ${count} charges`);
-  };
+
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -271,15 +243,7 @@ function FlightsPage() {
             <RefreshCw className={`size-3 inline mr-1 ${syncing ? "animate-spin" : ""}`} />
             {icao ? `Next sync in ${nextSync}s` : "Set airfield"}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline"><Download className="size-4 mr-1" />Export</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={exportXlsx}>Excel (XLSX)</DropdownMenuItem>
-              <DropdownMenuItem onClick={exportAeroLog}>AeroLog Cloud (CSV)</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button onClick={exportXlsx} variant="outline"><Download className="size-4 mr-1" />Export</Button>
           <Button onClick={() => setAdding(true)} variant="outline"><Plus className="size-4 mr-1" />Add manual</Button>
           <Button onClick={() => setBulkOpen(true)}><Plus className="size-4 mr-1" />Bulk add</Button>
         </div>
