@@ -472,3 +472,132 @@ function PilotPicker({ label, members, value, onPick, onText }: {
     </div>
   );
 }
+
+type BulkRow = {
+  glider_id: string | null; glider_registration: string; flarm_id: string;
+  takeoff_time: string; landing_time: string;
+  p1_name: string; p1_membership: string;
+  p2_name: string; p2_membership: string;
+  launch_type: "aerotow" | "winch"; aerotow_height_ft: number;
+};
+
+const blankRow = (): BulkRow => ({
+  glider_id: null, glider_registration: "", flarm_id: "",
+  takeoff_time: "", landing_time: "",
+  p1_name: "", p1_membership: "", p2_name: "", p2_membership: "",
+  launch_type: "aerotow", aerotow_height_ft: 2000,
+});
+
+function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: {
+  open: boolean; onOpenChange: (v: boolean) => void;
+  date: string; gliders: Glider[]; members: Member[]; onSaved: () => void;
+}) {
+  const [rows, setRows] = useState<BulkRow[]>([blankRow(), blankRow(), blankRow()]);
+
+  useEffect(() => { if (open) setRows([blankRow(), blankRow(), blankRow()]); }, [open]);
+
+  const update = (i: number, patch: Partial<BulkRow>) => {
+    setRows((r) => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
+  };
+
+  const fromLocal = (s: string) => s ? new Date(s).toISOString() : null;
+
+  const saveAll = async () => {
+    const valid = rows.filter((r) => r.glider_registration.trim() || r.flarm_id.trim() || r.takeoff_time);
+    if (valid.length === 0) return toast.error("Add at least one row");
+    const payload = valid.map((r) => ({
+      flight_date: date,
+      glider_id: r.glider_id || null,
+      glider_registration: r.glider_registration || null,
+      flarm_id: r.flarm_id ? r.flarm_id.toUpperCase() : null,
+      takeoff_time: fromLocal(r.takeoff_time),
+      landing_time: fromLocal(r.landing_time),
+      p1_name: r.p1_name || null, p1_membership: r.p1_membership || null,
+      p2_name: r.p2_name || null, p2_membership: r.p2_membership || null,
+      launch_type: r.launch_type,
+      aerotow_height_ft: r.launch_type === "aerotow" ? r.aerotow_height_ft : null,
+      manual: true,
+    }));
+    const { error } = await supabase.from("flights").insert(payload);
+    if (error) return toast.error(error.message);
+    toast.success(`${payload.length} flights logged`);
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Bulk add flights — {date}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          {rows.map((r, i) => (
+            <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 p-3 border rounded-lg">
+              <div className="md:col-span-3">
+                <Label className="text-xs">Glider</Label>
+                <GliderPicker
+                  gliders={gliders}
+                  registration={r.glider_registration}
+                  onSelect={(g) => update(i, { glider_id: g?.id ?? null, glider_registration: g?.registration ?? r.glider_registration, flarm_id: g?.flarm_id ?? r.flarm_id })}
+                  onChangeText={(t) => update(i, { glider_registration: t, glider_id: null })}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-xs">Takeoff</Label>
+                <Input type="datetime-local" value={r.takeoff_time} onChange={(e) => update(i, { takeoff_time: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-xs">Landing</Label>
+                <Input type="datetime-local" value={r.landing_time} onChange={(e) => update(i, { landing_time: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <PilotPicker label="P1" members={members} value={r.p1_name}
+                  onPick={(m) => update(i, { p1_name: m.full_name, p1_membership: m.membership_number })}
+                  onText={(t) => update(i, { p1_name: t })} />
+                <Input className="mt-1" placeholder="P1 #" value={r.p1_membership} onChange={(e) => update(i, { p1_membership: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <PilotPicker label="P2" members={members} value={r.p2_name}
+                  onPick={(m) => update(i, { p2_name: m.full_name, p2_membership: m.membership_number })}
+                  onText={(t) => update(i, { p2_name: t })} />
+                <Input className="mt-1" placeholder="P2 #" value={r.p2_membership} onChange={(e) => update(i, { p2_membership: e.target.value })} />
+              </div>
+              <div className="md:col-span-1">
+                <Label className="text-xs">Launch</Label>
+                <Select value={r.launch_type} onValueChange={(v) => update(i, { launch_type: v as "aerotow" | "winch" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="aerotow">Aerotow</SelectItem>
+                    <SelectItem value="winch">Winch</SelectItem>
+                  </SelectContent>
+                </Select>
+                {r.launch_type === "aerotow" && (
+                  <Select value={String(r.aerotow_height_ft)} onValueChange={(v) => update(i, { aerotow_height_ft: parseInt(v) })}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000].map((h) => (
+                        <SelectItem key={h} value={String(h)}>{h}ft</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <div className="md:col-span-12 flex justify-end">
+                <Button size="sm" variant="ghost" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="size-4 mr-1" />Remove row
+                </Button>
+              </div>
+            </div>
+          ))}
+          <Button variant="outline" onClick={() => setRows((r) => [...r, blankRow()])}>
+            <Plus className="size-4 mr-1" />Add another row
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={saveAll}>Save {rows.length} flights</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
