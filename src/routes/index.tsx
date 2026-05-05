@@ -403,6 +403,10 @@ function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; on
                       <TableCell>{f.p2_charge ? <Badge variant="default">✓</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell className="text-right font-medium">{fmtGBP(std.total)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{fmtGBP(u21.total)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Button size="icon" variant="ghost" onClick={() => onEdit(f)}><Pencil className="size-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => onDelete(f.id)}><Trash2 className="size-4" /></Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
