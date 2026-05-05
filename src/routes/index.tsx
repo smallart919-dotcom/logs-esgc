@@ -98,13 +98,15 @@ function FlightsPage() {
       setIcao(code);
     }
     setSyncing(true);
+    setSyncResult(null);
     try {
       const res = await fetch("/api/public/hooks/ogn-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icao: code, date }) });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
-      toast.success(`OGN ${code}: ${j.created} new, ${j.updated} updated, ${j.skipped} skipped`);
+      setSyncResult(j);
+      toast.success(`OGN ${code}: ${j.created} new, ${j.updated} updated, ${j.skipped} skipped${j.errors?.length ? `, ${j.errors.length} errors` : ""}`);
       load();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e.message); setSyncResult({ icao: code, date, created: 0, updated: 0, skipped: 0, total: 0, synced_at: new Date().toISOString(), errors: [{ flarm: null, registration: null, message: e.message }], matches: [] }); }
     finally { setSyncing(false); }
   };
 
