@@ -81,14 +81,13 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             continue;
           }
 
-          if (!fleetMatch) {
-            // Track unmatched FLARMs so the user can see what was seen
-            matches.push({ status: "unmatched", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, synced_at });
-            skipped++;
-            continue;
-          }
-
-          const sourceMeta = { airfield: icao, raw: f, device: dev, synced_at, match: { flarm, registration: fleetMatch.registration, confidence: "high" as const } };
+          const matchedReg = fleetMatch?.registration ?? dev?.registration ?? null;
+          const matchedId = fleetMatch?.id ?? null;
+          const confidence: "high" | "low" = fleetMatch ? "high" : "low";
+          const sourceMeta = {
+            airfield: icao, raw: f, device: dev, synced_at,
+            match: { flarm, registration: matchedReg, confidence },
+          };
 
           const { data: existing } = await supabaseAdmin
             .from("flights").select("id, landing_time, ogn_source")
@@ -100,12 +99,12 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             if (landing && !existing.landing_time) patch.landing_time = landing;
             await supabaseAdmin.from("flights").update(patch).eq("id", existing.id);
             updated++;
-            matches.push({ status: "updated", flarm, registration: fleetMatch.registration, callsign: dev?.cn ?? null, confidence: "high", takeoff, landing, synced_at });
+            matches.push({ status: "updated", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, synced_at });
           } else {
             const { error: insErr } = await supabaseAdmin.from("flights").insert({
               flight_date: date,
-              glider_id: fleetMatch.id,
-              glider_registration: fleetMatch.registration,
+              glider_id: matchedId,
+              glider_registration: matchedReg,
               flarm_id: flarm,
               takeoff_time: takeoff,
               landing_time: landing,
@@ -114,7 +113,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             });
             if (!insErr) {
               created++;
-              matches.push({ status: "created", flarm, registration: fleetMatch.registration, callsign: dev?.cn ?? null, confidence: "high", takeoff, landing, synced_at });
+              matches.push({ status: fleetMatch ? "created" : "unmatched", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, synced_at });
             }
           }
         }
