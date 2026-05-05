@@ -42,6 +42,7 @@ type Flight = {
   launch_type: "aerotow" | "winch" | null;
   aerotow_height_ft: number | null;
   manual: boolean; notes: string | null;
+  logged_by: string | null;
   ogn_source: OgnSource;
 };
 type Glider = { id: string; registration: string; callsign: string | null; flarm_id: string | null; glider_type: string | null };
