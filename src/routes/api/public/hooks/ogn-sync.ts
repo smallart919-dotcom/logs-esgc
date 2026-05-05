@@ -123,7 +123,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
 
           // Tow plane present → assume aerotow
-          const hasTow = f.start_tow !== null && f.start_tow !== undefined;
+          const hasTow = (f.tow !== null && f.tow !== undefined) || (f.start_tow !== null && f.start_tow !== undefined);
           const launchType: "aerotow" | "winch" | null = hasTow ? "aerotow" : null;
           const towHeightFt = hasTow && f.tow_height ? Math.round(f.tow_height) : null;
 
