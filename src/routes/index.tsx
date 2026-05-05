@@ -345,8 +345,8 @@ function FlightDialog({
       flight_date: date, manual: true, launch_type: "aerotow",
       glider_id: null, glider_registration: "", flarm_id: "",
       takeoff_time: null, landing_time: null,
-      p1_name: "", p1_membership: "", p1_kind: "member",
-      p2_name: "", p2_membership: "", p2_kind: "member",
+      p1_name: "", p1_membership: "", p1_kind: "member", p1_charge: false,
+      p2_name: "", p2_membership: "", p2_kind: "member", p2_charge: false,
       aerotow_height_ft: 2000, notes: "",
     });
   }, [flight, manual, date, open]);
@@ -368,9 +368,11 @@ function FlightDialog({
       p1_kind: p1Kind,
       p1_name: p1Kind === "gfe" ? null : (form.p1_name || null),
       p1_membership: p1Kind === "member" ? (form.p1_membership || null) : null,
+      p1_charge: !!form.p1_charge,
       p2_kind: p2Kind,
       p2_name: p2Kind === "gfe" ? null : (form.p2_name || null),
       p2_membership: p2Kind === "member" ? (form.p2_membership || null) : null,
+      p2_charge: !!form.p2_charge,
       launch_type: form.launch_type || null,
       aerotow_height_ft: form.launch_type === "aerotow" ? (form.aerotow_height_ft ?? null) : null,
       manual: !!form.manual,
