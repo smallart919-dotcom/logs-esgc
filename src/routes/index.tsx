@@ -287,7 +287,7 @@ function FlightsPage() {
       <DailyLogCard date={date} />
 
       <Card>
-        <CardHeader><CardTitle>{flights.length} flights on {date}</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {date}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader><TableRow>
@@ -296,7 +296,7 @@ function FlightsPage() {
               <TableHead>Launch</TableHead><TableHead>Source</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {flights.map((f) => {
+              {flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).map((f) => {
                 const dur = f.takeoff_time && f.landing_time
                   ? Math.round((+new Date(f.landing_time) - +new Date(f.takeoff_time)) / 60000) + "m"
                   : f.takeoff_time ? "in air" : "—";
