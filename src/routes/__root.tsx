@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Plane, Users, ListChecks, LogOut, History, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import esgcLogo from "@/assets/esgc-logo.jpeg";
 
 import appCss from "../styles.css?url";
 
@@ -24,12 +25,12 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Gliding Club Daily Log" },
-      { name: "description", content: "Daily flight log for gliding clubs with OGN integration." },
-      { property: "og:title", content: "Gliding Club Daily Log" },
-      { name: "twitter:title", content: "Gliding Club Daily Log" },
-      { property: "og:description", content: "Daily flight log for gliding clubs with OGN integration." },
-      { name: "twitter:description", content: "Daily flight log for gliding clubs with OGN integration." },
+      { title: "ESGC Logs" },
+      { name: "description", content: "East Sussex Gliding Club daily flight log with OGN integration." },
+      { property: "og:title", content: "ESGC Logs" },
+      { name: "twitter:title", content: "ESGC Logs" },
+      { property: "og:description", content: "East Sussex Gliding Club daily flight log with OGN integration." },
+      { name: "twitter:description", content: "East Sussex Gliding Club daily flight log with OGN integration." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/722cdbfa-c76a-4ec7-9ed6-b52b3020ff3e/id-preview-646f6bf4--76d2b799-a1e7-4714-a7a2-c6accd336401.lovable.app-1777926613169.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/722cdbfa-c76a-4ec7-9ed6-b52b3020ff3e/id-preview-646f6bf4--76d2b799-a1e7-4714-a7a2-c6accd336401.lovable.app-1777926613169.png" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -74,10 +75,8 @@ function RootComponent() {
       <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg">
-            <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-[var(--sky-deep)] flex items-center justify-center text-primary-foreground">
-              <Plane className="size-5" />
-            </div>
-            <span className="hidden sm:inline">Club Daily Log</span>
+            <img src={esgcLogo} alt="ESGC" className="size-9 rounded-lg object-cover" />
+            <span className="hidden sm:inline">ESGC Logs</span>
           </Link>
           <nav className="flex items-center gap-1">
             <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" />
