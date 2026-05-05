@@ -213,9 +213,9 @@ function FlightsPage() {
 
       ws.getRow(4).height = 22;
       setBox("A4:A4", { value: "Duty Instructor", bold: true, size: 9 });
-      setBox("B4:E4", { value: "", align: "left" });
+      setBox("B4:E4", { value: dutyInstructor, align: "left", bold: true });
       setBox("F4:F4", { value: "Duty Pilot", bold: true, size: 9 });
-      setBox("G4:O4", { value: "", align: "left" });
+      setBox("G4:O4", { value: dutyPilot, align: "left", bold: true });
 
       ws.getRow(5).height = 18;
       ws.getRow(6).height = 22;
