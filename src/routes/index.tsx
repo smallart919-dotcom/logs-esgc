@@ -161,6 +161,10 @@ function FlightsPage() {
     const pilotName = (kind: PilotKind | null, name: string | null) =>
       kind === "gfe" ? "GFE" : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
 
+    const { data: daily } = await supabase.from("daily_logs").select("duty_instructor,duty_pilot").eq("flight_date", date).maybeSingle();
+    const dutyInstructor = daily?.duty_instructor ?? "";
+    const dutyPilot = daily?.duty_pilot ?? "";
+
     const wb = new ExcelJS.Workbook();
 
     const RED = "FFC00000";
