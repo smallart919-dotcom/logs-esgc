@@ -38,6 +38,36 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_logs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          duty_instructor: string | null
+          duty_pilot: string | null
+          flight_date: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          duty_instructor?: string | null
+          duty_pilot?: string | null
+          flight_date: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          duty_instructor?: string | null
+          duty_pilot?: string | null
+          flight_date?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fleet_gliders: {
         Row: {
           callsign: string | null
