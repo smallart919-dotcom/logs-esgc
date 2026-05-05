@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plane, Briefcase, Caravan, ArrowLeft } from "lucide-react";
+import { Briefcase, Caravan, ArrowLeft } from "lucide-react";
+import esgcLogo from "@/assets/esgc-logo.jpeg";
 
 export const Route = createFileRoute("/auth")({ component: AuthPage });
 
@@ -57,10 +58,8 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
-          <div className="size-14 rounded-xl bg-gradient-to-br from-primary to-[var(--sky-deep)] flex items-center justify-center text-primary-foreground mb-3">
-            <Plane className="size-7" />
-          </div>
-          <h1 className="text-2xl font-bold">Club Daily Log</h1>
+          <img src={esgcLogo} alt="ESGC" className="size-14 rounded-xl object-cover mb-3" />
+          <h1 className="text-2xl font-bold">ESGC Logs</h1>
           <p className="text-muted-foreground text-sm">Sign in to log today's flights</p>
         </div>
 
