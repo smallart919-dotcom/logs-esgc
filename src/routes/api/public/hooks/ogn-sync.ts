@@ -102,8 +102,8 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         for (const f of payload.flights || []) {
           const dev = payload.devices?.[f.device];
           const flarm = dev?.address ? dev.address.toUpperCase() : null;
-          const takeoff = parseTimeOnDate(date, f.start);
-          const landing = parseTimeOnDate(date, f.stop);
+          const takeoff = f.start_tsp ? new Date(f.start_tsp * 1000).toISOString() : parseTimeOnDate(date, f.start);
+          const landing = f.stop_tsp ? new Date(f.stop_tsp * 1000).toISOString() : parseTimeOnDate(date, f.stop);
           const fleetMatch = flarm ? fleetByFlarm.get(flarm) : undefined;
 
           // Excluded registrations (tow planes / motor gliders) — never log
