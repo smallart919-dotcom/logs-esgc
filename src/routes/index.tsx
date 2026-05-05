@@ -160,6 +160,13 @@ function FlightsPage() {
     };
     const pilotName = (kind: PilotKind | null, name: string | null) =>
       kind === "gfe" ? "GFE" : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
+    const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const memberByName = new Map(members.map((m) => [norm(m.full_name), m.membership_number]));
+    const lookupMembership = (kind: PilotKind | null, name: string | null, stored: string | null) => {
+      if (kind !== "member") return "";
+      if (stored) return stored;
+      return memberByName.get(norm(name)) || "";
+    };
 
     const wb = new ExcelJS.Workbook();
 
