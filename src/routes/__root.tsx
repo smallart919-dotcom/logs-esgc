@@ -84,6 +84,9 @@ function RootComponent() {
             {(userEmail || "").toLowerCase() === "office@esgc.local" && (
               <NavLink to="/history" icon={<History className="size-4" />} label="History" />
             )}
+            {["office@esgc.local", "caravan@esgc.local"].includes((userEmail || "").toLowerCase()) && (
+              <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" />
+            )}
             <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" />
             <NavLink to="/members" icon={<Users className="size-4" />} label="Members" />
           </nav>
