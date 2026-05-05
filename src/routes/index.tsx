@@ -58,6 +58,12 @@ async function maybeAddMember(existing: Member[], kind: PilotKind | null | undef
 
 function FlightsPage() {
   const [date, setDate] = useState(todayStr());
+  const [isOffice, setIsOffice] = useState(false);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsOffice((data.user?.email || "").toLowerCase() === "office@esgc.local");
+    });
+  }, []);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
