@@ -9,17 +9,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Plus, Trash2, Users } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/members")({
   beforeLoad: requireAuth,
   component: MembersPage,
 });
 
-type Member = { id: string; full_name: string; membership_number: string };
+type Member = { id: string; full_name: string; membership_number: string; under_21: boolean };
 
 function MembersPage() {
   const [items, setItems] = useState<Member[]>([]);
-  const [form, setForm] = useState({ full_name: "", membership_number: "" });
+  const [form, setForm] = useState({ full_name: "", membership_number: "", under_21: false });
 
   const load = async () => {
     const { data, error } = await supabase.from("club_members").select("*").order("full_name");
@@ -31,12 +32,17 @@ function MembersPage() {
     e.preventDefault();
     if (!form.full_name.trim() || !form.membership_number.trim()) return;
     const { error } = await supabase.from("club_members").insert({
-      full_name: form.full_name.trim(), membership_number: form.membership_number.trim(),
+      full_name: form.full_name.trim(), membership_number: form.membership_number.trim(), under_21: form.under_21,
     });
     if (error) return toast.error(error.message);
     toast.success("Member added");
-    setForm({ full_name: "", membership_number: "" });
+    setForm({ full_name: "", membership_number: "", under_21: false });
     load();
+  };
+
+  const toggleU21 = async (m: Member) => {
+    const { error } = await supabase.from("club_members").update({ under_21: !m.under_21 }).eq("id", m.id);
+    if (error) toast.error(error.message); else load();
   };
 
   const remove = async (id: string) => {
@@ -54,9 +60,10 @@ function MembersPage() {
       <Card>
         <CardHeader><CardTitle>Add member</CardTitle></CardHeader>
         <CardContent>
-          <form onSubmit={add} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+          <form onSubmit={add} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
             <div><Label>Full name *</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
             <div><Label>Membership # *</Label><Input value={form.membership_number} onChange={(e) => setForm({ ...form, membership_number: e.target.value })} /></div>
+            <div className="flex items-center gap-2 pb-2"><Checkbox id="u21" checked={form.under_21} onCheckedChange={(v) => setForm({ ...form, under_21: !!v })} /><Label htmlFor="u21">Under 21</Label></div>
             <Button type="submit"><Plus className="size-4 mr-1" />Add</Button>
           </form>
         </CardContent>
@@ -65,16 +72,17 @@ function MembersPage() {
         <CardHeader><CardTitle>Members ({items.length})</CardTitle></CardHeader>
         <CardContent>
           <Table>
-            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Membership #</TableHead><TableHead></TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Membership #</TableHead><TableHead>U21</TableHead><TableHead></TableHead></TableRow></TableHeader>
             <TableBody>
               {items.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.full_name}</TableCell>
                   <TableCell className="font-mono">{m.membership_number}</TableCell>
+                  <TableCell><Checkbox checked={!!m.under_21} onCheckedChange={() => toggleU21(m)} /></TableCell>
                   <TableCell className="text-right"><Button size="icon" variant="ghost" onClick={() => remove(m.id)}><Trash2 className="size-4" /></Button></TableCell>
                 </TableRow>
               ))}
-              {items.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No members yet</TableCell></TableRow>}
+              {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No members yet</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
