@@ -162,138 +162,141 @@ function FlightsPage() {
       kind === "gfe" ? "GFE" : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
 
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Flight Log", { views: [{ showGridLines: false }] });
-
-    // Columns: A No | B Reg | C Type | D P1 No | E P1 Name | F Ch | G P2 No | H P2 Name | I Ch | J Height | K Take off | L Landing | M Time | N Comments | O LB
-    ws.columns = [
-      { width: 4 }, { width: 8 }, { width: 7 },
-      { width: 7 }, { width: 20 }, { width: 4 },
-      { width: 7 }, { width: 20 }, { width: 4 },
-      { width: 7 }, { width: 9 }, { width: 9 }, { width: 7 },
-      { width: 28 }, { width: 5 },
-    ];
 
     const RED = "FFC00000";
     const PINK = "FFFCE4E6";
     const thin: Partial<ExcelJS.Borders> = {
       top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" },
     };
-    const setBox = (range: string, opts: { fill?: string; bold?: boolean; color?: string; size?: number; align?: "left" | "center" | "right"; value?: any }) => {
-      ws.mergeCells(range);
-      const cell = ws.getCell(range.split(":")[0]);
-      if (opts.value !== undefined) cell.value = opts.value;
-      cell.alignment = { vertical: "middle", horizontal: opts.align ?? "center", wrapText: true };
-      cell.font = { bold: opts.bold, color: opts.color ? { argb: opts.color } : undefined, size: opts.size, name: "Calibri" };
-      if (opts.fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: opts.fill } };
-      cell.border = thin;
-    };
 
-    // Row 1-2: Header strip
-    ws.getRow(1).height = 28;
-    ws.getRow(2).height = 22;
-    setBox("A1:C2", { value: "ESGC", bold: true, color: "FF1F4E79", size: 16 });
-    setBox("D1:F2", { value: "Flight Log", bold: true, color: RED, size: 18, fill: PINK });
-    setBox("G1:I1", { value: "Launch Type ✓", bold: true, size: 10 });
-    setBox("G2:H2", { value: "Aerotow", align: "left" });
-    setBox("I2:I2", { value: "" });
-    setBox("J1:L1", { value: "Sheet", bold: true });
-    setBox("J2:K2", { value: "Winch", align: "left" });
-    setBox("L2:L2", { value: "" });
-    setBox("M1:M2", { value: "Of", bold: true });
-    setBox("N1:O1", { value: "Day & Date", bold: true });
-    setBox("N2:O2", { value: date });
-
-    // Row 3: red banner + comments instruction
-    ws.getRow(3).height = 22;
-    setBox("A3:I3", { value: "LOG KEEPERS PLEASE MAKE ALL ENTRIES IN BLOCK CAPITALS AND LEGIBLE", bold: true, color: "FFFFFFFF", fill: RED, size: 10 });
-    setBox("J3:O3", { value: "Enter comment against each flight eg trial lesson, voucher number, training flight etc. Enter tick in \"Ch\" against pilot who is to pay for the flight. Logged By: - please enter your initials in the \"LB\" Column", size: 8, align: "left" });
-    ws.getRow(3).height = 40;
-
-    // Row 4: Duty Instructor / Duty Pilot
-    ws.getRow(4).height = 22;
-    setBox("A4:A4", { value: "Duty Instructor", bold: true, size: 9 });
-    setBox("B4:E4", { value: "", align: "left" });
-    setBox("F4:F4", { value: "Duty Pilot", bold: true, size: 9 });
-    setBox("G4:O4", { value: "", align: "left" });
-
-    // Row 5-6: table headers
-    ws.getRow(5).height = 18;
-    ws.getRow(6).height = 22;
-    setBox("A5:A6", { value: "No", bold: true, fill: PINK });
-    setBox("B5:B6", { value: "Reg", bold: true, fill: PINK });
-    setBox("C5:C6", { value: "Type", bold: true, fill: PINK });
-    setBox("D5:F5", { value: "P1", bold: true, fill: PINK });
-    setBox("D6:D6", { value: "No", bold: true, fill: PINK });
-    setBox("E6:E6", { value: "Name", bold: true, fill: PINK });
-    setBox("F6:F6", { value: "Ch", bold: true, fill: PINK });
-    setBox("G5:I5", { value: "P2", bold: true, fill: PINK });
-    setBox("G6:G6", { value: "No", bold: true, fill: PINK });
-    setBox("H6:H6", { value: "Name", bold: true, fill: PINK });
-    setBox("I6:I6", { value: "Ch", bold: true, fill: PINK });
-    setBox("J5:J6", { value: "Height", bold: true, fill: PINK });
-    setBox("K5:K5", { value: "Take off", bold: true, fill: PINK });
-    setBox("K6:K6", { value: "h:m", bold: true, fill: PINK, size: 9 });
-    setBox("L5:L5", { value: "Landing", bold: true, fill: PINK });
-    setBox("L6:L6", { value: "h:m", bold: true, fill: PINK, size: 9 });
-    setBox("M5:M5", { value: "Time", bold: true, fill: PINK });
-    setBox("M6:M6", { value: "h:m", bold: true, fill: PINK, size: 9 });
-    setBox("N5:N6", { value: "Comments", bold: true, fill: PINK });
-    setBox("O5:O6", { value: "LB", bold: true, fill: PINK });
-
-    // Data rows
-    const startRow = 7;
-    flights.forEach((f, i) => {
-      const r = startRow + i;
-      const row = ws.getRow(r);
-      row.height = 20;
-      const vals = [
-        i + 1,
-        f.glider_registration || "",
-        "",
-        f.p1_kind === "member" ? (f.p1_membership || "") : "",
-        pilotName(f.p1_kind, f.p1_name),
-        f.p1_charge ? "✓" : "",
-        f.p2_kind === "member" ? (f.p2_membership || "") : "",
-        pilotName(f.p2_kind, f.p2_name),
-        f.p2_charge ? "✓" : "",
-        f.launch_type === "aerotow" ? (f.aerotow_height_ft ?? "") : "",
-        fmtTime(f.takeoff_time),
-        fmtTime(f.landing_time),
-        dur(f.takeoff_time, f.landing_time),
-        f.notes || "",
-        "",
+    const buildSheet = (name: string, rows: Flight[], launch: "aerotow" | "winch" | null) => {
+      const ws = wb.addWorksheet(name, { views: [{ showGridLines: false }] });
+      ws.columns = [
+        { width: 4 }, { width: 8 }, { width: 7 },
+        { width: 7 }, { width: 20 }, { width: 4 },
+        { width: 7 }, { width: 20 }, { width: 4 },
+        { width: 7 }, { width: 9 }, { width: 9 }, { width: 7 },
+        { width: 28 }, { width: 5 },
       ];
-      vals.forEach((v, c) => {
-        const cell = row.getCell(c + 1);
-        cell.value = v as any;
+
+      const setBox = (range: string, opts: { fill?: string; bold?: boolean; color?: string; size?: number; align?: "left" | "center" | "right"; value?: any }) => {
+        ws.mergeCells(range);
+        const cell = ws.getCell(range.split(":")[0]);
+        if (opts.value !== undefined) cell.value = opts.value;
+        cell.alignment = { vertical: "middle", horizontal: opts.align ?? "center", wrapText: true };
+        cell.font = { bold: opts.bold, color: opts.color ? { argb: opts.color } : undefined, size: opts.size, name: "Calibri" };
+        if (opts.fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: opts.fill } };
         cell.border = thin;
-        cell.font = { name: "Calibri", size: 10 };
-        cell.alignment = { vertical: "middle", horizontal: c === 4 || c === 7 || c === 13 ? "left" : "center", wrapText: true };
+      };
+
+      ws.getRow(1).height = 28;
+      ws.getRow(2).height = 22;
+      setBox("A1:C2", { value: "ESGC", bold: true, color: "FF1F4E79", size: 16 });
+      setBox("D1:F2", { value: "Flight Log", bold: true, color: RED, size: 18, fill: PINK });
+      setBox("G1:I1", { value: "Launch Type ✓", bold: true, size: 10 });
+      setBox("G2:H2", { value: "Aerotow", align: "left" });
+      setBox("I2:I2", { value: launch === "aerotow" ? "✓" : "", bold: true });
+      setBox("J1:L1", { value: "Sheet", bold: true });
+      setBox("J2:K2", { value: "Winch", align: "left" });
+      setBox("L2:L2", { value: launch === "winch" ? "✓" : "", bold: true });
+      setBox("M1:M2", { value: "Of", bold: true });
+      setBox("N1:O1", { value: "Day & Date", bold: true });
+      setBox("N2:O2", { value: date });
+
+      ws.getRow(3).height = 40;
+      setBox("A3:I3", { value: "LOG KEEPERS PLEASE MAKE ALL ENTRIES IN BLOCK CAPITALS AND LEGIBLE", bold: true, color: "FFFFFFFF", fill: RED, size: 10 });
+      setBox("J3:O3", { value: "Enter comment against each flight eg trial lesson, voucher number, training flight etc. Enter tick in \"Ch\" against pilot who is to pay for the flight. Logged By: - please enter your initials in the \"LB\" Column", size: 8, align: "left" });
+
+      ws.getRow(4).height = 22;
+      setBox("A4:A4", { value: "Duty Instructor", bold: true, size: 9 });
+      setBox("B4:E4", { value: "", align: "left" });
+      setBox("F4:F4", { value: "Duty Pilot", bold: true, size: 9 });
+      setBox("G4:O4", { value: "", align: "left" });
+
+      ws.getRow(5).height = 18;
+      ws.getRow(6).height = 22;
+      setBox("A5:A6", { value: "No", bold: true, fill: PINK });
+      setBox("B5:B6", { value: "Reg", bold: true, fill: PINK });
+      setBox("C5:C6", { value: "Type", bold: true, fill: PINK });
+      setBox("D5:F5", { value: "P1", bold: true, fill: PINK });
+      setBox("D6:D6", { value: "No", bold: true, fill: PINK });
+      setBox("E6:E6", { value: "Name", bold: true, fill: PINK });
+      setBox("F6:F6", { value: "Ch", bold: true, fill: PINK });
+      setBox("G5:I5", { value: "P2", bold: true, fill: PINK });
+      setBox("G6:G6", { value: "No", bold: true, fill: PINK });
+      setBox("H6:H6", { value: "Name", bold: true, fill: PINK });
+      setBox("I6:I6", { value: "Ch", bold: true, fill: PINK });
+      setBox("J5:J6", { value: "Height", bold: true, fill: PINK });
+      setBox("K5:K5", { value: "Take off", bold: true, fill: PINK });
+      setBox("K6:K6", { value: "h:m", bold: true, fill: PINK, size: 9 });
+      setBox("L5:L5", { value: "Landing", bold: true, fill: PINK });
+      setBox("L6:L6", { value: "h:m", bold: true, fill: PINK, size: 9 });
+      setBox("M5:M5", { value: "Time", bold: true, fill: PINK });
+      setBox("M6:M6", { value: "h:m", bold: true, fill: PINK, size: 9 });
+      setBox("N5:N6", { value: "Comments", bold: true, fill: PINK });
+      setBox("O5:O6", { value: "LB", bold: true, fill: PINK });
+
+      const startRow = 7;
+      rows.forEach((f, i) => {
+        const r = startRow + i;
+        const row = ws.getRow(r);
+        row.height = 20;
+        const vals = [
+          i + 1,
+          f.glider_registration || "",
+          "",
+          f.p1_kind === "member" ? (f.p1_membership || "") : "",
+          pilotName(f.p1_kind, f.p1_name),
+          f.p1_charge ? "✓" : "",
+          f.p2_kind === "member" ? (f.p2_membership || "") : "",
+          pilotName(f.p2_kind, f.p2_name),
+          f.p2_charge ? "✓" : "",
+          f.launch_type === "aerotow" ? (f.aerotow_height_ft ?? "") : "",
+          fmtTime(f.takeoff_time),
+          fmtTime(f.landing_time),
+          dur(f.takeoff_time, f.landing_time),
+          f.notes || "",
+          "",
+        ];
+        vals.forEach((v, c) => {
+          const cell = row.getCell(c + 1);
+          cell.value = v as any;
+          cell.border = thin;
+          cell.font = { name: "Calibri", size: 10 };
+          cell.alignment = { vertical: "middle", horizontal: c === 4 || c === 7 || c === 13 ? "left" : "center", wrapText: true };
+        });
       });
-    });
 
-    // Pad to at least 20 rows like the paper form
-    const minRows = Math.max(20, flights.length);
-    for (let i = flights.length; i < minRows; i++) {
-      const r = startRow + i;
-      const row = ws.getRow(r);
-      row.height = 20;
-      row.getCell(1).value = i + 1;
-      for (let c = 1; c <= 15; c++) {
-        row.getCell(c).border = thin;
-        row.getCell(c).font = { name: "Calibri", size: 10 };
-        row.getCell(c).alignment = { vertical: "middle", horizontal: "center" };
+      const minRows = Math.max(20, rows.length);
+      for (let i = rows.length; i < minRows; i++) {
+        const r = startRow + i;
+        const row = ws.getRow(r);
+        row.height = 20;
+        row.getCell(1).value = i + 1;
+        for (let c = 1; c <= 15; c++) {
+          row.getCell(c).border = thin;
+          row.getCell(c).font = { name: "Calibri", size: 10 };
+          row.getCell(c).alignment = { vertical: "middle", horizontal: "center" };
+        }
       }
-    }
 
-    ws.pageSetup = {
-      orientation: "landscape",
-      paperSize: 9, // A4
-      fitToPage: true,
-      fitToWidth: 1,
-      fitToHeight: 1,
-      margins: { left: 0.3, right: 0.3, top: 0.3, bottom: 0.3, header: 0.2, footer: 0.2 },
+      ws.pageSetup = {
+        orientation: "landscape",
+        paperSize: 9,
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 1,
+        margins: { left: 0.3, right: 0.3, top: 0.3, bottom: 0.3, header: 0.2, footer: 0.2 },
+      };
     };
+
+    const aerotow = flights.filter((f) => f.launch_type === "aerotow");
+    const winch = flights.filter((f) => f.launch_type === "winch");
+    const other = flights.filter((f) => f.launch_type !== "aerotow" && f.launch_type !== "winch");
+
+    buildSheet("Aerotow", aerotow, "aerotow");
+    buildSheet("Winch", winch, "winch");
+    if (other.length) buildSheet("Other", other, null);
 
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
