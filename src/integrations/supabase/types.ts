@@ -110,6 +110,7 @@ export type Database = {
           id: string
           landing_time: string | null
           launch_type: Database["public"]["Enums"]["launch_type"] | null
+          logged_by: string | null
           manual: boolean
           notes: string | null
           ogn_source: Json | null
@@ -135,6 +136,7 @@ export type Database = {
           id?: string
           landing_time?: string | null
           launch_type?: Database["public"]["Enums"]["launch_type"] | null
+          logged_by?: string | null
           manual?: boolean
           notes?: string | null
           ogn_source?: Json | null
@@ -160,6 +162,7 @@ export type Database = {
           id?: string
           landing_time?: string | null
           launch_type?: Database["public"]["Enums"]["launch_type"] | null
+          logged_by?: string | null
           manual?: boolean
           notes?: string | null
           ogn_source?: Json | null
