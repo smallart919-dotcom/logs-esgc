@@ -124,10 +124,10 @@ function FlightsPage() {
       "Duration (min)": f.takeoff_time && f.landing_time
         ? Math.round((+new Date(f.landing_time) - +new Date(f.takeoff_time)) / 60000)
         : "",
-      "P1 Name": f.p1_name || "",
-      "P1 Membership #": f.p1_membership || "",
-      "P2 Name": f.p2_name || "",
-      "P2 Membership #": f.p2_membership || "",
+      "P1 Name": f.p1_kind === "gfe" ? "GFE" : f.p1_kind === "visitor" ? (f.p1_name ? `Visitor (${f.p1_name})` : "Visitor") : (f.p1_name || ""),
+      "P1 Membership #": f.p1_kind === "member" ? (f.p1_membership || "") : "",
+      "P2 Name": f.p2_kind === "gfe" ? "GFE" : f.p2_kind === "visitor" ? (f.p2_name ? `Visitor (${f.p2_name})` : "Visitor") : (f.p2_name || ""),
+      "P2 Membership #": f.p2_kind === "member" ? (f.p2_membership || "") : "",
       Launch: f.launch_type || "",
       "Tow Height (ft)": f.aerotow_height_ft ?? "",
       Source: f.manual ? "Manual" : "OGN",
