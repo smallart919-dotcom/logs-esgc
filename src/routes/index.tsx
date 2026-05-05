@@ -298,6 +298,59 @@ function FlightsPage() {
   );
 }
 
+function DailyLogCard({ date }: { date: string }) {
+  const [duty_instructor, setDI] = useState("");
+  const [duty_pilot, setDP] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    supabase.from("daily_logs").select("*").eq("flight_date", date).maybeSingle().then(({ data }) => {
+      if (!active) return;
+      setDI(data?.duty_instructor ?? "");
+      setDP(data?.duty_pilot ?? "");
+      setNotes(data?.notes ?? "");
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, [date]);
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("daily_logs").upsert({
+      flight_date: date, duty_instructor: duty_instructor || null, duty_pilot: duty_pilot || null, notes: notes || null,
+    }, { onConflict: "flight_date" });
+    setSaving(false);
+    if (error) toast.error(error.message); else toast.success("Daily log saved");
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Daily Log — {date}</CardTitle></CardHeader>
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <Label>Duty Instructor</Label>
+          <Input value={duty_instructor} onChange={(e) => setDI(e.target.value)} disabled={loading} />
+        </div>
+        <div>
+          <Label>Duty Pilot</Label>
+          <Input value={duty_pilot} onChange={(e) => setDP(e.target.value)} disabled={loading} />
+        </div>
+        <div className="md:col-span-2">
+          <Label>Notes</Label>
+          <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={loading} />
+        </div>
+        <div className="md:col-span-2 flex justify-end">
+          <Button onClick={save} disabled={saving || loading}>Save daily log</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function OgnSourceCell({ flight }: { flight: Flight }) {
   if (flight.manual) return <Badge variant="outline">Manual</Badge>;
   const src = flight.ogn_source;
