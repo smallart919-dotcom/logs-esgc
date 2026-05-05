@@ -22,6 +22,12 @@ export const Route = createFileRoute("/")({
   component: FlightsPage,
 });
 
+type OgnSource = {
+  airfield?: string;
+  synced_at?: string;
+  match?: { flarm?: string; registration?: string; confidence?: "high" | "low" };
+  device?: { address?: string; registration?: string; cn?: string };
+} | null;
 type Flight = {
   id: string; flight_date: string;
   glider_id: string | null; glider_registration: string | null; flarm_id: string | null;
@@ -31,6 +37,7 @@ type Flight = {
   launch_type: "aerotow" | "winch" | null;
   aerotow_height_ft: number | null;
   manual: boolean; notes: string | null;
+  ogn_source: OgnSource;
 };
 type Glider = { id: string; registration: string; callsign: string | null; flarm_id: string | null; glider_type: string | null };
 type Member = { id: string; full_name: string; membership_number: string };
