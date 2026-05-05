@@ -121,11 +121,20 @@ function FlightsPage() {
     finally { if (!silent) setSyncing(false); }
   }, [icao, date, load]);
 
-  // Auto-sync every 30 seconds in the background.
+  // Auto-sync every 10 seconds in the background.
+  const SYNC_INTERVAL = 10;
+  const [nextSync, setNextSync] = useState(SYNC_INTERVAL);
   useEffect(() => {
     if (!icao) return;
-    const id = setInterval(() => { syncOgn(true); }, 30_000);
-    return () => clearInterval(id);
+    syncOgn(true);
+    setNextSync(SYNC_INTERVAL);
+    const tick = setInterval(() => {
+      setNextSync((n) => {
+        if (n <= 1) { syncOgn(true); return SYNC_INTERVAL; }
+        return n - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
   }, [icao, syncOgn]);
 
 
