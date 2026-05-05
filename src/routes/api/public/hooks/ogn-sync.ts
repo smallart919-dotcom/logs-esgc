@@ -55,30 +55,52 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           return Response.json({ error: `OGN fetch failed: ${e.message}` }, { status: 502 });
         }
 
+        const synced_at = new Date().toISOString();
         let created = 0, updated = 0, skipped = 0;
+        const matches: Array<{
+          status: "created" | "updated" | "unmatched" | "skipped";
+          flarm: string | null;
+          registration: string | null;
+          callsign: string | null;
+          confidence: "high" | "low";
+          takeoff: string | null;
+          landing: string | null;
+          synced_at: string;
+        }> = [];
+
         for (const f of payload.flights || []) {
           const dev = payload.devices?.[f.device];
-          if (!dev?.address) { skipped++; continue; }
-          const flarm = dev.address.toUpperCase();
-          // Only auto-import flights for known fleet gliders
-          const fleetMatch = fleetByFlarm.get(flarm);
-          if (!fleetMatch) { skipped++; continue; }
-
+          const flarm = dev?.address ? dev.address.toUpperCase() : null;
           const takeoff = parseTimeOnDate(date, f.start);
           const landing = parseTimeOnDate(date, f.stop);
-          if (!takeoff) { skipped++; continue; }
+          const fleetMatch = flarm ? fleetByFlarm.get(flarm) : undefined;
 
-          // Upsert by (flarm_id, takeoff_time)
+          if (!flarm || !takeoff) {
+            skipped++;
+            matches.push({ status: "skipped", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, synced_at });
+            continue;
+          }
+
+          if (!fleetMatch) {
+            // Track unmatched FLARMs so the user can see what was seen
+            matches.push({ status: "unmatched", flarm, registration: dev?.registration ?? null, callsign: dev?.cn ?? null, confidence: "low", takeoff, landing, synced_at });
+            skipped++;
+            continue;
+          }
+
+          const sourceMeta = { airfield: icao, raw: f, device: dev, synced_at, match: { flarm, registration: fleetMatch.registration, confidence: "high" as const } };
+
           const { data: existing } = await supabaseAdmin
-            .from("flights").select("id, landing_time")
+            .from("flights").select("id, landing_time, ogn_source")
             .eq("flarm_id", flarm).eq("takeoff_time", takeoff).eq("manual", false)
             .maybeSingle();
 
           if (existing) {
-            if (landing && !existing.landing_time) {
-              await supabaseAdmin.from("flights").update({ landing_time: landing }).eq("id", existing.id);
-              updated++;
-            }
+            const patch: Record<string, unknown> = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
+            if (landing && !existing.landing_time) patch.landing_time = landing;
+            await supabaseAdmin.from("flights").update(patch).eq("id", existing.id);
+            updated++;
+            matches.push({ status: "updated", flarm, registration: fleetMatch.registration, callsign: dev?.cn ?? null, confidence: "high", takeoff, landing, synced_at });
           } else {
             const { error: insErr } = await supabaseAdmin.from("flights").insert({
               flight_date: date,
@@ -88,13 +110,16 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
               takeoff_time: takeoff,
               landing_time: landing,
               manual: false,
-              ogn_source: { airfield: icao, raw: f, device: dev },
+              ogn_source: sourceMeta,
             });
-            if (!insErr) created++;
+            if (!insErr) {
+              created++;
+              matches.push({ status: "created", flarm, registration: fleetMatch.registration, callsign: dev?.cn ?? null, confidence: "high", takeoff, landing, synced_at });
+            }
           }
         }
 
-        return Response.json({ ok: true, icao, date, created, updated, skipped, total: payload.flights?.length ?? 0 });
+        return Response.json({ ok: true, icao, date, created, updated, skipped, total: payload.flights?.length ?? 0, synced_at, matches });
       },
     },
   },
