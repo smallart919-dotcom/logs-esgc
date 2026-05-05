@@ -353,6 +353,60 @@ function FlightsPage() {
   );
 }
 
+function MotorGliderCosts({ flights }: { flights: Flight[] }) {
+  const [open, setOpen] = useState(false);
+  const mg = flights.filter((f) => (f.glider_registration || "").toUpperCase().trim() === "G-KIAU");
+  const rows = mg.map((f) => {
+    const std = computeFlightCharge(f, false);
+    const u21 = computeFlightCharge(f, true);
+    const mins = f.takeoff_time && f.landing_time
+      ? Math.round((+new Date(f.landing_time) - +new Date(f.takeoff_time)) / 60000) : 0;
+    return { f, std, u21, mins };
+  });
+  const totalStd = rows.reduce((a, r) => a + r.std.total, 0);
+  return (
+    <Card>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors">
+            <CardTitle className="flex items-center justify-between text-base">
+              <span>Motor Glider Costs (G-KIAU) — {mg.length} flight{mg.length === 1 ? "" : "s"}</span>
+              <span className="text-sm text-muted-foreground">{open ? "Hide" : "Show"} · Total {fmtGBP(totalStd)}</span>
+            </CardTitle>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="overflow-x-auto">
+            {mg.length === 0 ? (
+              <div className="text-sm text-muted-foreground py-4">No motor glider flights on this date.</div>
+            ) : (
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Pilot</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
+                  <TableHead>Duration</TableHead><TableHead className="text-right">Normal</TableHead>
+                  <TableHead className="text-right">U21</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {rows.map(({ f, std, u21, mins }) => (
+                    <TableRow key={f.id}>
+                      <TableCell>{f.p1_name || <span className="text-muted-foreground">—</span>}{f.p1_membership ? <span className="text-xs text-muted-foreground ml-1">({f.p1_membership})</span> : null}</TableCell>
+                      <TableCell className="font-mono text-sm">{f.takeoff_time ? new Date(f.takeoff_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
+                      <TableCell className="font-mono text-sm">{f.landing_time ? new Date(f.landing_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
+                      <TableCell className="text-sm">{mins}m</TableCell>
+                      <TableCell className="text-right font-medium">{fmtGBP(std.total)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{fmtGBP(u21.total)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+}
+
 function DailyLogCard({ date }: { date: string }) {
   const [duty_instructor, setDI] = useState("");
   const [duty_pilot, setDP] = useState("");
