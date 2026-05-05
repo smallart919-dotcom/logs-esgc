@@ -366,14 +366,31 @@ function DailyLogCard({ date }: { date: string }) {
     return () => { active = false; };
   }, [date]);
 
-  const save = async () => {
+  const save = useCallback(async (silent = false) => {
+    if (loading) return;
     setSaving(true);
     const { error } = await supabase.from("daily_logs").upsert({
       flight_date: date, duty_instructor: duty_instructor || null, duty_pilot: duty_pilot || null, notes: notes || null,
     }, { onConflict: "flight_date" });
     setSaving(false);
-    if (error) toast.error(error.message); else toast.success("Daily log saved");
-  };
+    if (error) { if (!silent) toast.error(error.message); }
+    else if (!silent) toast.success("Daily log saved");
+  }, [loading, date, duty_instructor, duty_pilot, notes]);
+
+  // Debounced autosave whenever any field changes.
+  useEffect(() => {
+    if (loading) return;
+    const id = setTimeout(() => { save(true); }, 1500);
+    return () => clearTimeout(id);
+  }, [duty_instructor, duty_pilot, notes, loading, save]);
+
+  // Force-save at midnight so the day's log is always persisted.
+  useEffect(() => {
+    const now = new Date();
+    const next = new Date(now); next.setHours(24, 0, 5, 0);
+    const id = setTimeout(() => { save(true); }, next.getTime() - now.getTime());
+    return () => clearTimeout(id);
+  }, [save]);
 
   return (
     <Card>
@@ -391,8 +408,8 @@ function DailyLogCard({ date }: { date: string }) {
           <Label>Notes</Label>
           <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={loading} />
         </div>
-        <div className="md:col-span-2 flex justify-end">
-          <Button onClick={save} disabled={saving || loading}>Save daily log</Button>
+        <div className="md:col-span-2 flex justify-end items-center gap-2 text-xs text-muted-foreground">
+          {saving ? "Saving…" : "Auto-saved"}
         </div>
       </CardContent>
     </Card>
