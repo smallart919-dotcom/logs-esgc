@@ -424,6 +424,7 @@ function FlightsPage() {
                         </Badge>
                       ) : <span className="text-muted-foreground text-sm">—</span>}
                     </TableCell>
+                    <TableCell className="font-mono text-xs">{f.logged_by || <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell><OgnSourceCell flight={f} /></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <Button size="icon" variant="ghost" onClick={() => setEditing(f)}><Pencil className="size-4" /></Button>
