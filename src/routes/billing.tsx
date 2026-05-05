@@ -121,6 +121,45 @@ function BillingPage() {
 
   const grandTotal = rows.reduce((s, r) => s + r.totalApplied, 0);
 
+  const periodLabel = mode === "day" ? date : month;
+  const csvEscape = (v: string | number) => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  function downloadCSV(filename: string, content: string) {
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+  function exportGeneric() {
+    const headers = ["Date","Member #","Member Name","U21","Glider","Role","Launch","Soaring","TMG","Total","Notes"];
+    const lines = [headers.join(",")];
+    for (const r of rows) for (const fe of r.flights) {
+      lines.push([
+        fe.flight.flight_date, r.member.membership_number, r.member.full_name,
+        r.member.under_21 ? "Y" : "N",
+        fe.flight.glider_registration || "", fe.role,
+        fe.applied.launch.toFixed(2), fe.applied.soaring.toFixed(2), fe.applied.motorGlider.toFixed(2),
+        fe.applied.total.toFixed(2), fe.applied.notes.join(" · "),
+      ].map(csvEscape).join(","));
+    }
+    downloadCSV(`billing-${periodLabel}.csv`, lines.join("\n"));
+  }
+  function exportAeroLog() {
+    const headers = ["MemberNumber","Date","Description","Amount","Reference"];
+    const lines = [headers.join(",")];
+    for (const r of rows) for (const fe of r.flights) {
+      const desc = `${fe.flight.glider_registration || "Flight"} ${fe.role} — ${fe.applied.notes.join("; ")}`;
+      lines.push([
+        r.member.membership_number, fe.flight.flight_date, desc,
+        fe.applied.total.toFixed(2), fe.flight.id.slice(0, 8),
+      ].map(csvEscape).join(","));
+    }
+    downloadCSV(`aerolog-${periodLabel}.csv`, lines.join("\n"));
+  }
+
 
   if (allowed === null) return <div className="text-muted-foreground">Loading…</div>;
   if (!allowed) return (
