@@ -567,14 +567,22 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
       flarm_id: r.flarm_id ? r.flarm_id.toUpperCase() : null,
       takeoff_time: fromLocal(r.takeoff_time),
       landing_time: fromLocal(r.landing_time),
-      p1_name: r.p1_name || null, p1_membership: r.p1_membership || null,
-      p2_name: r.p2_name || null, p2_membership: r.p2_membership || null,
+      p1_kind: r.p1_kind,
+      p1_name: r.p1_kind === "gfe" ? null : (r.p1_name || null),
+      p1_membership: r.p1_kind === "member" ? (r.p1_membership || null) : null,
+      p2_kind: r.p2_kind,
+      p2_name: r.p2_kind === "gfe" ? null : (r.p2_name || null),
+      p2_membership: r.p2_kind === "member" ? (r.p2_membership || null) : null,
       launch_type: r.launch_type,
       aerotow_height_ft: r.launch_type === "aerotow" ? r.aerotow_height_ft : null,
       manual: true,
     }));
     const { error } = await supabase.from("flights").insert(payload);
     if (error) return toast.error(error.message);
+    await Promise.all(payload.flatMap((p) => [
+      maybeAddMember(members, p.p1_kind, p.p1_name, p.p1_membership),
+      maybeAddMember(members, p.p2_kind, p.p2_name, p.p2_membership),
+    ]));
     toast.success(`${payload.length} flights logged`);
     onSaved();
   };
