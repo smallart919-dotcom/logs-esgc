@@ -160,13 +160,6 @@ function FlightsPage() {
     };
     const pilotName = (kind: PilotKind | null, name: string | null) =>
       kind === "gfe" ? "GFE" : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
-    const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
-    const memberByName = new Map(members.map((m) => [norm(m.full_name), m.membership_number]));
-    const lookupMembership = (kind: PilotKind | null, name: string | null, stored: string | null) => {
-      if (kind !== "member") return "";
-      if (stored) return stored;
-      return memberByName.get(norm(name)) || "";
-    };
 
     const wb = new ExcelJS.Workbook();
 
@@ -252,10 +245,10 @@ function FlightsPage() {
           i + 1,
           f.glider_registration || "",
           "",
-          lookupMembership(f.p1_kind, f.p1_name, f.p1_membership),
+          f.p1_kind === "member" ? (f.p1_membership || "") : "",
           pilotName(f.p1_kind, f.p1_name),
           f.p1_charge ? "✓" : "",
-          lookupMembership(f.p2_kind, f.p2_name, f.p2_membership),
+          f.p2_kind === "member" ? (f.p2_membership || "") : "",
           pilotName(f.p2_kind, f.p2_name),
           f.p2_charge ? "✓" : "",
           f.launch_type === "aerotow" ? (f.aerotow_height_ft ?? "") : "",
@@ -385,7 +378,7 @@ function FlightsPage() {
         </Card>
       )}
 
-      <DailyLogCard date={date} />
+      <DailyLogCard date={date} members={members} />
 
       <Card>
         <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {date}</CardTitle></CardHeader>
@@ -518,7 +511,7 @@ function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; on
   );
 }
 
-function DailyLogCard({ date }: { date: string }) {
+function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
   const [duty_instructor, setDI] = useState("");
   const [duty_pilot, setDP] = useState("");
   const [notes, setNotes] = useState("");
@@ -570,11 +563,11 @@ function DailyLogCard({ date }: { date: string }) {
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <Label>Duty Instructor</Label>
-          <Input value={duty_instructor} onChange={(e) => setDI(e.target.value)} disabled={loading} />
+          <MemberNamePicker members={members} value={duty_instructor} onChange={setDI} disabled={loading} />
         </div>
         <div>
           <Label>Duty Pilot</Label>
-          <Input value={duty_pilot} onChange={(e) => setDP(e.target.value)} disabled={loading} />
+          <MemberNamePicker members={members} value={duty_pilot} onChange={setDP} disabled={loading} />
         </div>
         <div className="md:col-span-2">
           <Label>Notes</Label>
@@ -858,12 +851,18 @@ function PilotPicker({ label, members, value, onPick, onText }: {
   onPick: (m: Member) => void; onText: (t: string) => void;
 }) {
   const [focused, setFocused] = useState(false);
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const filtered = useMemo(() => {
     const q = value.trim().toLowerCase();
     if (!q) return [];
     return members.filter((m) => m.full_name.toLowerCase().includes(q)).slice(0, 6);
   }, [members, value]);
   const showList = focused && filtered.length > 0;
+  const handleText = (t: string) => {
+    onText(t);
+    const exact = members.find((m) => norm(m.full_name) === norm(t));
+    if (exact) onPick(exact);
+  };
   return (
     <div className="relative">
       <Label>{label}</Label>
@@ -872,7 +871,7 @@ function PilotPicker({ label, members, value, onPick, onText }: {
         placeholder="Type a name…"
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 150)}
-        onChange={(e) => onText(e.target.value)}
+        onChange={(e) => handleText(e.target.value)}
       />
       {showList && (
         <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
@@ -882,6 +881,45 @@ function PilotPicker({ label, members, value, onPick, onText }: {
               key={m.id}
               className="w-full text-left px-3 py-2 hover:bg-accent"
               onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
+            >
+              <div className="text-sm">{m.full_name}</div>
+              <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MemberNamePicker({ members, value, onChange, disabled }: {
+  members: Member[]; value: string; onChange: (name: string) => void; disabled?: boolean;
+}) {
+  const [focused, setFocused] = useState(false);
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return [];
+    return members.filter((m) => m.full_name.toLowerCase().includes(q)).slice(0, 6);
+  }, [members, value]);
+  const showList = focused && filtered.length > 0;
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        placeholder="Type a name…"
+        disabled={disabled}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {showList && (
+        <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
+          {filtered.map((m) => (
+            <button
+              type="button"
+              key={m.id}
+              className="w-full text-left px-3 py-2 hover:bg-accent"
+              onMouseDown={(e) => { e.preventDefault(); onChange(m.full_name); setFocused(false); }}
             >
               <div className="text-sm">{m.full_name}</div>
               <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
