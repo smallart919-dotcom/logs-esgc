@@ -382,17 +382,24 @@ function MotorGliderCosts({ flights }: { flights: Flight[] }) {
             ) : (
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>Pilot</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
-                  <TableHead>Duration</TableHead><TableHead className="text-right">Normal</TableHead>
+                  <TableHead>Glider</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
+                  <TableHead>Dur</TableHead>
+                  <TableHead>P1</TableHead><TableHead>P1 Ch</TableHead>
+                  <TableHead>P2</TableHead><TableHead>P2 Ch</TableHead>
+                  <TableHead className="text-right">Normal</TableHead>
                   <TableHead className="text-right">U21</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {rows.map(({ f, std, u21, mins }) => (
                     <TableRow key={f.id}>
-                      <TableCell>{f.p1_name || <span className="text-muted-foreground">—</span>}{f.p1_membership ? <span className="text-xs text-muted-foreground ml-1">({f.p1_membership})</span> : null}</TableCell>
+                      <TableCell className="font-medium">{f.glider_registration}</TableCell>
                       <TableCell className="font-mono text-sm">{f.takeoff_time ? new Date(f.takeoff_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
                       <TableCell className="font-mono text-sm">{f.landing_time ? new Date(f.landing_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
                       <TableCell className="text-sm">{mins}m</TableCell>
+                      <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
+                      <TableCell>{f.p1_charge ? <Badge variant="default">✓</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell><PilotCell name={f.p2_name} membership={f.p2_membership} kind={f.p2_kind} /></TableCell>
+                      <TableCell>{f.p2_charge ? <Badge variant="default">✓</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell className="text-right font-medium">{fmtGBP(std.total)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{fmtGBP(u21.total)}</TableCell>
                     </TableRow>
