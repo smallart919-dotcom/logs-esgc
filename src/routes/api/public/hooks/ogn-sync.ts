@@ -90,6 +90,13 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           .eq("flight_date", date).eq("manual", false);
         const dayFlights = existingDay ?? [];
 
+        // Pre-load tombstones for the day so deleted flights don't get re-created.
+        const { data: tombstoneRows } = await supabaseAdmin
+          .from("flight_tombstones")
+          .select("flarm_id, glider_registration, takeoff_time, landing_time")
+          .eq("flight_date", date);
+        const tombstones = tombstoneRows ?? [];
+
         const TIME_WINDOW_MS = 90 * 1000; // ±90s window for fuzzy match
 
         for (const f of payload.flights || []) {
@@ -133,6 +140,24 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             const sameReg = regKey && row.glider_registration && row.glider_registration.trim().toUpperCase() === regKey;
             return sameFlarm || sameReg;
           });
+
+          // Skip if a tombstone matches (deleted previously) — match by flarm OR registration within ±90s
+          if (!existing && refMs !== null) {
+            const tombstoned = tombstones.find((t) => {
+              const tRef = t.takeoff_time ?? t.landing_time;
+              if (!tRef) {
+                const sameFlarm = flarm && t.flarm_id && t.flarm_id.toUpperCase() === flarm;
+                const sameReg = regKey && t.glider_registration && t.glider_registration.trim().toUpperCase() === regKey;
+                return sameFlarm || sameReg;
+              }
+              const dt = Math.abs(+new Date(tRef) - refMs);
+              if (dt > TIME_WINDOW_MS) return false;
+              const sameFlarm = flarm && t.flarm_id && t.flarm_id.toUpperCase() === flarm;
+              const sameReg = regKey && t.glider_registration && t.glider_registration.trim().toUpperCase() === regKey;
+              return sameFlarm || sameReg;
+            });
+            if (tombstoned) { skipped++; continue; }
+          }
 
           if (existing) {
             const patch: any = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };

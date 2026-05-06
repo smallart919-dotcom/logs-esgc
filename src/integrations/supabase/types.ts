@@ -98,6 +98,39 @@ export type Database = {
         }
         Relationships: []
       }
+      flight_tombstones: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          flarm_id: string | null
+          flight_date: string
+          glider_registration: string | null
+          id: string
+          landing_time: string | null
+          takeoff_time: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          flarm_id?: string | null
+          flight_date: string
+          glider_registration?: string | null
+          id?: string
+          landing_time?: string | null
+          takeoff_time?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          flarm_id?: string | null
+          flight_date?: string
+          glider_registration?: string | null
+          id?: string
+          landing_time?: string | null
+          takeoff_time?: string | null
+        }
+        Relationships: []
+      }
       flights: {
         Row: {
           aerotow_height_ft: number | null
