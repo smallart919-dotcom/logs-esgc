@@ -104,14 +104,8 @@ function FlightsPage() {
   const [icao] = useState<string>("UKRIN");
 
   const syncOgn = useCallback(async (silent = false) => {
-    let code = icao;
-    if (!code) {
-      if (silent) return;
-      code = (prompt("Enter your airfield ICAO (e.g. EGHL, LFNB) — used to fetch OGN flights.") || "").toUpperCase().trim();
-      if (!code) return;
-      localStorage.setItem("ogn_icao", code);
-      setIcao(code);
-    }
+    const code = icao;
+    if (!code) return;
     if (!silent) { setSyncing(true); setSyncResult(null); }
     try {
       const res = await fetch("/api/public/hooks/ogn-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icao: code, date }) });
