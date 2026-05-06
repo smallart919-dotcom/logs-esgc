@@ -326,14 +326,14 @@ function FlightsPage() {
           <h1 className="text-3xl font-bold flex items-center gap-2"><Plane className="size-7 text-primary" /> Daily Flight Log</h1>
           <p className="text-muted-foreground">OGN-fed flights for your club fleet. Add pilot details and export.</p>
         </div>
-        <div className="flex flex-wrap gap-2 items-end">
-          <div>
+        <div className="flex flex-wrap gap-2 items-end w-full md:w-auto">
+          <div className="flex-1 min-w-[140px] md:flex-none">
             <Label className="text-xs">Date</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40"
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full md:w-40"
               max={todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
           <div
-            className="text-xs text-muted-foreground px-2 py-1 rounded border bg-muted/40 cursor-pointer select-none"
+            className="text-xs text-muted-foreground px-2 py-1 rounded border bg-muted/40 cursor-pointer select-none whitespace-nowrap"
             title={icao ? `Auto-syncing ${icao} every ${SYNC_INTERVAL}s. Right-click to change airfield.` : "Click to set airfield"}
             onClick={() => { if (!icao) { const v = (prompt("Airfield ICAO") || "").toUpperCase().trim(); if (v) { localStorage.setItem("ogn_icao", v); setIcao(v); } } }}
             onContextMenu={(e) => { e.preventDefault(); const v = prompt("Airfield ICAO", icao) || ""; if (v) { localStorage.setItem("ogn_icao", v.toUpperCase()); setIcao(v.toUpperCase()); } }}
@@ -341,9 +341,11 @@ function FlightsPage() {
             <RefreshCw className={`size-3 inline mr-1 ${syncing ? "animate-spin" : ""}`} />
             {icao ? `Next sync in ${nextSync}s` : "Set airfield"}
           </div>
-          <Button onClick={exportXlsx} variant="outline"><Download className="size-4 mr-1" />Export</Button>
-          <Button onClick={() => setAdding(true)} variant="outline"><Plus className="size-4 mr-1" />Add manual</Button>
-          <Button onClick={() => setBulkOpen(true)}><Plus className="size-4 mr-1" />Bulk add</Button>
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <Button onClick={exportXlsx} variant="outline" className="flex-1 md:flex-none"><Download className="size-4 mr-1" />Export</Button>
+            <Button onClick={() => setAdding(true)} variant="outline" className="flex-1 md:flex-none"><Plus className="size-4 mr-1" />Add manual</Button>
+            <Button onClick={() => setBulkOpen(true)} className="flex-1 md:flex-none"><Plus className="size-4 mr-1" />Bulk add</Button>
+          </div>
         </div>
       </div>
 
