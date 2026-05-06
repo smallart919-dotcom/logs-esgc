@@ -485,7 +485,7 @@ function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; on
             {mg.length === 0 ? (
               <div className="text-sm text-muted-foreground py-4">No motor glider flights on this date.</div>
             ) : (
-              <Table>
+              <Table className="min-w-[900px]">
                 <TableHeader><TableRow>
                   <TableHead>Glider</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
                   <TableHead>Dur</TableHead>
