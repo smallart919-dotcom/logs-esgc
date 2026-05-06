@@ -101,7 +101,7 @@ function FlightsPage() {
     return () => { supabase.removeChannel(ch); };
   }, [load]);
 
-  const [icao, setIcao] = useState<string>(() => (typeof window !== "undefined" ? localStorage.getItem("ogn_icao") || "" : ""));
+  const [icao] = useState<string>("UKRIN");
 
   const syncOgn = useCallback(async (silent = false) => {
     let code = icao;
