@@ -141,6 +141,17 @@ function FlightsPage() {
 
   const remove = async (id: string) => {
     if (!confirm("Delete this flight?")) return;
+    const f = flights.find((x) => x.id === id);
+    if (f && !f.manual) {
+      // Record a tombstone so the next OGN sync won't recreate this flight.
+      await supabase.from("flight_tombstones").insert({
+        flight_date: f.flight_date,
+        flarm_id: f.flarm_id,
+        glider_registration: f.glider_registration,
+        takeoff_time: f.takeoff_time,
+        landing_time: f.landing_time,
+      });
+    }
     const { error } = await supabase.from("flights").delete().eq("id", id);
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
