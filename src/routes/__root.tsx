@@ -89,15 +89,28 @@ function RootComponent() {
             <span className="hidden sm:inline">ESGC Logs</span>
           </Link>
           <nav className="flex items-center gap-1">
-            <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" />
-            {(userEmail || "").toLowerCase() === "office@esgc.local" && (
-              <NavLink to="/history" icon={<History className="size-4" />} label="History" />
-            )}
-            {["office@esgc.local", "caravan@esgc.local"].includes((userEmail || "").toLowerCase()) && (
-              <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" />
-            )}
-            <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" />
-            <NavLink to="/members" icon={<Users className="size-4" />} label="Members" />
+            {(() => {
+              const email = (userEmail || "").toLowerCase();
+              const isCaravan = email === "caravan@esgc.local";
+              const isOffice = email === "office@esgc.local";
+              return (
+                <>
+                  <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" />
+                  {isOffice && (
+                    <NavLink to="/history" icon={<History className="size-4" />} label="History" />
+                  )}
+                  {(isOffice || isCaravan) && (
+                    <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" />
+                  )}
+                  {!isCaravan && (
+                    <>
+                      <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" />
+                      <NavLink to="/members" icon={<Users className="size-4" />} label="Members" />
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </nav>
           <div className="flex items-center gap-2">
             {userEmail ? (
