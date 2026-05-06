@@ -448,6 +448,8 @@ function FlightsPage() {
 
       <MotorGliderCosts flights={flights} onEdit={setEditing} onDelete={remove} />
 
+      <DeletedFlights date={date} onRestored={load} />
+
       <FlightDialog
         open={!!editing || adding}
         onOpenChange={(o) => { if (!o) { setEditing(null); setAdding(false); } }}
