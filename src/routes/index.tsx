@@ -448,6 +448,8 @@ function FlightsPage() {
 
       <MotorGliderCosts flights={flights} onEdit={setEditing} onDelete={remove} />
 
+      <DeletedFlights date={date} onRestored={load} />
+
       <FlightDialog
         open={!!editing || adding}
         onOpenChange={(o) => { if (!o) { setEditing(null); setAdding(false); } }}
@@ -459,6 +461,92 @@ function FlightsPage() {
         onSaved={() => { setEditing(null); setAdding(false); load(); }}
       />
       <BulkAddDialog open={bulkOpen} onOpenChange={setBulkOpen} date={date} gliders={gliders} members={members} onSaved={() => { setBulkOpen(false); load(); }} />
+    </div>
+  );
+}
+
+type Tombstone = {
+  id: string;
+  flight_date: string;
+  flarm_id: string | null;
+  glider_registration: string | null;
+  takeoff_time: string | null;
+  landing_time: string | null;
+  created_at: string;
+};
+
+function DeletedFlights({ date, onRestored }: { date: string; onRestored: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState<Tombstone[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("flight_tombstones")
+      .select("*")
+      .eq("flight_date", date)
+      .order("takeoff_time", { ascending: true, nullsFirst: false });
+    setRows((data as Tombstone[]) ?? []);
+    setLoading(false);
+  }, [date]);
+
+  useEffect(() => { if (open) refresh(); }, [open, refresh]);
+
+  const restore = async (t: Tombstone) => {
+    // Removing the tombstone allows the next OGN sync to recreate the flight.
+    const { error } = await supabase.from("flight_tombstones").delete().eq("id", t.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Flight will be re-added on next sync");
+    setRows((rs) => rs.filter((r) => r.id !== t.id));
+    onRestored();
+  };
+
+  const fmt = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—";
+
+  return (
+    <div className="mt-2">
+      <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>
+        {open ? "Hide" : "Show"} deleted flights
+      </Button>
+      {open && (
+        <Card className="mt-2">
+          <CardHeader><CardTitle className="text-base">Deleted on {date}</CardTitle></CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-sm text-muted-foreground">Loading…</div>
+            ) : rows.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No deleted flights for this date.</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Glider</TableHead>
+                    <TableHead>FLARM</TableHead>
+                    <TableHead>Take off</TableHead>
+                    <TableHead>Landing</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>{t.glider_registration || <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell className="font-mono text-xs">{t.flarm_id || <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell>{fmt(t.takeoff_time)}</TableCell>
+                      <TableCell>{fmt(t.landing_time)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="secondary" onClick={() => restore(t)}>Re-add</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
