@@ -90,6 +90,13 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           .eq("flight_date", date).eq("manual", false);
         const dayFlights = existingDay ?? [];
 
+        // Pre-load tombstones for the day so deleted flights don't get re-created.
+        const { data: tombstoneRows } = await supabaseAdmin
+          .from("flight_tombstones")
+          .select("flarm_id, glider_registration, takeoff_time, landing_time")
+          .eq("flight_date", date);
+        const tombstones = tombstoneRows ?? [];
+
         const TIME_WINDOW_MS = 90 * 1000; // ±90s window for fuzzy match
 
         for (const f of payload.flights || []) {
