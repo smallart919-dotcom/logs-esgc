@@ -392,7 +392,7 @@ function FlightsPage() {
       <Card>
         <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {date}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[900px]">
             <TableHeader><TableRow>
               <TableHead>Glider</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
               <TableHead>Dur</TableHead><TableHead>P1</TableHead><TableHead>P2</TableHead>
@@ -485,7 +485,7 @@ function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; on
             {mg.length === 0 ? (
               <div className="text-sm text-muted-foreground py-4">No motor glider flights on this date.</div>
             ) : (
-              <Table>
+              <Table className="min-w-[900px]">
                 <TableHeader><TableRow>
                   <TableHead>Glider</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
                   <TableHead>Dur</TableHead>
