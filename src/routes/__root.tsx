@@ -91,19 +91,14 @@ function RootComponent() {
           <nav className="flex items-center gap-1">
             {(() => {
               const email = (userEmail || "").toLowerCase();
-              const isCaravan = email === "caravan@esgc.local";
               const isOffice = email === "office@esgc.local";
               return (
                 <>
                   <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" />
+                  <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" />
                   {isOffice && (
-                    <NavLink to="/history" icon={<History className="size-4" />} label="History" />
-                  )}
-                  {(isOffice || isCaravan) && (
-                    <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" />
-                  )}
-                  {!isCaravan && (
                     <>
+                      <NavLink to="/history" icon={<History className="size-4" />} label="History" />
                       <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" />
                       <NavLink to="/members" icon={<Users className="size-4" />} label="Members" />
                     </>
