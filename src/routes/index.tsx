@@ -101,17 +101,11 @@ function FlightsPage() {
     return () => { supabase.removeChannel(ch); };
   }, [load]);
 
-  const [icao, setIcao] = useState<string>(() => (typeof window !== "undefined" ? localStorage.getItem("ogn_icao") || "" : ""));
+  const [icao] = useState<string>("UKRIN");
 
   const syncOgn = useCallback(async (silent = false) => {
-    let code = icao;
-    if (!code) {
-      if (silent) return;
-      code = (prompt("Enter your airfield ICAO (e.g. EGHL, LFNB) — used to fetch OGN flights.") || "").toUpperCase().trim();
-      if (!code) return;
-      localStorage.setItem("ogn_icao", code);
-      setIcao(code);
-    }
+    const code = icao;
+    if (!code) return;
     if (!silent) { setSyncing(true); setSyncResult(null); }
     try {
       const res = await fetch("/api/public/hooks/ogn-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icao: code, date }) });
@@ -333,13 +327,11 @@ function FlightsPage() {
               max={todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
           <div
-            className="text-xs text-muted-foreground px-2 py-1 rounded border bg-muted/40 cursor-pointer select-none whitespace-nowrap"
-            title={icao ? `Auto-syncing ${icao} every ${SYNC_INTERVAL}s. Right-click to change airfield.` : "Click to set airfield"}
-            onClick={() => { if (!icao) { const v = (prompt("Airfield ICAO") || "").toUpperCase().trim(); if (v) { localStorage.setItem("ogn_icao", v); setIcao(v); } } }}
-            onContextMenu={(e) => { e.preventDefault(); const v = prompt("Airfield ICAO", icao) || ""; if (v) { localStorage.setItem("ogn_icao", v.toUpperCase()); setIcao(v.toUpperCase()); } }}
+            className="text-xs text-muted-foreground px-2 py-1 rounded border bg-muted/40 select-none whitespace-nowrap"
+            title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s.`}
           >
             <RefreshCw className={`size-3 inline mr-1 ${syncing ? "animate-spin" : ""}`} />
-            {icao ? `Next sync in ${nextSync}s` : "Set airfield"}
+            {icao} · next sync in {nextSync}s
           </div>
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
             <Button onClick={exportXlsx} variant="outline" className="flex-1 md:flex-none"><Download className="size-4 mr-1" />Export</Button>
