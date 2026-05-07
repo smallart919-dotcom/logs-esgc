@@ -60,6 +60,35 @@ async function maybeAddMember(existing: Member[], kind: PilotKind | null | undef
   await supabase.from("club_members").insert({ full_name: n, membership_number: m });
 }
 
+async function maybeUpsertFleet(
+  gliders: Glider[],
+  registration: string | null,
+  glider_type: string,
+  callsign: string,
+  flarm_id: string | null,
+) {
+  const reg = (registration || "").trim();
+  if (!reg) return;
+  const type = (glider_type || "").trim();
+  const cs = (callsign || "").trim();
+  if (!type && !cs) return;
+  const existing = gliders.find((g) => (g.registration || "").toUpperCase().trim() === reg.toUpperCase());
+  if (existing) {
+    const patch: Partial<Glider> = {};
+    if (type && !existing.glider_type) patch.glider_type = type;
+    if (cs && !existing.callsign) patch.callsign = cs;
+    if (Object.keys(patch).length === 0) return;
+    await supabase.from("fleet_gliders").update(patch).eq("id", existing.id);
+  } else {
+    await supabase.from("fleet_gliders").insert({
+      registration: reg,
+      glider_type: type || null,
+      callsign: cs || null,
+      flarm_id: (flarm_id || "").trim().toUpperCase() || null,
+    });
+  }
+}
+
 function FlightsPage() {
   const initialDate = typeof window !== "undefined"
     ? (new URLSearchParams(window.location.search).get("date") || todayStr())
@@ -740,10 +769,27 @@ function FlightDialog({
   gliders: Glider[]; members: Member[]; onSaved: () => void;
 }) {
   const [form, setForm] = useState<Partial<Flight>>({});
+  const [gliderType, setGliderType] = useState("");
+  const [gliderCallsign, setGliderCallsign] = useState("");
+
+  const lookupFleet = (reg: string) => {
+    const r = (reg || "").toUpperCase().trim();
+    if (!r) return null;
+    return gliders.find((g) => (g.registration || "").toUpperCase().trim() === r) ?? null;
+  };
 
   useEffect(() => {
-    if (flight) setForm(flight);
-    else if (manual) setForm({
+    const f = flight;
+    if (f) {
+      setForm(f);
+      const fleet = lookupFleet(f.glider_registration || "");
+      const ognType = (f.ogn_source?.device as any)?.aircraft as string | undefined;
+      setGliderType(fleet?.glider_type || ognType || "");
+      setGliderCallsign(fleet?.callsign || "");
+    } else if (manual) {
+      setGliderType("");
+      setGliderCallsign("");
+      setForm({
       flight_date: date, manual: true, launch_type: "aerotow",
       glider_id: null, glider_registration: "", flarm_id: "",
       takeoff_time: null, landing_time: null,
@@ -751,6 +797,7 @@ function FlightDialog({
       p2_name: "", p2_membership: "", p2_kind: "member", p2_charge: false,
       aerotow_height_ft: 2000, notes: "",
     });
+    }
   }, [flight, manual, date, open]);
 
   const setPilot = (which: 1 | 2, name: string, membership: string) => {
@@ -790,6 +837,8 @@ function FlightDialog({
       maybeAddMember(members, p1Kind, payload.p1_name, payload.p1_membership),
       maybeAddMember(members, p2Kind, payload.p2_name, payload.p2_membership),
     ]);
+    // Auto-sync glider type/callsign into fleet so it auto-fills next time
+    await maybeUpsertFleet(gliders, payload.glider_registration, gliderType, gliderCallsign, payload.flarm_id);
     toast.success("Saved");
     onSaved();
   };
@@ -835,9 +884,28 @@ function FlightDialog({
             <GliderPicker
               gliders={gliders}
               registration={form.glider_registration ?? ""}
-              onSelect={(g) => setForm({ ...form, glider_id: g?.id ?? null, glider_registration: g?.registration ?? form.glider_registration, flarm_id: g?.flarm_id ?? form.flarm_id })}
-              onChangeText={(t) => setForm({ ...form, glider_registration: t, glider_id: null })}
+              onSelect={(g) => {
+                setForm({ ...form, glider_id: g?.id ?? null, glider_registration: g?.registration ?? form.glider_registration, flarm_id: g?.flarm_id ?? form.flarm_id });
+                if (g?.glider_type) setGliderType(g.glider_type);
+                if (g?.callsign) setGliderCallsign(g.callsign);
+              }}
+              onChangeText={(t) => {
+                setForm({ ...form, glider_registration: t, glider_id: null });
+                const fleet = lookupFleet(t);
+                if (fleet) {
+                  if (fleet.glider_type) setGliderType(fleet.glider_type);
+                  if (fleet.callsign) setGliderCallsign(fleet.callsign);
+                }
+              }}
             />
+          </div>
+          <div>
+            <Label>Type</Label>
+            <Input placeholder="e.g. ASK-21" value={gliderType} onChange={(e) => setGliderType(e.target.value)} />
+          </div>
+          <div>
+            <Label>Callsign</Label>
+            <Input placeholder="e.g. KA" value={gliderCallsign} onChange={(e) => setGliderCallsign(e.target.value)} />
           </div>
           <div>
             <Label>Takeoff time</Label>
