@@ -83,11 +83,12 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           synced_at: string;
         }> = [];
 
-        // Pre-load all existing OGN flights for the day to enable stronger dedupe
+        // Pre-load ALL existing flights for the day (including manual) so we
+        // never create OGN duplicates of an already-logged flight.
         const { data: existingDay } = await supabaseAdmin
           .from("flights")
-          .select("id, flarm_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft")
-          .eq("flight_date", date).eq("manual", false);
+          .select("id, flarm_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft, manual")
+          .eq("flight_date", date);
         const dayFlights = existingDay ?? [];
 
         // Pre-load tombstones for the day so deleted flights don't get re-created.
