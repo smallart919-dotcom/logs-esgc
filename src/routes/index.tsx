@@ -740,10 +740,27 @@ function FlightDialog({
   gliders: Glider[]; members: Member[]; onSaved: () => void;
 }) {
   const [form, setForm] = useState<Partial<Flight>>({});
+  const [gliderType, setGliderType] = useState("");
+  const [gliderCallsign, setGliderCallsign] = useState("");
+
+  const lookupFleet = (reg: string) => {
+    const r = (reg || "").toUpperCase().trim();
+    if (!r) return null;
+    return gliders.find((g) => (g.registration || "").toUpperCase().trim() === r) ?? null;
+  };
 
   useEffect(() => {
-    if (flight) setForm(flight);
-    else if (manual) setForm({
+    const f = flight;
+    if (f) {
+      setForm(f);
+      const fleet = lookupFleet(f.glider_registration || "");
+      const ognType = (f.ogn_source?.device as any)?.aircraft as string | undefined;
+      setGliderType(fleet?.glider_type || ognType || "");
+      setGliderCallsign(fleet?.callsign || "");
+    } else if (manual) {
+      setGliderType("");
+      setGliderCallsign("");
+      setForm({
       flight_date: date, manual: true, launch_type: "aerotow",
       glider_id: null, glider_registration: "", flarm_id: "",
       takeoff_time: null, landing_time: null,
