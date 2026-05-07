@@ -184,14 +184,6 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             updated++;
             matches.push({ status: "updated", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
           } else {
-            // Only create flights for aircraft that match the club fleet.
-            // This prevents random/visiting aircraft logged by OGN from
-            // appearing in the daily log.
-            if (!fleetMatch) {
-              skipped++;
-              matches.push({ status: "unmatched", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
-              continue;
-            }
             const insertRow: any = {
               flight_date: date,
               glider_id: matchedId,
