@@ -808,6 +808,8 @@ function FlightDialog({
       maybeAddMember(members, p1Kind, payload.p1_name, payload.p1_membership),
       maybeAddMember(members, p2Kind, payload.p2_name, payload.p2_membership),
     ]);
+    // Auto-sync glider type/callsign into fleet so it auto-fills next time
+    await maybeUpsertFleet(gliders, payload.glider_registration, gliderType, gliderCallsign, payload.flarm_id);
     toast.success("Saved");
     onSaved();
   };
