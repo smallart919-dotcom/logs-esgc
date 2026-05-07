@@ -256,8 +256,10 @@ function parseHtmlLogbook(html: string): OgnPayload {
     if (!/^\d+$/.test(idx)) continue;
 
     const towReg = cells[1];
+    const towType = cells[2];
     const gliderReg = cells[3];
     const cn = cells[4];
+    const gliderType = cells[5];
     const takeoff = toHms(cells[6]);
     const landing = toHms(cells[7]);
 
@@ -265,8 +267,9 @@ function parseHtmlLogbook(html: string): OgnPayload {
     if (!gliderReg && !towReg) continue;
     // Use glider reg if present, otherwise the tug reg (so tug-only flights are captured).
     const reg = gliderReg || towReg;
+    const aircraftType = (gliderReg ? gliderType : towType) || undefined;
 
-    const deviceIndex = ensureDevice(reg, cn || undefined);
+    const deviceIndex = ensureDevice(reg, cn || undefined, aircraftType);
 
     flights.push({
       start: takeoff,
