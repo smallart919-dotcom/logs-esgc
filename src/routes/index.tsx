@@ -60,6 +60,35 @@ async function maybeAddMember(existing: Member[], kind: PilotKind | null | undef
   await supabase.from("club_members").insert({ full_name: n, membership_number: m });
 }
 
+async function maybeUpsertFleet(
+  gliders: Glider[],
+  registration: string | null,
+  glider_type: string,
+  callsign: string,
+  flarm_id: string | null,
+) {
+  const reg = (registration || "").trim();
+  if (!reg) return;
+  const type = (glider_type || "").trim();
+  const cs = (callsign || "").trim();
+  if (!type && !cs) return;
+  const existing = gliders.find((g) => (g.registration || "").toUpperCase().trim() === reg.toUpperCase());
+  if (existing) {
+    const patch: Partial<Glider> = {};
+    if (type && !existing.glider_type) patch.glider_type = type;
+    if (cs && !existing.callsign) patch.callsign = cs;
+    if (Object.keys(patch).length === 0) return;
+    await supabase.from("fleet_gliders").update(patch).eq("id", existing.id);
+  } else {
+    await supabase.from("fleet_gliders").insert({
+      registration: reg,
+      glider_type: type || null,
+      callsign: cs || null,
+      flarm_id: (flarm_id || "").trim().toUpperCase() || null,
+    });
+  }
+}
+
 function FlightsPage() {
   const initialDate = typeof window !== "undefined"
     ? (new URLSearchParams(window.location.search).get("date") || todayStr())
