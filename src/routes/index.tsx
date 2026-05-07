@@ -264,7 +264,7 @@ function FlightsPage() {
         const vals = [
           i + 1,
           f.glider_registration || "",
-          "",
+          typeFor(f),
           f.p1_kind === "member" ? (f.p1_membership || "") : "",
           pilotName(f.p1_kind, f.p1_name),
           f.p1_charge ? "✓" : "",
