@@ -179,6 +179,16 @@ function FlightsPage() {
       top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" },
     };
 
+    const fleetTypeByReg = new Map(
+      gliders.filter((g) => g.registration).map((g) => [g.registration.toUpperCase().trim(), g.glider_type || ""])
+    );
+    const typeFor = (f: Flight) => {
+      const r = (f.glider_registration || "").toUpperCase().trim();
+      const fleetT = fleetTypeByReg.get(r);
+      if (fleetT) return fleetT;
+      const dev = (f.ogn_source as any)?.raw && (f.ogn_source as any)?.device;
+      return (dev?.aircraft as string) || "";
+    };
     const buildSheet = (name: string, rows: Flight[], launch: "aerotow" | "winch" | null) => {
       const ws = wb.addWorksheet(name, { views: [{ showGridLines: false }] });
       ws.columns = [
