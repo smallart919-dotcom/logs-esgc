@@ -217,11 +217,15 @@ function parseHtmlLogbook(html: string): OgnPayload {
   const flights: OgnFlight[] = [];
   const deviceIdx = new Map<string, number>(); // registration -> index
 
-  const ensureDevice = (registration: string, cn?: string): number => {
+  const ensureDevice = (registration: string, cn?: string, aircraft?: string): number => {
     const key = registration.toUpperCase();
-    if (deviceIdx.has(key)) return deviceIdx.get(key)!;
+    if (deviceIdx.has(key)) {
+      const i = deviceIdx.get(key)!;
+      if (aircraft && !devices[i].aircraft) devices[i].aircraft = aircraft;
+      return i;
+    }
     const i = devices.length;
-    devices.push({ address: "", registration, cn });
+    devices.push({ address: "", registration, cn, aircraft });
     deviceIdx.set(key, i);
     return i;
   };
