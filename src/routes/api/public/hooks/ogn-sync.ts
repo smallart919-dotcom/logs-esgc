@@ -83,11 +83,12 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           synced_at: string;
         }> = [];
 
-        // Pre-load all existing OGN flights for the day to enable stronger dedupe
+        // Pre-load ALL existing flights for the day (including manual) so we
+        // never create OGN duplicates of an already-logged flight.
         const { data: existingDay } = await supabaseAdmin
           .from("flights")
-          .select("id, flarm_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft")
-          .eq("flight_date", date).eq("manual", false);
+          .select("id, flarm_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft, manual")
+          .eq("flight_date", date);
         const dayFlights = existingDay ?? [];
 
         // Pre-load tombstones for the day so deleted flights don't get re-created.
@@ -160,6 +161,12 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
 
           if (existing) {
+            // If the matched flight is a manual entry, never overwrite it —
+            // just dedupe so we don't create a duplicate OGN row alongside it.
+            if ((existing as any).manual) {
+              skipped++;
+              continue;
+            }
             const patch: any = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
             if (takeoff && !existing.takeoff_time) patch.takeoff_time = takeoff;
             if (landing && !existing.landing_time) patch.landing_time = landing;
@@ -177,6 +184,14 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             updated++;
             matches.push({ status: "updated", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
           } else {
+            // Only create flights for aircraft that match the club fleet.
+            // This prevents random/visiting aircraft logged by OGN from
+            // appearing in the daily log.
+            if (!fleetMatch) {
+              skipped++;
+              matches.push({ status: "unmatched", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
+              continue;
+            }
             const insertRow: any = {
               flight_date: date,
               glider_id: matchedId,
@@ -189,11 +204,11 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
               aerotow_height_ft: towHeightFt,
               ogn_source: sourceMeta,
             };
-            const { data: inserted, error: insErr } = await supabaseAdmin.from("flights").insert(insertRow).select("id, flarm_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft").single();
+            const { data: inserted, error: insErr } = await supabaseAdmin.from("flights").insert(insertRow).select("id, flarm_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft, manual").single();
             if (insErr) { errors.push({ flarm, registration: matchedReg, message: insErr.message }); continue; }
             if (inserted) dayFlights.push(inserted as any);
             created++;
-            matches.push({ status: fleetMatch ? "created" : "unmatched", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
+            matches.push({ status: "created", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
           }
         }
 
