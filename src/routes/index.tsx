@@ -768,6 +768,7 @@ function FlightDialog({
       p2_name: "", p2_membership: "", p2_kind: "member", p2_charge: false,
       aerotow_height_ft: 2000, notes: "",
     });
+    }
   }, [flight, manual, date, open]);
 
   const setPilot = (which: 1 | 2, name: string, membership: string) => {
