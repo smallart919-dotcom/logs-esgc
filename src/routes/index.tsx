@@ -884,9 +884,28 @@ function FlightDialog({
             <GliderPicker
               gliders={gliders}
               registration={form.glider_registration ?? ""}
-              onSelect={(g) => setForm({ ...form, glider_id: g?.id ?? null, glider_registration: g?.registration ?? form.glider_registration, flarm_id: g?.flarm_id ?? form.flarm_id })}
-              onChangeText={(t) => setForm({ ...form, glider_registration: t, glider_id: null })}
+              onSelect={(g) => {
+                setForm({ ...form, glider_id: g?.id ?? null, glider_registration: g?.registration ?? form.glider_registration, flarm_id: g?.flarm_id ?? form.flarm_id });
+                if (g?.glider_type) setGliderType(g.glider_type);
+                if (g?.callsign) setGliderCallsign(g.callsign);
+              }}
+              onChangeText={(t) => {
+                setForm({ ...form, glider_registration: t, glider_id: null });
+                const fleet = lookupFleet(t);
+                if (fleet) {
+                  if (fleet.glider_type) setGliderType(fleet.glider_type);
+                  if (fleet.callsign) setGliderCallsign(fleet.callsign);
+                }
+              }}
             />
+          </div>
+          <div>
+            <Label>Type</Label>
+            <Input placeholder="e.g. ASK-21" value={gliderType} onChange={(e) => setGliderType(e.target.value)} />
+          </div>
+          <div>
+            <Label>Callsign</Label>
+            <Input placeholder="e.g. KA" value={gliderCallsign} onChange={(e) => setGliderCallsign(e.target.value)} />
           </div>
           <div>
             <Label>Takeoff time</Label>
