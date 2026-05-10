@@ -96,6 +96,7 @@ function RootComponent() {
                 <>
                   <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" />
                   <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" />
+                  <NavLink to="/currency" icon={<Activity className="size-4" />} label="Currency" />
                   {isOffice && (
                     <>
                       <NavLink to="/history" icon={<History className="size-4" />} label="History" />
