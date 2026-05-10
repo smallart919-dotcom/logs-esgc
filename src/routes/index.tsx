@@ -848,8 +848,19 @@ function FlightDialog({
   };
 
   // local time -> ISO helper
-  const toLocalInput = (iso: string | null | undefined) => iso ? format(new Date(iso), "yyyy-MM-dd'T'HH:mm") : "";
-  const fromLocal = (s: string) => s ? new Date(s).toISOString() : null;
+  // Edit times in UTC (matching how times are displayed elsewhere) and preserve seconds.
+  const toLocalInput = (iso: string | null | undefined) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  };
+  const fromLocal = (s: string) => {
+    if (!s) return null;
+    // datetime-local may omit seconds; treat the entered value as UTC.
+    const withSec = s.length === 16 ? `${s}:00` : s;
+    return new Date(`${withSec}Z`).toISOString();
+  };
 
   const renderPilot = (which: 1 | 2, label: string) => {
     const kind = ((which === 1 ? form.p1_kind : form.p2_kind) ?? "member") as PilotKind;
@@ -912,12 +923,12 @@ function FlightDialog({
             <Input placeholder="e.g. KA" value={gliderCallsign} onChange={(e) => setGliderCallsign(e.target.value)} />
           </div>
           <div>
-            <Label>Takeoff time</Label>
-            <Input type="datetime-local" value={toLocalInput(form.takeoff_time)} onChange={(e) => setForm({ ...form, takeoff_time: fromLocal(e.target.value) })} />
+            <Label>Takeoff time (UTC)</Label>
+            <Input type="datetime-local" step="1" value={toLocalInput(form.takeoff_time)} onChange={(e) => setForm({ ...form, takeoff_time: fromLocal(e.target.value) })} />
           </div>
           <div>
-            <Label>Landing time</Label>
-            <Input type="datetime-local" value={toLocalInput(form.landing_time)} onChange={(e) => setForm({ ...form, landing_time: fromLocal(e.target.value) })} />
+            <Label>Landing time (UTC)</Label>
+            <Input type="datetime-local" step="1" value={toLocalInput(form.landing_time)} onChange={(e) => setForm({ ...form, landing_time: fromLocal(e.target.value) })} />
           </div>
 
           {renderPilot(1, "P1 (Pilot in command)")}
@@ -1157,7 +1168,12 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
     setRows((r) => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
   };
 
-  const fromLocal = (s: string) => s ? new Date(s).toISOString() : null;
+  // Bulk row times are entered as UTC to match the rest of the app.
+  const fromLocal = (s: string) => {
+    if (!s) return null;
+    const withSec = s.length === 16 ? `${s}:00` : s;
+    return new Date(`${withSec}Z`).toISOString();
+  };
 
   const saveAll = async () => {
     const valid = rows.filter((r) => r.glider_registration.trim() || r.flarm_id.trim() || r.takeoff_time);
@@ -1208,12 +1224,12 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
                 />
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Takeoff</Label>
-                <Input type="datetime-local" value={r.takeoff_time} onChange={(e) => update(i, { takeoff_time: e.target.value })} />
+                <Label className="text-xs">Takeoff (UTC)</Label>
+                <Input type="datetime-local" step="1" value={r.takeoff_time} onChange={(e) => update(i, { takeoff_time: e.target.value })} />
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Landing</Label>
-                <Input type="datetime-local" value={r.landing_time} onChange={(e) => update(i, { landing_time: e.target.value })} />
+                <Label className="text-xs">Landing (UTC)</Label>
+                <Input type="datetime-local" step="1" value={r.landing_time} onChange={(e) => update(i, { landing_time: e.target.value })} />
               </div>
               <div className="md:col-span-2 space-y-1">
                 <div className="flex gap-2 text-xs">
