@@ -1168,7 +1168,12 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
     setRows((r) => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
   };
 
-  const fromLocal = (s: string) => s ? new Date(s).toISOString() : null;
+  // Bulk row times are entered as UTC to match the rest of the app.
+  const fromLocal = (s: string) => {
+    if (!s) return null;
+    const withSec = s.length === 16 ? `${s}:00` : s;
+    return new Date(`${withSec}Z`).toISOString();
+  };
 
   const saveAll = async () => {
     const valid = rows.filter((r) => r.glider_registration.trim() || r.flarm_id.trim() || r.takeoff_time);
