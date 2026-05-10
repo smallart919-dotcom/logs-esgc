@@ -161,12 +161,9 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
 
           if (existing) {
-            // If the matched flight is a manual entry, never overwrite it —
-            // just dedupe so we don't create a duplicate OGN row alongside it.
-            if ((existing as any).manual) {
-              skipped++;
-              continue;
-            }
+            // For manual entries we still backfill missing fields (e.g. landing
+            // time once the glider lands) but never overwrite anything the user
+            // already filled in. For OGN-sourced entries we also only fill gaps.
             const patch: any = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
             if (takeoff && !existing.takeoff_time) patch.takeoff_time = takeoff;
             if (landing && !existing.landing_time) patch.landing_time = landing;
@@ -177,6 +174,11 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             // Backfill launch info if missing
             if (launchType && !existing.launch_type) patch.launch_type = launchType;
             if (towHeightFt && !existing.aerotow_height_ft) patch.aerotow_height_ft = towHeightFt;
+            // If nothing actually changed besides ogn_source for a manual row, skip
+            if ((existing as any).manual && Object.keys(patch).length === 1) {
+              skipped++;
+              continue;
+            }
             const { error: upErr } = await supabaseAdmin.from("flights").update(patch).eq("id", existing.id);
             if (upErr) { errors.push({ flarm, registration: matchedReg, message: upErr.message }); continue; }
             // keep cached row in sync for subsequent iterations
