@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          currency_aerotow_override: string | null
+          currency_winch_override: string | null
           full_name: string
           id: string
           membership_number: string
@@ -26,6 +28,8 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          currency_aerotow_override?: string | null
+          currency_winch_override?: string | null
           full_name: string
           id?: string
           membership_number: string
@@ -34,6 +38,8 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          currency_aerotow_override?: string | null
+          currency_winch_override?: string | null
           full_name?: string
           id?: string
           membership_number?: string
