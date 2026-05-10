@@ -848,8 +848,19 @@ function FlightDialog({
   };
 
   // local time -> ISO helper
-  const toLocalInput = (iso: string | null | undefined) => iso ? format(new Date(iso), "yyyy-MM-dd'T'HH:mm") : "";
-  const fromLocal = (s: string) => s ? new Date(s).toISOString() : null;
+  // Edit times in UTC (matching how times are displayed elsewhere) and preserve seconds.
+  const toLocalInput = (iso: string | null | undefined) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  };
+  const fromLocal = (s: string) => {
+    if (!s) return null;
+    // datetime-local may omit seconds; treat the entered value as UTC.
+    const withSec = s.length === 16 ? `${s}:00` : s;
+    return new Date(`${withSec}Z`).toISOString();
+  };
 
   const renderPilot = (which: 1 | 2, label: string) => {
     const kind = ((which === 1 ? form.p1_kind : form.p2_kind) ?? "member") as PilotKind;
