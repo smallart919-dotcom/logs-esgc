@@ -1224,12 +1224,12 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
                 />
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Takeoff</Label>
-                <Input type="datetime-local" value={r.takeoff_time} onChange={(e) => update(i, { takeoff_time: e.target.value })} />
+                <Label className="text-xs">Takeoff (UTC)</Label>
+                <Input type="datetime-local" step="1" value={r.takeoff_time} onChange={(e) => update(i, { takeoff_time: e.target.value })} />
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Landing</Label>
-                <Input type="datetime-local" value={r.landing_time} onChange={(e) => update(i, { landing_time: e.target.value })} />
+                <Label className="text-xs">Landing (UTC)</Label>
+                <Input type="datetime-local" step="1" value={r.landing_time} onChange={(e) => update(i, { landing_time: e.target.value })} />
               </div>
               <div className="md:col-span-2 space-y-1">
                 <div className="flex gap-2 text-xs">
