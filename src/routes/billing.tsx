@@ -55,7 +55,10 @@ function BillingPage() {
       const [{ data: m }, { data: f }] = await Promise.all([
         supabase.from("club_members").select("*").order("full_name"),
         supabase.from("flights").select("id, flight_date, glider_registration, takeoff_time, landing_time, launch_type, aerotow_height_ft, p1_name, p1_membership, p1_kind, p1_charge, p2_name, p2_membership, p2_kind, p2_charge")
-          .gte("flight_date", from).lte("flight_date", to),
+          .gte("flight_date", from).lte("flight_date", to)
+          .order("flight_date", { ascending: true })
+          .order("takeoff_time", { ascending: true, nullsFirst: false })
+          .limit(20000),
       ]);
       setMembers((m as Member[]) ?? []);
       setFlights((f as Flight[]) ?? []);
