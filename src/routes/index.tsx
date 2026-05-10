@@ -923,12 +923,12 @@ function FlightDialog({
             <Input placeholder="e.g. KA" value={gliderCallsign} onChange={(e) => setGliderCallsign(e.target.value)} />
           </div>
           <div>
-            <Label>Takeoff time</Label>
-            <Input type="datetime-local" value={toLocalInput(form.takeoff_time)} onChange={(e) => setForm({ ...form, takeoff_time: fromLocal(e.target.value) })} />
+            <Label>Takeoff time (UTC)</Label>
+            <Input type="datetime-local" step="1" value={toLocalInput(form.takeoff_time)} onChange={(e) => setForm({ ...form, takeoff_time: fromLocal(e.target.value) })} />
           </div>
           <div>
-            <Label>Landing time</Label>
-            <Input type="datetime-local" value={toLocalInput(form.landing_time)} onChange={(e) => setForm({ ...form, landing_time: fromLocal(e.target.value) })} />
+            <Label>Landing time (UTC)</Label>
+            <Input type="datetime-local" step="1" value={toLocalInput(form.landing_time)} onChange={(e) => setForm({ ...form, landing_time: fromLocal(e.target.value) })} />
           </div>
 
           {renderPilot(1, "P1 (Pilot in command)")}
