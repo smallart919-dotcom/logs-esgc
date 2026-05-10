@@ -443,7 +443,11 @@ function FlightsPage() {
               <TableHead>Launch</TableHead><TableHead>LB</TableHead><TableHead>Source</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).map((f) => {
+              {flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).slice().sort((a, b) => {
+                const ta = a.takeoff_time ? +new Date(a.takeoff_time) : Number.POSITIVE_INFINITY;
+                const tb = b.takeoff_time ? +new Date(b.takeoff_time) : Number.POSITIVE_INFINITY;
+                return ta - tb;
+              }).map((f) => {
                 const dur = (() => {
                   if (!f.takeoff_time) return "—";
                   if (!f.landing_time) return "in air";
