@@ -501,6 +501,7 @@ function FlightsPage() {
         date={date}
         gliders={gliders}
         members={members}
+        previousInitials={Array.from(new Set(flights.map((f) => (f.logged_by || "").trim()).filter(Boolean))).sort()}
         onSaved={() => { setEditing(null); setAdding(false); load(); }}
       />
       <BulkAddDialog open={bulkOpen} onOpenChange={setBulkOpen} date={date} gliders={gliders} members={members} onSaved={() => { setBulkOpen(false); load(); }} />
@@ -766,11 +767,11 @@ function PilotCell({ name, membership, kind }: { name: string | null; membership
 }
 
 function FlightDialog({
-  open, onOpenChange, flight, manual, date, gliders, members, onSaved,
+  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved,
 }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   flight: Flight | null; manual: boolean; date: string;
-  gliders: Glider[]; members: Member[]; onSaved: () => void;
+  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: () => void;
 }) {
   const [form, setForm] = useState<Partial<Flight>>({});
   const [gliderType, setGliderType] = useState("");
@@ -963,7 +964,16 @@ function FlightDialog({
           </div>
           <div>
             <Label>Logged By (initials)</Label>
-            <Input maxLength={5} placeholder="e.g. RC" value={form.logged_by ?? ""} onChange={(e) => setForm({ ...form, logged_by: e.target.value.toUpperCase() })} />
+            <Input
+              maxLength={5}
+              placeholder="e.g. RC"
+              list="logged-by-initials"
+              value={form.logged_by ?? ""}
+              onChange={(e) => setForm({ ...form, logged_by: e.target.value.toUpperCase() })}
+            />
+            <datalist id="logged-by-initials">
+              {previousInitials.map((i) => <option key={i} value={i} />)}
+            </datalist>
           </div>
         </div>
         <DialogFooter>
