@@ -1145,6 +1145,42 @@ function MemberNamePicker({ members, value, onChange, disabled }: {
   );
 }
 
+function InitialsPicker({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
+  const [focused, setFocused] = useState(false);
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    const list = q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
+    return list.slice(0, 8);
+  }, [options, value]);
+  const showList = focused && filtered.length > 0;
+  return (
+    <div className="relative">
+      <Input
+        maxLength={5}
+        placeholder="e.g. RC"
+        value={value}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {showList && (
+        <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
+          {filtered.map((o) => (
+            <button
+              type="button"
+              key={o}
+              className="w-full text-left px-3 py-2 hover:bg-accent text-sm font-mono"
+              onMouseDown={(e) => { e.preventDefault(); onChange(o); setFocused(false); }}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type BulkRow = {
   glider_id: string | null; glider_registration: string; flarm_id: string;
   takeoff_time: string; landing_time: string;
