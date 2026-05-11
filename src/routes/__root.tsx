@@ -2,7 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } f
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Plane, Users, ListChecks, LogOut, History, Receipt, Activity } from "lucide-react";
+import { Plane, Users, ListChecks, LogOut, History, Receipt, Activity, BookOpen, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import esgcLogo from "@/assets/esgc-logo.png";
 
@@ -97,6 +97,8 @@ function RootComponent() {
                   <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" />
                   <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" />
                   <NavLink to="/currency" icon={<Activity className="size-4" />} label="Currency" />
+                  <NavLink to="/logbook" icon={<BookOpen className="size-4" />} label="Logbook" />
+                  <NavLink to="/stats" icon={<BarChart3 className="size-4" />} label="Stats" />
                   {isOffice && (
                     <>
                       <NavLink to="/history" icon={<History className="size-4" />} label="History" />
