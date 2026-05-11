@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as MembersRouteImport } from './routes/members'
+import { Route as LogbookRouteImport } from './routes/logbook'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as FleetRouteImport } from './routes/fleet'
 import { Route as CurrencyRouteImport } from './routes/currency'
@@ -18,9 +20,19 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/hooks/ogn-sync'
 
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MembersRoute = MembersRouteImport.update({
   id: '/members',
   path: '/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogbookRoute = LogbookRouteImport.update({
+  id: '/logbook',
+  path: '/logbook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -66,7 +78,9 @@ export interface FileRoutesByFullPath {
   '/currency': typeof CurrencyRoute
   '/fleet': typeof FleetRoute
   '/history': typeof HistoryRoute
+  '/logbook': typeof LogbookRoute
   '/members': typeof MembersRoute
+  '/stats': typeof StatsRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
 export interface FileRoutesByTo {
@@ -76,7 +90,9 @@ export interface FileRoutesByTo {
   '/currency': typeof CurrencyRoute
   '/fleet': typeof FleetRoute
   '/history': typeof HistoryRoute
+  '/logbook': typeof LogbookRoute
   '/members': typeof MembersRoute
+  '/stats': typeof StatsRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
 export interface FileRoutesById {
@@ -87,7 +103,9 @@ export interface FileRoutesById {
   '/currency': typeof CurrencyRoute
   '/fleet': typeof FleetRoute
   '/history': typeof HistoryRoute
+  '/logbook': typeof LogbookRoute
   '/members': typeof MembersRoute
+  '/stats': typeof StatsRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
 export interface FileRouteTypes {
@@ -99,7 +117,9 @@ export interface FileRouteTypes {
     | '/currency'
     | '/fleet'
     | '/history'
+    | '/logbook'
     | '/members'
+    | '/stats'
     | '/api/public/hooks/ogn-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -109,7 +129,9 @@ export interface FileRouteTypes {
     | '/currency'
     | '/fleet'
     | '/history'
+    | '/logbook'
     | '/members'
+    | '/stats'
     | '/api/public/hooks/ogn-sync'
   id:
     | '__root__'
@@ -119,7 +141,9 @@ export interface FileRouteTypes {
     | '/currency'
     | '/fleet'
     | '/history'
+    | '/logbook'
     | '/members'
+    | '/stats'
     | '/api/public/hooks/ogn-sync'
   fileRoutesById: FileRoutesById
 }
@@ -130,17 +154,33 @@ export interface RootRouteChildren {
   CurrencyRoute: typeof CurrencyRoute
   FleetRoute: typeof FleetRoute
   HistoryRoute: typeof HistoryRoute
+  LogbookRoute: typeof LogbookRoute
   MembersRoute: typeof MembersRoute
+  StatsRoute: typeof StatsRoute
   ApiPublicHooksOgnSyncRoute: typeof ApiPublicHooksOgnSyncRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/members': {
       id: '/members'
       path: '/members'
       fullPath: '/members'
       preLoaderRoute: typeof MembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logbook': {
+      id: '/logbook'
+      path: '/logbook'
+      fullPath: '/logbook'
+      preLoaderRoute: typeof LogbookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -202,7 +242,9 @@ const rootRouteChildren: RootRouteChildren = {
   CurrencyRoute: CurrencyRoute,
   FleetRoute: FleetRoute,
   HistoryRoute: HistoryRoute,
+  LogbookRoute: LogbookRoute,
   MembersRoute: MembersRoute,
+  StatsRoute: StatsRoute,
   ApiPublicHooksOgnSyncRoute: ApiPublicHooksOgnSyncRoute,
 }
 export const routeTree = rootRouteImport
