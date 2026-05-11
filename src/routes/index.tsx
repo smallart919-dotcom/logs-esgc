@@ -964,16 +964,11 @@ function FlightDialog({
           </div>
           <div>
             <Label>Logged By (initials)</Label>
-            <Input
-              maxLength={5}
-              placeholder="e.g. RC"
-              list="logged-by-initials"
+            <InitialsPicker
               value={form.logged_by ?? ""}
-              onChange={(e) => setForm({ ...form, logged_by: e.target.value.toUpperCase() })}
+              options={previousInitials}
+              onChange={(v) => setForm({ ...form, logged_by: v.toUpperCase() })}
             />
-            <datalist id="logged-by-initials">
-              {previousInitials.map((i) => <option key={i} value={i} />)}
-            </datalist>
           </div>
         </div>
         <DialogFooter>
