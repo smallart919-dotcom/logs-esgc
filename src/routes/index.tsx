@@ -964,16 +964,11 @@ function FlightDialog({
           </div>
           <div>
             <Label>Logged By (initials)</Label>
-            <Input
-              maxLength={5}
-              placeholder="e.g. RC"
-              list="logged-by-initials"
+            <InitialsPicker
               value={form.logged_by ?? ""}
-              onChange={(e) => setForm({ ...form, logged_by: e.target.value.toUpperCase() })}
+              options={previousInitials}
+              onChange={(v) => setForm({ ...form, logged_by: v.toUpperCase() })}
             />
-            <datalist id="logged-by-initials">
-              {previousInitials.map((i) => <option key={i} value={i} />)}
-            </datalist>
           </div>
         </div>
         <DialogFooter>
@@ -1142,6 +1137,42 @@ function MemberNamePicker({ members, value, onChange, disabled }: {
             >
               <div className="text-sm">{m.full_name}</div>
               <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InitialsPicker({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
+  const [focused, setFocused] = useState(false);
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    const list = q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
+    return list.slice(0, 8);
+  }, [options, value]);
+  const showList = focused && filtered.length > 0;
+  return (
+    <div className="relative">
+      <Input
+        maxLength={5}
+        placeholder="e.g. RC"
+        value={value}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {showList && (
+        <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
+          {filtered.map((o) => (
+            <button
+              type="button"
+              key={o}
+              className="w-full text-left px-3 py-2 hover:bg-accent text-sm font-mono"
+              onMouseDown={(e) => { e.preventDefault(); onChange(o); setFocused(false); }}
+            >
+              {o}
             </button>
           ))}
         </div>
