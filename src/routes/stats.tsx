@@ -146,11 +146,11 @@ function StatsPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <BarChart3 className="size-6 text-primary" />
-        <h1 className="text-2xl font-bold">Club statistics</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Club statistics</h1>
       </div>
 
       <Card>
-        <CardContent className="p-4 grid gap-3 md:grid-cols-4">
+        <CardContent className="p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Label>From</Label>
             <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
@@ -159,10 +159,10 @@ function StatsPage() {
             <Label>To</Label>
             <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
           </div>
-          <div className="md:col-span-2 flex items-end gap-2">
+          <div className="sm:col-span-2 flex flex-wrap items-end gap-2">
             {[7, 30, 90, 365].map((d) => (
               <button key={d} onClick={() => { setFromDate(format(subDays(new Date(), d - 1), "yyyy-MM-dd")); setToDate(today); }}
-                className="px-3 py-2 text-sm rounded-md border hover:bg-accent">
+                className="flex-1 sm:flex-none px-3 py-2 text-sm rounded-md border hover:bg-accent whitespace-nowrap">
                 Last {d}d
               </button>
             ))}
