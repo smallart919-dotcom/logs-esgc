@@ -228,8 +228,8 @@ function BillingPage() {
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <Table>
+          <CardContent className="overflow-x-auto">
+            <Table className="min-w-[980px]">
               <TableHeader><TableRow>
                 <TableHead>Date</TableHead><TableHead>Glider</TableHead><TableHead>Role</TableHead>
                 <TableHead>Notes</TableHead>
