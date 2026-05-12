@@ -83,12 +83,12 @@ function RootComponent() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2 font-bold text-lg">
-            <img src={esgcLogo} alt="ESGC" className="size-9 object-contain" />
+        <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0">
+            <img src={esgcLogo} alt="ESGC" className="size-8 object-contain" />
             <span className="hidden sm:inline">ESGC Logs</span>
           </Link>
-          <nav className="flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1 min-w-0 overflow-x-auto">
             {(() => {
               const email = (userEmail || "").toLowerCase();
               const isOffice = email === "office@esgc.local";
@@ -110,16 +110,41 @@ function RootComponent() {
               );
             })()}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {userEmail ? (
               <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }}>
-                <LogOut className="size-4 mr-1" /><span className="hidden sm:inline">Sign out</span>
+                <LogOut className="size-4 sm:mr-1" /><span className="hidden sm:inline">Sign out</span>
               </Button>
             ) : (
               <Link to="/auth"><Button size="sm">Sign in</Button></Link>
             )}
           </div>
         </div>
+        {/* Secondary scrollable nav for tablet/mobile */}
+        <nav className="lg:hidden border-t bg-background/60">
+          <div className="container mx-auto px-2 flex items-center gap-1 overflow-x-auto py-1.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {(() => {
+              const email = (userEmail || "").toLowerCase();
+              const isOffice = email === "office@esgc.local";
+              return (
+                <>
+                  <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" compact />
+                  <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" compact />
+                  <NavLink to="/currency" icon={<Activity className="size-4" />} label="Currency" compact />
+                  <NavLink to="/logbook" icon={<BookOpen className="size-4" />} label="Logbook" compact />
+                  <NavLink to="/stats" icon={<BarChart3 className="size-4" />} label="Stats" compact />
+                  {isOffice && (
+                    <>
+                      <NavLink to="/history" icon={<History className="size-4" />} label="History" compact />
+                      <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" compact />
+                      <NavLink to="/members" icon={<Users className="size-4" />} label="Members" compact />
+                    </>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </nav>
       </header>
       <main className="flex-1 container mx-auto px-4 py-6">
         <Outlet />
