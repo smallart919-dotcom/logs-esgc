@@ -69,7 +69,8 @@ function LogbookPage() {
       const [{ data: m }, { data: f }] = await Promise.all([
         supabase.from("club_members").select("id, full_name, membership_number").order("full_name"),
         supabase.from("flights")
-          .select("id, flight_date, glider_registration, launch_type, aerotow_height_ft, takeoff_time, landing_time, p1_name, p1_membership, p1_kind, p2_name, p2_membership, p2_kind, notes")
+          .select("id, flight_date, glider_registration, launch_type, aerotow_height_ft, takeoff_time, landing_time, p1_name, p1_membership, p1_kind, p1_charge, p2_name, p2_membership, p2_kind, p2_charge, notes")
+          .neq("glider_registration", "G-ESGC")
           .order("flight_date", { ascending: false })
           .order("takeoff_time", { ascending: false, nullsFirst: false })
           .limit(20000),
