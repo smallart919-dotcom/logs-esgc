@@ -48,8 +48,9 @@ function StatsPage() {
     (async () => {
       setLoading(true);
       const { data } = await supabase.from("flights")
-        .select("id, flight_date, glider_registration, launch_type, takeoff_time, landing_time, p1_name, p1_membership, p2_name, p2_membership")
+        .select("id, flight_date, glider_registration, launch_type, takeoff_time, landing_time, p1_name, p1_membership, p1_charge, p2_name, p2_membership, p2_charge")
         .gte("flight_date", fromDate).lte("flight_date", toDate)
+        .neq("glider_registration", "G-ESGC")
         .order("flight_date", { ascending: true })
         .limit(20000);
       setFlights((data as Flight[]) ?? []);
