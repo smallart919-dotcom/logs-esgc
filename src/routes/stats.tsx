@@ -127,7 +127,10 @@ function StatsPage() {
     const map = new Map<string, { name: string; flights: number; mins: number }>();
     for (const f of flights) {
       const mins = durationMin(f);
-      for (const name of [f.p1_name, f.p2_name]) {
+      const credited: (string | null)[] = [];
+      if (f.p1_charge && f.p1_name) credited.push(f.p1_name);
+      if (f.p2_charge && f.p2_name) credited.push(f.p2_name);
+      for (const name of credited) {
         if (!name) continue;
         const key = name.trim().toUpperCase();
         const row = map.get(key) ?? { name: name.trim(), flights: 0, mins: 0 };
