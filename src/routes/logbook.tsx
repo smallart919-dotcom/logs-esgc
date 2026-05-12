@@ -206,7 +206,7 @@ function LogbookPage() {
           <Card>
             <CardHeader><CardTitle>Flights ({myFlights.length})</CardTitle></CardHeader>
             <CardContent className="overflow-x-auto p-0">
-              <Table>
+              <Table className="min-w-[640px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
