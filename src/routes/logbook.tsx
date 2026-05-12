@@ -134,18 +134,18 @@ function LogbookPage() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Pilot</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-4">
-          <div className="md:col-span-2">
+        <CardHeader className="pb-3"><CardTitle className="text-base">Pilot &amp; filters</CardTitle></CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="sm:col-span-2 lg:col-span-2">
             <Label>Pilot</Label>
             <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between mt-1">
-                  {member ? `${member.full_name} (${member.membership_number})` : "Select pilot…"}
-                  <ChevronsUpDown className="size-4 opacity-60" />
+                <Button variant="outline" className="w-full justify-between mt-1 font-normal">
+                  <span className="truncate">{member ? `${member.full_name} (${member.membership_number})` : "Select pilot…"}</span>
+                  <ChevronsUpDown className="size-4 opacity-60 shrink-0" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[360px] p-2" align="start">
+              <PopoverContent className="w-[min(92vw,360px)] p-2" align="start">
                 <Input autoFocus placeholder="Search name or member #" value={pickerQuery} onChange={(e) => setPickerQuery(e.target.value)} />
                 <div className="mt-2 max-h-64 overflow-auto">
                   {filteredMembers.map((m) => (
