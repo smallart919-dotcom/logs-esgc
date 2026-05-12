@@ -207,10 +207,10 @@ function CurrencyPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Activity className="size-7 text-primary" /> Currency
+        <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+          <Activity className="size-6 md:size-7 text-primary" /> Currency
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Last aerotow and winch per pilot. BGA recommendation: current ≤ {GREEN_DAYS} days, watch ≤ {AMBER_DAYS} days, otherwise lapsed.
           {isOffice && " Office account: click the pencil to override last-flown dates."}
         </p>
@@ -219,14 +219,14 @@ function CurrencyPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-end gap-3">
-            <CardTitle>{filtered.length} pilots</CardTitle>
-            <div className="ml-auto">
+            <CardTitle className="text-base">{filtered.length} pilots</CardTitle>
+            <div className="ml-auto w-full sm:w-auto">
               <Label className="text-xs">Filter</Label>
               <Input
                 placeholder="Name or membership #"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="w-56"
+                className="w-full sm:w-56"
               />
             </div>
           </div>

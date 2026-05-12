@@ -175,38 +175,40 @@ function BillingPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><Receipt className="size-7 text-primary" /> Billing</h1>
-        <p className="text-muted-foreground">Charges per member, computed from the daily flight log using ESGC 2026 prices.</p>
+        <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2"><Receipt className="size-6 md:size-7 text-primary" /> Billing</h1>
+        <p className="text-sm text-muted-foreground">Charges per member, computed from the daily flight log using ESGC 2026 prices.</p>
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Period &amp; search</CardTitle></CardHeader>
-        <CardContent className="flex flex-wrap gap-3 items-end">
+        <CardHeader className="pb-3"><CardTitle className="text-base">Period &amp; search</CardTitle></CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">
           <div className="flex gap-1">
-            <button onClick={() => setMode("day")} className={`px-3 py-2 rounded-md text-sm border ${mode === "day" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>Day</button>
-            <button onClick={() => setMode("month")} className={`px-3 py-2 rounded-md text-sm border ${mode === "month" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>Month</button>
+            <button onClick={() => setMode("day")} className={`flex-1 px-3 py-2 rounded-md text-sm border ${mode === "day" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>Day</button>
+            <button onClick={() => setMode("month")} className={`flex-1 px-3 py-2 rounded-md text-sm border ${mode === "month" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>Month</button>
           </div>
           {mode === "day" ? (
-            <div><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-44" /></div>
+            <div><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
           ) : (
-            <div><Label className="text-xs">Month</Label><Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" /></div>
+            <div><Label className="text-xs">Month</Label><Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-full" /></div>
           )}
-          <div className="flex-1 min-w-[200px]">
+          <div className="sm:col-span-2 lg:col-span-1">
             <Label className="text-xs">Search name or membership #</Label>
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Smith or 1234" />
           </div>
-          <Badge variant="default" className="text-base px-3 py-1.5">Grand total {fmtGBP(grandTotal)}</Badge>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={rows.length === 0}>
-                <Download className="size-4 mr-1" /> Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={exportGeneric}>Generic CSV (Excel)</DropdownMenuItem>
-              <DropdownMenuItem onClick={exportAeroLog}>AeroLog Cloud CSV</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center justify-between gap-2 sm:col-span-2 lg:col-span-1">
+            <Badge variant="default" className="text-sm px-3 py-1.5 truncate">Total {fmtGBP(grandTotal)}</Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={rows.length === 0}>
+                  <Download className="size-4 mr-1" /> Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportGeneric}>Generic CSV (Excel)</DropdownMenuItem>
+                <DropdownMenuItem onClick={exportAeroLog}>AeroLog Cloud CSV</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardContent>
       </Card>
 
@@ -226,8 +228,8 @@ function BillingPage() {
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <Table>
+          <CardContent className="overflow-x-auto">
+            <Table className="min-w-[980px]">
               <TableHeader><TableRow>
                 <TableHead>Date</TableHead><TableHead>Glider</TableHead><TableHead>Role</TableHead>
                 <TableHead>Notes</TableHead>
