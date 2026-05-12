@@ -25,8 +25,8 @@ type Flight = {
   launch_type: "aerotow" | "winch" | null;
   takeoff_time: string | null;
   landing_time: string | null;
-  p1_name: string | null; p1_membership: string | null;
-  p2_name: string | null; p2_membership: string | null;
+  p1_name: string | null; p1_membership: string | null; p1_charge: boolean | null;
+  p2_name: string | null; p2_membership: string | null; p2_charge: boolean | null;
 };
 
 const COLORS = ["hsl(220 80% 55%)", "hsl(35 90% 55%)", "hsl(160 60% 45%)", "hsl(280 60% 55%)", "hsl(0 70% 55%)"];
