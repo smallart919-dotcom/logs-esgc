@@ -154,17 +154,17 @@ function RootComponent() {
   );
 }
 
-function NavLink({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+function NavLink({ to, icon, label, compact }: { to: string; icon: React.ReactNode; label: string; compact?: boolean }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const active = path === to;
   return (
     <Link
       to={to}
-      className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition ${
-        active ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-      }`}
+      className={`shrink-0 flex items-center gap-1.5 rounded-md text-sm font-medium transition ${
+        compact ? "px-2.5 py-1.5" : "px-3 py-2"
+      } ${active ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
     >
-      {icon}<span className="hidden sm:inline">{label}</span>
+      {icon}<span className={compact ? "" : "hidden sm:inline"}>{label}</span>
     </Link>
   );
 }
