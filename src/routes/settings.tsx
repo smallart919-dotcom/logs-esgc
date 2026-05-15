@@ -195,8 +195,8 @@ function SettingsPage() {
           </div>
           <div className="text-xs text-muted-foreground">
             {override === null
-              ? `No override for ${date} — falls back to permanent (${fmtOffset(permanent)}).`
-              : `Override active for ${date}: ${fmtOffset(override)}.`}
+              ? `No override for ${fmtUKDate(date)} — falls back to permanent (${fmtOffset(permanent)}).`
+              : `Override active for ${fmtUKDate(date)}: ${fmtOffset(override)}.`}
           </div>
         </CardContent>
       </Card>
