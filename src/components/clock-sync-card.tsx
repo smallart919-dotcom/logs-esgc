@@ -48,9 +48,9 @@ export function ClockSyncCard({ date, isCaravan }: { date: string; isCaravan: bo
           {permanent !== 0 && override === null && <Badge variant="outline">Permanent {fmtOffset(permanent)}</Badge>}
         </div>
 
-        {isCaravan ? (
+        {isCaravan && !caravanCanEdit ? (
           <p className="text-sm text-muted-foreground">
-            The caravan account can't change the clock offset. Ask the office to adjust it from Settings.
+            Editing the clock offset has been restricted by the office. Ask them to adjust it from Settings.
           </p>
         ) : (
           <>
