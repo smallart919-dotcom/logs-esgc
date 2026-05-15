@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { format, subDays } from "date-fns";
 import { History } from "lucide-react";
+import { dateToUKShortLabel, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/history")({
   beforeLoad: requireAuth,
@@ -39,7 +40,7 @@ function HistoryPage() {
   useEffect(() => {
     if (!allowed) return;
     (async () => {
-      const since = format(subDays(new Date(), rangeDays - 1), "yyyy-MM-dd");
+      const since = format(subDays(new Date(`${todayUKDate()}T12:00:00Z`), rangeDays - 1), "yyyy-MM-dd");
       const [{ data: f }, { data: logs }] = await Promise.all([
         supabase.from("flights").select("flight_date, launch_type, glider_registration").gte("flight_date", since),
         supabase.from("daily_logs").select("flight_date, duty_pilot, duty_instructor").gte("flight_date", since),
@@ -113,7 +114,7 @@ function HistoryPage() {
                 <TableRow key={d.date}>
                   <TableCell className="font-medium">
                     <Link to="/" search={{ date: d.date } as any} className="underline underline-offset-2">
-                      {format(new Date(d.date), "EEE d MMM yyyy")}
+                      {dateToUKShortLabel(d.date)}
                     </Link>
                   </TableCell>
                   <TableCell><Badge variant={d.total ? "default" : "outline"}>{d.total}</Badge></TableCell>
