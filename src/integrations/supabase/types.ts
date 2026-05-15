@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      clock_offsets: {
+        Row: {
+          flight_date: string
+          offset_seconds: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          flight_date: string
+          offset_seconds?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          flight_date?: string
+          offset_seconds?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      clock_settings: {
+        Row: {
+          id: number
+          permanent_offset_seconds: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: number
+          permanent_offset_seconds?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: number
+          permanent_offset_seconds?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       club_members: {
         Row: {
           created_at: string

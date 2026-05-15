@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatsRouteImport } from './routes/stats'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as MembersRouteImport } from './routes/members'
 import { Route as LogbookRouteImport } from './routes/logbook'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -23,6 +24,11 @@ import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/h
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MembersRoute = MembersRouteImport.update({
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/logbook': typeof LogbookRoute
   '/members': typeof MembersRoute
+  '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/logbook': typeof LogbookRoute
   '/members': typeof MembersRoute
+  '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/logbook': typeof LogbookRoute
   '/members': typeof MembersRoute
+  '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/logbook'
     | '/members'
+    | '/settings'
     | '/stats'
     | '/api/public/hooks/ogn-sync'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/logbook'
     | '/members'
+    | '/settings'
     | '/stats'
     | '/api/public/hooks/ogn-sync'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/logbook'
     | '/members'
+    | '/settings'
     | '/stats'
     | '/api/public/hooks/ogn-sync'
   fileRoutesById: FileRoutesById
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   LogbookRoute: typeof LogbookRoute
   MembersRoute: typeof MembersRoute
+  SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
   ApiPublicHooksOgnSyncRoute: typeof ApiPublicHooksOgnSyncRoute
 }
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/stats'
       fullPath: '/stats'
       preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/members': {
@@ -244,18 +264,10 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   LogbookRoute: LogbookRoute,
   MembersRoute: MembersRoute,
+  SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
   ApiPublicHooksOgnSyncRoute: ApiPublicHooksOgnSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

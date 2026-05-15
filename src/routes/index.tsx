@@ -21,6 +21,8 @@ import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
 import { fmtUKTime, toUKLocalInput, fromUKLocalInput } from "@/lib/uktime";
+import { useDayOffset } from "@/lib/clock-offset";
+import { ClockSyncCard } from "@/components/clock-sync-card";
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
@@ -96,11 +98,15 @@ function FlightsPage() {
     : todayStr();
   const [date, setDate] = useState(initialDate);
   const [isOffice, setIsOffice] = useState(false);
+  const [isCaravan, setIsCaravan] = useState(false);
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setIsOffice((data.user?.email || "").toLowerCase() === "office@esgc.local");
+      const email = (data.user?.email || "").toLowerCase();
+      setIsOffice(email === "office@esgc.local");
+      setIsCaravan(email === "caravan@esgc.local");
     });
   }, []);
+  const { offsetSec } = useDayOffset(date);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -187,7 +193,7 @@ function FlightsPage() {
   };
 
   const exportXlsx = async () => {
-    const fmtTime = (iso: string | null) => iso ? fmtUKTime(iso) : "";
+    const fmtTime = (iso: string | null) => iso ? fmtUKTime(iso, offsetSec) : "";
     const dur = (a: string | null, b: string | null) => {
       if (!a || !b) return "";
       const m = Math.round((+new Date(b) - +new Date(a)) / 60000);
@@ -434,6 +440,8 @@ function FlightsPage() {
 
       <DailyLogCard date={date} members={members} />
 
+      <ClockSyncCard date={date} isCaravan={isCaravan} />
+
       <Card>
         <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {date}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
@@ -461,8 +469,8 @@ function FlightsPage() {
                       {f.glider_registration || <span className="text-muted-foreground">unknown</span>}
                       {f.flarm_id && <div className="text-xs font-mono text-muted-foreground">{f.flarm_id}</div>}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time)}</TableCell>
-                    <TableCell className="font-mono text-sm">{fmtUKTime(f.landing_time)}</TableCell>
+                    <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time, offsetSec)}</TableCell>
+                    <TableCell className="font-mono text-sm">{fmtUKTime(f.landing_time, offsetSec)}</TableCell>
                     <TableCell className="text-sm">{dur}</TableCell>
                     <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
                     <TableCell><PilotCell name={f.p2_name} membership={f.p2_membership} kind={f.p2_kind} /></TableCell>
@@ -490,9 +498,9 @@ function FlightsPage() {
         </CardContent>
       </Card>
 
-      <MotorGliderCosts flights={flights} onEdit={setEditing} onDelete={remove} />
+      <MotorGliderCosts flights={flights} offsetSec={offsetSec} onEdit={setEditing} onDelete={remove} />
 
-      <DeletedFlights date={date} onRestored={load} />
+      <DeletedFlights date={date} offsetSec={offsetSec} onRestored={load} />
 
       <FlightDialog
         open={!!editing || adding}
@@ -520,7 +528,7 @@ type Tombstone = {
   created_at: string;
 };
 
-function DeletedFlights({ date, onRestored }: { date: string; onRestored: () => void }) {
+function DeletedFlights({ date, offsetSec, onRestored }: { date: string; offsetSec: number; onRestored: () => void }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Tombstone[]>([]);
   const [loading, setLoading] = useState(false);
@@ -547,7 +555,7 @@ function DeletedFlights({ date, onRestored }: { date: string; onRestored: () => 
     onRestored();
   };
 
-  const fmt = (iso: string | null) => fmtUKTime(iso);
+  const fmt = (iso: string | null) => fmtUKTime(iso, offsetSec);
 
   return (
     <div className="mt-2">
@@ -595,7 +603,7 @@ function DeletedFlights({ date, onRestored }: { date: string; onRestored: () => 
   );
 }
 
-function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; onEdit: (f: Flight) => void; onDelete: (id: string) => void }) {
+function MotorGliderCosts({ flights, offsetSec, onEdit, onDelete }: { flights: Flight[]; offsetSec: number; onEdit: (f: Flight) => void; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const mg = flights.filter((f) => (f.glider_registration || "").toUpperCase().trim() === "G-KIAU");
   const rows = mg.map((f) => {
@@ -636,8 +644,8 @@ function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; on
                   {rows.map(({ f, std, u21, mins }) => (
                     <TableRow key={f.id}>
                       <TableCell className="font-medium">{f.glider_registration}</TableCell>
-                      <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time)}</TableCell>
-                      <TableCell className="font-mono text-sm">{fmtUKTime(f.landing_time)}</TableCell>
+                      <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time, offsetSec)}</TableCell>
+                      <TableCell className="font-mono text-sm">{fmtUKTime(f.landing_time, offsetSec)}</TableCell>
                       <TableCell className="text-sm">{`${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`}</TableCell>
                       <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
                       <TableCell>{f.p1_charge ? <Badge variant="default">✓</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>

@@ -2,7 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } f
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Plane, Users, ListChecks, LogOut, History, Receipt, Activity, BookOpen, BarChart3 } from "lucide-react";
+import { Plane, Users, ListChecks, LogOut, History, Receipt, Activity, BookOpen, BarChart3, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import esgcLogo from "@/assets/esgc-logo.png";
 
@@ -104,6 +104,7 @@ function RootComponent() {
                       <NavLink to="/history" icon={<History className="size-4" />} label="History" />
                       <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" />
                       <NavLink to="/members" icon={<Users className="size-4" />} label="Members" />
+                      <NavLink to="/settings" icon={<SettingsIcon className="size-4" />} label="Settings" />
                     </>
                   )}
                 </>
@@ -138,6 +139,7 @@ function RootComponent() {
                       <NavLink to="/history" icon={<History className="size-4" />} label="History" compact />
                       <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" compact />
                       <NavLink to="/members" icon={<Users className="size-4" />} label="Members" compact />
+                      <NavLink to="/settings" icon={<SettingsIcon className="size-4" />} label="Settings" compact />
                     </>
                   )}
                 </>

@@ -18,11 +18,19 @@ function londonParts(d: Date) {
   return parts;
 }
 
-/** Format a UTC ISO string as UK local HH:mm (handles BST). */
-export function fmtUKTime(iso: string | null | undefined): string {
+/** Format a UTC ISO string as UK local HH:mm (handles BST). Optional offsetSec is added to the instant before formatting (used to match an out-of-sync clubhouse clock). */
+export function fmtUKTime(iso: string | null | undefined, offsetSec = 0): string {
   if (!iso) return "—";
-  const p = londonParts(new Date(iso));
+  const d = new Date(new Date(iso).getTime() + offsetSec * 1000);
+  const p = londonParts(d);
   return `${p.hour}:${p.minute}`;
+}
+
+/** Add offsetSec to an ISO and return the new ISO (or null). */
+export function shiftIso(iso: string | null | undefined, offsetSec = 0): string | null {
+  if (!iso) return null;
+  if (!offsetSec) return iso;
+  return new Date(new Date(iso).getTime() + offsetSec * 1000).toISOString();
 }
 
 /** Format a UTC ISO string as UK local HH:mm:ss. */
