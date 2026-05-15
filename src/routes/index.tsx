@@ -484,7 +484,7 @@ function FlightsPage() {
                 );
               })}
               {flights.length === 0 && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">
-                No flights yet. Click <strong>Refresh OGN</strong> or <strong>Add</strong>.
+                No flights yet — they'll appear here automatically from OGN, or click <strong>Add</strong>.
               </TableCell></TableRow>}
             </TableBody>
           </Table>
