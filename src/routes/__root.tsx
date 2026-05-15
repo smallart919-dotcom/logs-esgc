@@ -99,7 +99,7 @@ function RootComponent() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (isAuth) return <><Outlet /><Toaster /></>;
+  if (isAuth) return <><Outlet /><Toaster /><SaveSplash /></>;
 
   return (
     <div className="min-h-screen flex flex-col">
