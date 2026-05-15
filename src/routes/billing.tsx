@@ -50,8 +50,12 @@ function BillingPage() {
     (async () => {
       const [from, to] = mode === "day"
         ? [date, date]
-        : [format(startOfMonth(new Date(month + "-01")), "yyyy-MM-dd"),
-           format(endOfMonth(new Date(month + "-01")), "yyyy-MM-dd")];
+        : (() => {
+            const [y, mm] = month.split("-").map(Number);
+            const last = new Date(Date.UTC(y, mm, 0)).getUTCDate();
+            const pad = (n: number) => String(n).padStart(2, "0");
+            return [`${y}-${pad(mm)}-01`, `${y}-${pad(mm)}-${pad(last)}`];
+          })();
       const [{ data: m }, { data: f }] = await Promise.all([
         supabase.from("club_members").select("*").order("full_name"),
         supabase.from("flights").select("id, flight_date, glider_registration, takeoff_time, landing_time, launch_type, aerotow_height_ft, p1_name, p1_membership, p1_kind, p1_charge, p2_name, p2_membership, p2_kind, p2_charge")
