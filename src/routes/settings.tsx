@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Settings as SettingsIcon } from "lucide-react";
 import { fmtOffset } from "@/lib/clock-offset";
+import { fmtUKDate } from "@/lib/uktime";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/settings")({
