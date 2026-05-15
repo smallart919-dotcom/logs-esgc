@@ -85,7 +85,9 @@ function RootComponent() {
       <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40 overflow-hidden">
         {/* Ambient soaring glider — purely decorative */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <Plane className="absolute top-3 left-0 size-3.5 text-primary/30 glider-soar [transform-origin:center] rotate-45" />
+          <div className="absolute top-3 left-0 glider-soar">
+            <Plane className="size-3.5 text-primary/30 rotate-45" />
+          </div>
         </div>
         <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3 relative">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0 group">
