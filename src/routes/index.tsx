@@ -196,15 +196,26 @@ function FlightsPage() {
     finally { if (!silent) setSyncing(false); }
   }, [icao, date, load]);
 
-  // Silent auto-sync every 5s so landing times appear naturally without any user action.
-  const SYNC_INTERVAL = 5;
+  // Silent auto-sync so landing times appear naturally. Fast cadence when the
+  // tab is visible, lighter cadence in the background to save bandwidth.
   useEffect(() => {
     if (!icao) return;
     let cancelled = false;
-    const run = () => { if (!cancelled) syncOgn(true); };
-    run();
-    const tick = setInterval(run, SYNC_INTERVAL * 1000);
-    return () => { cancelled = true; clearInterval(tick); };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const tick = () => {
+      if (cancelled) return;
+      const visible = typeof document !== "undefined" && document.visibilityState === "visible";
+      syncOgn(true).finally(() => {
+        if (cancelled) return;
+        timer = setTimeout(tick, visible ? 3000 : 15000);
+      });
+    };
+    tick();
+    const onVis = () => {
+      if (document.visibilityState === "visible") { if (timer) clearTimeout(timer); tick(); }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
   }, [icao, syncOgn]);
 
 
