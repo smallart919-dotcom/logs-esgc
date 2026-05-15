@@ -26,7 +26,8 @@ export function useDayOffset(date: string) {
 
   // Realtime so the office settings page propagates instantly
   useEffect(() => {
-    const ch = supabase.channel(`clock-offset-${date}`)
+    const ch = supabase
+      .channel(`clock-offset-${date}-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "clock_offsets" }, () => refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "clock_settings" }, () => refresh())
       .subscribe();
