@@ -39,7 +39,7 @@ export function ClockSyncCard({ date, isCaravan }: { date: string; isCaravan: bo
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <Clock className="size-4 text-primary" /> Caravan clock sync — {date}
+          <Clock className="size-4 text-primary" /> Caravan clock sync — {fmtUKDate(date)}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
