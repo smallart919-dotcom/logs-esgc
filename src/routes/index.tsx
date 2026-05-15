@@ -196,8 +196,8 @@ function FlightsPage() {
     finally { if (!silent) setSyncing(false); }
   }, [icao, date, load]);
 
-  // Auto-sync every 5 seconds so landing times appear quickly.
-  const SYNC_INTERVAL = 5;
+  // Auto-sync at a steady cadence so landing times appear without hammering OGN.
+  const SYNC_INTERVAL = 30;
   const [nextSync, setNextSync] = useState(SYNC_INTERVAL);
   useEffect(() => {
     if (!icao) return;
@@ -429,6 +429,9 @@ function FlightsPage() {
             {loadingFlights ? "Refreshing" : `${icao} · ${nextSync}s`}
           </div>
           <div className="flex flex-wrap gap-2 ml-auto">
+            <Button onClick={() => syncOgn(false)} variant="outline" size="sm" disabled={syncing}>
+              <RefreshCw className={`size-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Refresh OGN
+            </Button>
             <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
             <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
             <Button onClick={() => setBulkOpen(true)} size="sm"><Plus className="size-4 mr-1" />Bulk add</Button>
