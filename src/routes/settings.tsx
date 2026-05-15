@@ -27,6 +27,8 @@ function SettingsPage() {
   const [permanent, setPermanent] = useState(0);
   const [permInput, setPermInput] = useState("0");
   const [savingPerm, setSavingPerm] = useState(false);
+  const [caravanCanEdit, setCaravanCanEdit] = useState(true);
+  const [savingCaravan, setSavingCaravan] = useState(false);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const [date, setDate] = useState(todayStr);
@@ -35,10 +37,11 @@ function SettingsPage() {
   const [savingOver, setSavingOver] = useState(false);
 
   const loadPerm = async () => {
-    const { data } = await supabase.from("clock_settings").select("permanent_offset_seconds").eq("id", 1).maybeSingle();
+    const { data } = await supabase.from("clock_settings").select("permanent_offset_seconds, caravan_can_edit").eq("id", 1).maybeSingle();
     const sec = data?.permanent_offset_seconds ?? 0;
     setPermanent(sec);
     setPermInput(String(Math.round(sec / 60)));
+    setCaravanCanEdit(data?.caravan_can_edit ?? true);
   };
   const loadOver = async (d: string) => {
     const { data } = await supabase.from("clock_offsets").select("offset_seconds").eq("flight_date", d).maybeSingle();
