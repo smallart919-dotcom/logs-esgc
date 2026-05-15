@@ -167,8 +167,8 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             // time once the glider lands) but never overwrite anything the user
             // already filled in. For OGN-sourced entries we also only fill gaps.
             const patch: any = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
-            if (takeoff && !existing.takeoff_time) patch.takeoff_time = takeoff;
-            if (landing && !existing.landing_time) patch.landing_time = landing;
+            if (takeoff && (!existing.takeoff_time || !(existing as any).manual)) patch.takeoff_time = takeoff;
+            if (landing && (!existing.landing_time || !(existing as any).manual)) patch.landing_time = landing;
             // Backfill flarm/registration if previously missing
             if (flarm && !existing.flarm_id) patch.flarm_id = flarm;
             if (matchedReg && !existing.glider_registration) patch.glider_registration = matchedReg;
