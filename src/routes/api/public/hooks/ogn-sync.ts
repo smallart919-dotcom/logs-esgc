@@ -16,8 +16,7 @@ type OgnFlight = {
 type OgnPayload = { airfield?: string; date?: string; devices: OgnDevice[]; flights: OgnFlight[] };
 
 function todayUTC() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
 }
 
 function parseTimeOnDate(date: string, hms?: string): string | null {
@@ -106,8 +105,8 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         for (const f of payload.flights || []) {
           const dev = payload.devices?.[f.device];
           const flarm = dev?.address ? dev.address.toUpperCase() : null;
-          const takeoff = f.start_tsp ? new Date(f.start_tsp * 1000).toISOString() : parseTimeOnDate(date, f.start);
-          const landing = f.stop_tsp ? new Date(f.stop_tsp * 1000).toISOString() : parseTimeOnDate(date, f.stop);
+          const takeoff = parseTimeOnDate(date, f.start) ?? (f.start_tsp ? new Date(f.start_tsp * 1000).toISOString() : null);
+          const landing = parseTimeOnDate(date, f.stop) ?? (f.stop_tsp ? new Date(f.stop_tsp * 1000).toISOString() : null);
           const fleetMatch =
             (flarm ? fleetByFlarm.get(flarm) : undefined) ??
             (dev?.registration ? fleetByReg.get(normReg(dev.registration)) : undefined);
