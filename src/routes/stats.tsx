@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart3 } from "lucide-react";
 import { format, subDays, eachDayOfInterval, startOfMonth } from "date-fns";
 import { fmtUKDate, todayUKDate } from "@/lib/uktime";
+import { useCountUp } from "@/lib/count-up";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend, LineChart, Line,
