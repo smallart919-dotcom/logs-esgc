@@ -46,8 +46,9 @@ function HistoryPage() {
         supabase.from("daily_logs").select("flight_date, duty_pilot, duty_instructor").gte("flight_date", since),
       ]);
       const map = new Map<string, DayRow>();
+      const today = new Date(`${todayUKDate()}T12:00:00Z`);
       for (let i = 0; i < rangeDays; i++) {
-        const d = format(subDays(new Date(), i), "yyyy-MM-dd");
+        const d = format(subDays(today, i), "yyyy-MM-dd");
         map.set(d, { date: d, total: 0, aerotow: 0, winch: 0, motor: 0, tug: 0, duty_pilot: null, duty_instructor: null });
       }
       (f ?? []).forEach((row: any) => {
