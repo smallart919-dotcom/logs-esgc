@@ -40,13 +40,13 @@ function HistoryPage() {
   useEffect(() => {
     if (!allowed) return;
     (async () => {
-      const since = format(subDays(new Date(`${todayUKDate()}T12:00:00Z`), rangeDays - 1), "yyyy-MM-dd");
+      const today = new Date(`${todayUKDate()}T12:00:00Z`);
+      const since = format(subDays(today, rangeDays - 1), "yyyy-MM-dd");
       const [{ data: f }, { data: logs }] = await Promise.all([
         supabase.from("flights").select("flight_date, launch_type, glider_registration").gte("flight_date", since),
         supabase.from("daily_logs").select("flight_date, duty_pilot, duty_instructor").gte("flight_date", since),
       ]);
       const map = new Map<string, DayRow>();
-      const today = new Date(`${todayUKDate()}T12:00:00Z`);
       for (let i = 0; i < rangeDays; i++) {
         const d = format(subDays(today, i), "yyyy-MM-dd");
         map.set(d, { date: d, total: 0, aerotow: 0, winch: 0, motor: 0, tug: 0, duty_pilot: null, duty_instructor: null });
