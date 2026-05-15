@@ -147,8 +147,8 @@ function FlightsPage() {
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoadingFlights(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoadingFlights(true);
     try {
       const [{ data: f, error: fErr }, { data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
         supabase.from("flights").select("*").eq("flight_date", date).order("takeoff_time", { ascending: true, nullsFirst: false }),
@@ -161,7 +161,7 @@ function FlightsPage() {
       setGliders((g as Glider[]) ?? []);
       setMembers((m as Member[]) ?? []);
     } finally {
-      setLoadingFlights(false);
+      if (!silent) setLoadingFlights(false);
     }
   }, [date]);
 
@@ -170,7 +170,7 @@ function FlightsPage() {
   // Realtime updates for the day
   useEffect(() => {
     const ch = supabase.channel("flights-rt").on("postgres_changes",
-      { event: "*", schema: "public", table: "flights" }, () => { load().catch(() => undefined); }
+      { event: "*", schema: "public", table: "flights" }, () => { load(true).catch(() => undefined); }
     ).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [load]);
@@ -186,7 +186,7 @@ function FlightsPage() {
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
       if (!silent) setSyncResult(j);
-      await load();
+      await load(silent);
     } catch (e: any) {
       if (!silent) {
         toast.error(e.message);
@@ -196,20 +196,15 @@ function FlightsPage() {
     finally { if (!silent) setSyncing(false); }
   }, [icao, date, load]);
 
-  // Auto-sync at a steady cadence so landing times appear without hammering OGN.
-  const SYNC_INTERVAL = 30;
-  const [nextSync, setNextSync] = useState(SYNC_INTERVAL);
+  // Silent auto-sync every 5s so landing times appear naturally without any user action.
+  const SYNC_INTERVAL = 5;
   useEffect(() => {
     if (!icao) return;
-    syncOgn(true);
-    setNextSync(SYNC_INTERVAL);
-    const tick = setInterval(() => {
-      setNextSync((n) => {
-        if (n <= 1) { syncOgn(true); return SYNC_INTERVAL; }
-        return n - 1;
-      });
-    }, 1000);
-    return () => clearInterval(tick);
+    let cancelled = false;
+    const run = () => { if (!cancelled) syncOgn(true); };
+    run();
+    const tick = setInterval(run, SYNC_INTERVAL * 1000);
+    return () => { cancelled = true; clearInterval(tick); };
   }, [icao, syncOgn]);
 
 
@@ -422,62 +417,19 @@ function FlightsPage() {
               max={todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
           <div
-            className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap"
-            title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s.`}
+            className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap gap-1.5"
+            title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s in the background.`}
           >
-            <RefreshCw className={`size-3 mr-1 ${syncing || loadingFlights ? "animate-spin" : ""}`} />
-            {loadingFlights ? "Refreshing" : `${icao} · ${nextSync}s`}
+            <span className={`inline-block size-1.5 rounded-full bg-primary ${loadingFlights ? "sky-shimmer" : ""}`} />
+            <span>Live · {icao}</span>
           </div>
           <div className="flex flex-wrap gap-2 ml-auto">
-            <Button onClick={() => syncOgn(false)} variant="outline" size="sm" disabled={syncing}>
-              <RefreshCw className={`size-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Refresh OGN
-            </Button>
             <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
             <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
             <Button onClick={() => setBulkOpen(true)} size="sm"><Plus className="size-4 mr-1" />Bulk add</Button>
           </div>
         </div>
       </div>
-
-      {(syncing || syncResult) && (
-        <Card className="border-primary/40">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <RefreshCw className={`size-4 ${syncing ? "animate-spin text-primary" : "text-muted-foreground"}`} />
-                {syncing ? "Syncing OGN…" : `Sync complete — ${syncResult?.icao} · ${syncResult?.date}`}
-              </CardTitle>
-              {syncResult && !syncing && (
-                <Button size="sm" variant="ghost" onClick={() => setSyncResult(null)}>Dismiss</Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {syncing && <div className="text-sm text-muted-foreground">Fetching flights from OGN flightbook and reconciling with your fleet…</div>}
-            {syncResult && (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="default">Total {syncResult.total}</Badge>
-                  <Badge variant="secondary">Inserted {syncResult.created}</Badge>
-                  <Badge variant="secondary">Updated {syncResult.updated}</Badge>
-                  <Badge variant="outline">Skipped {syncResult.skipped}</Badge>
-                  {syncResult.errors.length > 0 && <Badge variant="destructive">Errors {syncResult.errors.length}</Badge>}
-      <Badge variant="outline" className="ml-auto text-xs">at {fmtUKTimeSec(syncResult.synced_at)}</Badge>
-                </div>
-                {syncResult.errors.length > 0 && (
-                  <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1 text-xs">
-                    {syncResult.errors.map((e, i) => (
-                      <div key={i} className="font-mono">
-                        <span className="text-destructive font-semibold">{e.registration || e.flarm || "?"}</span>: {e.message}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       <DailyLogCard date={date} members={members} />
 
@@ -505,7 +457,7 @@ function FlightsPage() {
                   return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
                 })();
                 return (
-                  <TableRow key={f.id}>
+                  <TableRow key={f.id} className="row-glide-in transition-colors hover:bg-muted/40">
                     <TableCell className="font-medium">
                       {f.glider_registration || <span className="text-muted-foreground">unknown</span>}
                       {f.flarm_id && <div className="text-xs font-mono text-muted-foreground">{f.flarm_id}</div>}
@@ -532,7 +484,7 @@ function FlightsPage() {
                 );
               })}
               {flights.length === 0 && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">
-                No flights yet. Click <strong>Refresh OGN</strong> or <strong>Add</strong>.
+                No flights yet — they'll appear here automatically from OGN, or click <strong>Add</strong>.
               </TableCell></TableRow>}
             </TableBody>
           </Table>
