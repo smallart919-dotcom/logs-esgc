@@ -195,14 +195,31 @@
   0%   { opacity: 0; transform: translateX(-6px); }
   100% { opacity: 1; transform: translateX(0); }
 }
+@keyframes row-land-in {
+  0%   { opacity: 0; transform: translate3d(-18px, -8px, 0); background-color: color-mix(in oklab, var(--sky) 22%, transparent); }
+  60%  { opacity: 1; transform: translate3d(0, 0, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); background-color: transparent; }
+}
+@keyframes landing-pop {
+  0%   { color: var(--color-foreground); transform: scale(1); }
+  20%  { color: oklch(0.55 0.18 155); transform: scale(1.08); text-shadow: 0 0 12px color-mix(in oklab, oklch(0.55 0.18 155) 60%, transparent); }
+  100% { color: var(--color-foreground); transform: scale(1); text-shadow: none; }
+}
+@keyframes page-rise {
+  0%   { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.995); filter: blur(2px); }
+  60%  { filter: blur(0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
 
 .glider-soar   { animation: glider-soar 26s cubic-bezier(0.45, 0, 0.55, 1) infinite; will-change: transform, opacity; }
 .glider-land      { animation: glider-land 900ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .glider-touchdown { animation: glider-touchdown 1400ms cubic-bezier(0.22, 1, 0.36, 1) both; will-change: transform, opacity; }
 .gentle-float  { animation: gentle-float 4s ease-in-out infinite; }
-.soft-rise     { animation: soft-rise 400ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.soft-rise     { animation: page-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .sky-shimmer   { animation: sky-shimmer 2.2s ease-in-out infinite; }
 .row-glide-in  { animation: row-glide-in 280ms ease-out both; }
+.row-land-in   { animation: row-land-in 1200ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.landing-pop   { animation: landing-pop 1100ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* Subtle interactive polish for cards */
 [data-slot="card"] {
