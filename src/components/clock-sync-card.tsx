@@ -76,7 +76,7 @@ export function ClockSyncCard({ date, isCaravan }: { date: string; isCaravan: bo
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Read the caravan clock and type the time it currently shows. We'll record the difference and shift every flight time on {date} to match.
+                Read the caravan clock and type the time it currently shows. We'll record the difference and shift every flight time on {fmtUKDate(date)} to match.
               </p>
             )}
           </>
