@@ -164,7 +164,33 @@ function FlightsPage() {
       ]);
       const err = fErr || gErr || mErr;
       if (err) throw err;
-      setFlights((f as Flight[]) ?? []);
+      const next = (f as Flight[]) ?? [];
+
+      // Detect newly arrived flights and newly-landed flights for subtle animations.
+      const seen = seenIdsRef.current;
+      const inAir = inAirIdsRef.current;
+      const newIds = new Set<string>();
+      const landedIds = new Set<string>();
+      const isInitial = seen.size === 0;
+      for (const fl of next) {
+        if (!seen.has(fl.id)) { if (!isInitial) newIds.add(fl.id); seen.add(fl.id); }
+        if (fl.landing_time == null) inAir.add(fl.id);
+        else if (inAir.has(fl.id)) { inAir.delete(fl.id); if (!isInitial) landedIds.add(fl.id); }
+      }
+      // Drop ids that no longer exist (e.g. deletion)
+      const present = new Set(next.map((x) => x.id));
+      for (const id of Array.from(seen)) if (!present.has(id)) seen.delete(id);
+      for (const id of Array.from(inAir)) if (!present.has(id)) inAir.delete(id);
+
+      setFlights(next);
+      if (newIds.size) {
+        setFreshlyAdded((prev) => { const s = new Set(prev); newIds.forEach((id) => s.add(id)); return s; });
+        setTimeout(() => setFreshlyAdded((prev) => { const s = new Set(prev); newIds.forEach((id) => s.delete(id)); return s; }), 1600);
+      }
+      if (landedIds.size) {
+        setFreshlyLanded((prev) => { const s = new Set(prev); landedIds.forEach((id) => s.add(id)); return s; });
+        setTimeout(() => setFreshlyLanded((prev) => { const s = new Set(prev); landedIds.forEach((id) => s.delete(id)); return s; }), 1400);
+      }
       setGliders((g as Glider[]) ?? []);
       setMembers((m as Member[]) ?? []);
     } finally {
@@ -173,6 +199,9 @@ function FlightsPage() {
   }, [date]);
 
   useEffect(() => { load().catch((e) => toast.error(e.message || "Could not refresh the daily log")); }, [load]);
+
+  // Reset tracking when the date changes so we don't fire animations for the whole new day.
+  useEffect(() => { seenIdsRef.current = new Set(); inAirIdsRef.current = new Set(); }, [date]);
 
   // Realtime updates for the day
   useEffect(() => {
