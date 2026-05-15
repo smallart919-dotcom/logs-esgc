@@ -474,7 +474,7 @@ function FlightsPage() {
       <ClockSyncCard date={date} isCaravan={isCaravan} />
 
       <Card>
-        <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {date}</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {fmtUKDate(date)}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
           <Table className="min-w-[900px]">
             <TableHeader><TableRow>
