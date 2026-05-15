@@ -221,6 +221,46 @@
 .row-land-in   { animation: row-land-in 1200ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .landing-pop   { animation: landing-pop 1100ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
+/* Hero glider sweeps higher and slightly bobs */
+@keyframes glider-soar-hero {
+  0%   { transform: translate3d(-15vw, 8px, 0) rotate(-2deg); opacity: 0; }
+  10%  { opacity: 0.95; }
+  30%  { transform: translate3d(22vw, -4px, 0) rotate(-3deg); }
+  55%  { transform: translate3d(50vw, -10px, 0) rotate(-1deg); opacity: 1; }
+  80%  { transform: translate3d(78vw, -3px, 0) rotate(-2deg); }
+  95%  { opacity: 0.7; }
+  100% { transform: translate3d(115vw, 6px, 0) rotate(-1deg); opacity: 0; }
+}
+.glider-soar-hero { animation: glider-soar-hero 22s cubic-bezier(0.45, 0, 0.55, 1) infinite; will-change: transform, opacity; }
+
+/* Contrail shimmer behind glider */
+@keyframes contrail-shimmer {
+  0%, 100% { opacity: 0.2; }
+  50%      { opacity: 0.65; }
+}
+.contrail-shimmer { animation: contrail-shimmer 6s ease-in-out infinite; }
+
+/* Starling flock — drifts across with subtle wing flap */
+@keyframes flock-drift {
+  0%   { transform: translate3d(-30vw, 0, 0); opacity: 0; }
+  10%  { opacity: 0.9; }
+  50%  { transform: translate3d(40vw, -6px, 0); opacity: 1; }
+  90%  { opacity: 0.7; }
+  100% { transform: translate3d(120vw, 2px, 0); opacity: 0; }
+}
+.flock-drift { animation: flock-drift 38s linear infinite; animation-delay: -8s; will-change: transform, opacity; }
+
+@keyframes wing-flap {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50%      { transform: translateY(-1px) scaleY(0.55); }
+}
+.starling { transform-box: fill-box; transform-origin: center; animation: wing-flap 0.6s ease-in-out infinite; }
+.starling.s1 { animation-delay: 0s; }
+.starling.s2 { animation-delay: 0.08s; }
+.starling.s3 { animation-delay: 0.16s; }
+.starling.s4 { animation-delay: 0.12s; }
+.starling.s5 { animation-delay: 0.2s; }
+
 /* Subtle interactive polish for cards */
 [data-slot="card"] {
   box-shadow:
