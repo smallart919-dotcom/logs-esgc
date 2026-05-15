@@ -13,6 +13,7 @@ import { Receipt, Download } from "lucide-react";
 import { format } from "date-fns";
 import { computeFlightCharge, fmtGBP, type FlightLike } from "@/lib/pricing";
 import { fmtUKDate, todayUKDate } from "@/lib/uktime";
+import { useCountUp } from "@/lib/count-up";
 
 export const Route = createFileRoute("/billing")({
   beforeLoad: requireAuth,
