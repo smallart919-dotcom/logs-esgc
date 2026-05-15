@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from "lucide-react";
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
-import { fmtUKTime, toUKLocalInput, fromUKLocalInput } from "@/lib/uktime";
+import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 
