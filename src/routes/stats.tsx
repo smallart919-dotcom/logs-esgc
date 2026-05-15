@@ -90,7 +90,7 @@ function StatsPage() {
   const monthlyData = useMemo(() => {
     const byMonth = new Map<string, { month: string; flights: number; hours: number }>();
     for (const f of flights) {
-      const k = format(startOfMonth(new Date(f.flight_date + "T00:00:00Z")), "yyyy-MM");
+      const k = format(startOfMonth(new Date(f.flight_date + "T12:00:00Z")), "yyyy-MM");
       const label = format(startOfMonth(new Date(f.flight_date + "T12:00:00Z")), "MM-yyyy");
       const row = byMonth.get(k) ?? { month: label, flights: 0, hours: 0 };
       row.flights++;
