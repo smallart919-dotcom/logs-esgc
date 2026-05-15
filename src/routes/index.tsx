@@ -457,7 +457,7 @@ function FlightsPage() {
                   return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
                 })();
                 return (
-                  <TableRow key={f.id}>
+                  <TableRow key={f.id} className="row-glide-in transition-colors hover:bg-muted/40">
                     <TableCell className="font-medium">
                       {f.glider_registration || <span className="text-muted-foreground">unknown</span>}
                       {f.flarm_id && <div className="text-xs font-mono text-muted-foreground">{f.flarm_id}</div>}
