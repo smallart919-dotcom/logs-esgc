@@ -172,10 +172,10 @@ function StatsPage() {
       </Card>
 
       <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-        <StatCard label="Flights" value={String(totals.count)} />
-        <StatCard label="Hours" value={(totals.mins / 60).toFixed(1)} />
-        <StatCard label="Aerotow" value={String(totals.aerotow)} />
-        <StatCard label="Winch" value={String(totals.winch)} />
+        <StatCard label="Flights" value={totals.count} />
+        <StatCard label="Hours" value={totals.mins / 60} decimals={1} />
+        <StatCard label="Aerotow" value={totals.aerotow} />
+        <StatCard label="Winch" value={totals.winch} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
