@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { fromUKLocalInput } from "@/lib/uktime";
+import { fromUKLocalInput, todayUKDate } from "@/lib/uktime";
 
 // OGN Flightbook public API: https://flightbook.glidernet.org/api/logbook/{ICAO}/
 // Returns devices[] (with address = FLARM ID) and flights[] for the day.
@@ -16,7 +16,7 @@ type OgnFlight = {
 type OgnPayload = { airfield?: string; date?: string; devices: OgnDevice[]; flights: OgnFlight[] };
 
 function todayUTC() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
+  return todayUKDate();
 }
 
 function parseTimeOnDate(date: string, hms?: string): string | null {
