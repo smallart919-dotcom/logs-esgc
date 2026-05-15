@@ -261,6 +261,22 @@
 .starling.s4 { animation-delay: 0.12s; }
 .starling.s5 { animation-delay: 0.2s; }
 
+/* Wave lines — flowing horizontal bands in the header */
+@keyframes wave-flow {
+  0%   { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-400px, 0, 0); }
+}
+@keyframes wave-bob {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(-200px, -2px, 0); }
+}
+.wave-line { will-change: transform; transform-box: view-box; }
+.wl-1 { animation: wave-flow 14s linear infinite; }
+.wl-2 { animation: wave-flow 18s linear infinite; animation-delay: -2s; }
+.wl-3 { animation: wave-bob  20s ease-in-out infinite; animation-delay: -5s; }
+.wl-4 { animation: wave-flow 22s linear infinite; animation-delay: -8s; }
+.wl-5 { animation: wave-bob  26s ease-in-out infinite; animation-delay: -3s; }
+
 /* Subtle interactive polish for cards */
 [data-slot="card"] {
   box-shadow:
