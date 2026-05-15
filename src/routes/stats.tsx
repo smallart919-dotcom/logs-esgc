@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart3 } from "lucide-react";
 import { format, subDays, eachDayOfInterval, startOfMonth } from "date-fns";
+import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend, LineChart, Line,
@@ -37,8 +38,8 @@ function durationMin(f: Flight): number {
 }
 
 function StatsPage() {
-  const today = format(new Date(), "yyyy-MM-dd");
-  const defaultFrom = format(subDays(new Date(), 89), "yyyy-MM-dd");
+  const today = todayUKDate();
+  const defaultFrom = format(subDays(new Date(`${today}T12:00:00Z`), 89), "yyyy-MM-dd");
   const [fromDate, setFromDate] = useState(defaultFrom);
   const [toDate, setToDate] = useState(today);
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -69,11 +70,11 @@ function StatsPage() {
   }, [flights]);
 
   const dailyData = useMemo(() => {
-    const days = eachDayOfInterval({ start: new Date(fromDate), end: new Date(toDate) });
+    const days = eachDayOfInterval({ start: new Date(`${fromDate}T12:00:00Z`), end: new Date(`${toDate}T12:00:00Z`) });
     const byDay = new Map<string, { date: string; flights: number; aerotow: number; winch: number; hours: number }>();
     for (const d of days) {
       const k = format(d, "yyyy-MM-dd");
-      byDay.set(k, { date: format(d, "d MMM"), flights: 0, aerotow: 0, winch: 0, hours: 0 });
+      byDay.set(k, { date: fmtUKDate(k), flights: 0, aerotow: 0, winch: 0, hours: 0 });
     }
     for (const f of flights) {
       const row = byDay.get(f.flight_date);
@@ -89,8 +90,8 @@ function StatsPage() {
   const monthlyData = useMemo(() => {
     const byMonth = new Map<string, { month: string; flights: number; hours: number }>();
     for (const f of flights) {
-      const k = format(startOfMonth(new Date(f.flight_date + "T00:00:00Z")), "yyyy-MM");
-      const label = format(startOfMonth(new Date(f.flight_date + "T00:00:00Z")), "MMM yy");
+      const k = format(startOfMonth(new Date(f.flight_date + "T12:00:00Z")), "yyyy-MM");
+      const label = format(startOfMonth(new Date(f.flight_date + "T12:00:00Z")), "MM-yyyy");
       const row = byMonth.get(k) ?? { month: label, flights: 0, hours: 0 };
       row.flights++;
       row.hours += durationMin(f) / 60;
@@ -161,7 +162,7 @@ function StatsPage() {
           </div>
           <div className="sm:col-span-2 flex flex-wrap items-end gap-2">
             {[7, 30, 90, 365].map((d) => (
-              <button key={d} onClick={() => { setFromDate(format(subDays(new Date(), d - 1), "yyyy-MM-dd")); setToDate(today); }}
+              <button key={d} onClick={() => { setFromDate(format(subDays(new Date(`${today}T12:00:00Z`), d - 1), "yyyy-MM-dd")); setToDate(today); }}
                 className="flex-1 sm:flex-none px-3 py-2 text-sm rounded-md border hover:bg-accent whitespace-nowrap">
                 Last {d}d
               </button>

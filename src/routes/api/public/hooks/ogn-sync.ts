@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { fromUKLocalInput } from "@/lib/uktime";
+import { fromUKLocalInput, todayUKDate } from "@/lib/uktime";
 
 // OGN Flightbook public API: https://flightbook.glidernet.org/api/logbook/{ICAO}/
 // Returns devices[] (with address = FLARM ID) and flights[] for the day.
@@ -16,8 +16,7 @@ type OgnFlight = {
 type OgnPayload = { airfield?: string; date?: string; devices: OgnDevice[]; flights: OgnFlight[] };
 
 function todayUTC() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
+  return todayUKDate();
 }
 
 function parseTimeOnDate(date: string, hms?: string): string | null {
@@ -106,8 +105,8 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         for (const f of payload.flights || []) {
           const dev = payload.devices?.[f.device];
           const flarm = dev?.address ? dev.address.toUpperCase() : null;
-          const takeoff = f.start_tsp ? new Date(f.start_tsp * 1000).toISOString() : parseTimeOnDate(date, f.start);
-          const landing = f.stop_tsp ? new Date(f.stop_tsp * 1000).toISOString() : parseTimeOnDate(date, f.stop);
+          const takeoff = parseTimeOnDate(date, f.start) ?? (f.start_tsp ? new Date(f.start_tsp * 1000).toISOString() : null);
+          const landing = parseTimeOnDate(date, f.stop) ?? (f.stop_tsp ? new Date(f.stop_tsp * 1000).toISOString() : null);
           const fleetMatch =
             (flarm ? fleetByFlarm.get(flarm) : undefined) ??
             (dev?.registration ? fleetByReg.get(normReg(dev.registration)) : undefined);
@@ -168,8 +167,8 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             // time once the glider lands) but never overwrite anything the user
             // already filled in. For OGN-sourced entries we also only fill gaps.
             const patch: any = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
-            if (takeoff && !existing.takeoff_time) patch.takeoff_time = takeoff;
-            if (landing && !existing.landing_time) patch.landing_time = landing;
+            if (takeoff && (!existing.takeoff_time || !(existing as any).manual)) patch.takeoff_time = takeoff;
+            if (landing && (!existing.landing_time || !(existing as any).manual)) patch.landing_time = landing;
             // Backfill flarm/registration if previously missing
             if (flarm && !existing.flarm_id) patch.flarm_id = flarm;
             if (matchedReg && !existing.glider_registration) patch.glider_registration = matchedReg;

@@ -10,8 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Settings as SettingsIcon } from "lucide-react";
 import { fmtOffset } from "@/lib/clock-offset";
-import { fmtUKDate } from "@/lib/uktime";
-import { format } from "date-fns";
+import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/settings")({
   beforeLoad: async () => {
@@ -32,7 +31,7 @@ function SettingsPage() {
   const [savingCaravan, setSavingCaravan] = useState(false);
   const [caravanAudit, setCaravanAudit] = useState<{ at: string | null; by: string | null }>({ at: null, by: null });
 
-  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const todayStr = todayUKDate();
   const [date, setDate] = useState(todayStr);
   const [override, setOverride] = useState<number | null>(null);
   const [overInput, setOverInput] = useState("");

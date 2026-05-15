@@ -19,8 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { toast } from "sonner";
 import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from "lucide-react";
 import ExcelJS from "exceljs";
-import { format } from "date-fns";
-import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate } from "@/lib/uktime";
+import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 
@@ -82,7 +81,7 @@ type Flight = {
 type Glider = { id: string; registration: string; callsign: string | null; flarm_id: string | null; glider_type: string | null };
 type Member = { id: string; full_name: string; membership_number: string };
 
-const todayStr = () => format(new Date(), "yyyy-MM-dd");
+const todayStr = () => todayUKDate();
 
 async function maybeAddMember(existing: Member[], kind: PilotKind | null | undefined, name: string | null, membership: string | null) {
   if (kind !== "member") return;
@@ -142,28 +141,36 @@ function FlightsPage() {
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [loadingFlights, setLoadingFlights] = useState(false);
   const [syncResult, setSyncResult] = useState<null | { icao: string; date: string; created: number; updated: number; skipped: number; total: number; synced_at: string; errors: Array<{ flarm: string | null; registration: string | null; message: string }>; matches: Array<any> }>(null);
   const [editing, setEditing] = useState<Flight | null>(null);
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const [{ data: f }, { data: g }, { data: m }] = await Promise.all([
-      supabase.from("flights").select("*").eq("flight_date", date).order("takeoff_time", { ascending: true, nullsFirst: false }),
-      supabase.from("fleet_gliders").select("*").order("registration"),
-      supabase.from("club_members").select("*").order("full_name"),
-    ]);
-    setFlights((f as Flight[]) ?? []);
-    setGliders((g as Glider[]) ?? []);
-    setMembers((m as Member[]) ?? []);
+    setLoadingFlights(true);
+    try {
+      const [{ data: f, error: fErr }, { data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
+        supabase.from("flights").select("*").eq("flight_date", date).order("takeoff_time", { ascending: true, nullsFirst: false }),
+        supabase.from("fleet_gliders").select("*").order("registration"),
+        supabase.from("club_members").select("*").order("full_name"),
+      ]);
+      const err = fErr || gErr || mErr;
+      if (err) throw err;
+      setFlights((f as Flight[]) ?? []);
+      setGliders((g as Glider[]) ?? []);
+      setMembers((m as Member[]) ?? []);
+    } finally {
+      setLoadingFlights(false);
+    }
   }, [date]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load().catch((e) => toast.error(e.message || "Could not refresh the daily log")); }, [load]);
 
   // Realtime updates for the day
   useEffect(() => {
     const ch = supabase.channel("flights-rt").on("postgres_changes",
-      { event: "*", schema: "public", table: "flights" }, () => load()
+      { event: "*", schema: "public", table: "flights" }, () => { load().catch(() => undefined); }
     ).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [load]);
@@ -179,7 +186,7 @@ function FlightsPage() {
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
       if (!silent) setSyncResult(j);
-      load();
+      await load();
     } catch (e: any) {
       if (!silent) {
         toast.error(e.message);
@@ -189,8 +196,8 @@ function FlightsPage() {
     finally { if (!silent) setSyncing(false); }
   }, [icao, date, load]);
 
-  // Auto-sync every 5 seconds so landing times appear quickly.
-  const SYNC_INTERVAL = 5;
+  // Auto-sync at a steady cadence so landing times appear without hammering OGN.
+  const SYNC_INTERVAL = 30;
   const [nextSync, setNextSync] = useState(SYNC_INTERVAL);
   useEffect(() => {
     if (!icao) return;
@@ -288,7 +295,7 @@ function FlightsPage() {
       setBox("L2:L2", { value: launch === "winch" ? "✓" : "", bold: true });
       setBox("M1:M2", { value: "Of", bold: true });
       setBox("N1:O1", { value: "Day & Date", bold: true });
-      setBox("N2:O2", { value: date });
+      setBox("N2:O2", { value: fmtUKDate(date) });
 
       ws.getRow(3).height = 40;
       setBox("A3:I3", { value: "LOG KEEPERS PLEASE MAKE ALL ENTRIES IN BLOCK CAPITALS AND LEGIBLE", bold: true, color: "FFFFFFFF", fill: RED, size: 10 });
@@ -418,10 +425,13 @@ function FlightsPage() {
             className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap"
             title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s.`}
           >
-            <RefreshCw className={`size-3 mr-1 ${syncing ? "animate-spin" : ""}`} />
-            {icao} · {nextSync}s
+            <RefreshCw className={`size-3 mr-1 ${syncing || loadingFlights ? "animate-spin" : ""}`} />
+            {loadingFlights ? "Refreshing" : `${icao} · ${nextSync}s`}
           </div>
           <div className="flex flex-wrap gap-2 ml-auto">
+            <Button onClick={() => syncOgn(false)} variant="outline" size="sm" disabled={syncing}>
+              <RefreshCw className={`size-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Refresh OGN
+            </Button>
             <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
             <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
             <Button onClick={() => setBulkOpen(true)} size="sm"><Plus className="size-4 mr-1" />Bulk add</Button>
@@ -452,7 +462,7 @@ function FlightsPage() {
                   <Badge variant="secondary">Updated {syncResult.updated}</Badge>
                   <Badge variant="outline">Skipped {syncResult.skipped}</Badge>
                   {syncResult.errors.length > 0 && <Badge variant="destructive">Errors {syncResult.errors.length}</Badge>}
-                  <Badge variant="outline" className="ml-auto text-xs">at {format(new Date(syncResult.synced_at), "HH:mm:ss")}</Badge>
+      <Badge variant="outline" className="ml-auto text-xs">at {fmtUKTimeSec(syncResult.synced_at)}</Badge>
                 </div>
                 {syncResult.errors.length > 0 && (
                   <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1 text-xs">
@@ -522,7 +532,7 @@ function FlightsPage() {
                 );
               })}
               {flights.length === 0 && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">
-                No flights yet. Click <strong>Sync OGN</strong> or <strong>Add manual</strong>.
+                No flights yet. Click <strong>Refresh OGN</strong> or <strong>Add</strong>.
               </TableCell></TableRow>}
             </TableBody>
           </Table>
@@ -595,7 +605,7 @@ function DeletedFlights({ date, offsetSec, onRestored }: { date: string; offsetS
       </Button>
       {open && (
         <Card className="mt-2">
-          <CardHeader><CardTitle className="text-base">Deleted on {date}</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Deleted on {fmtUKDate(date)}</CardTitle></CardHeader>
           <CardContent>
             {loading ? (
               <div className="text-sm text-muted-foreground">Loading…</div>
@@ -775,7 +785,7 @@ function OgnSourceCell({ flight }: { flight: Flight }) {
   const src = flight.ogn_source;
   const matched = !!src?.match?.flarm;
   const conf = src?.match?.confidence ?? (matched ? "high" : "low");
-  const synced = src?.synced_at ? format(new Date(src.synced_at), "HH:mm:ss") : null;
+  const synced = src?.synced_at ? fmtUKTimeSec(src.synced_at) : null;
   return (
     <div className="space-y-0.5">
       <div className="flex items-center gap-1">
@@ -1237,11 +1247,9 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
     setRows((r) => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
   };
 
-  // Bulk row times are entered as UTC to match the rest of the app.
+    // Bulk row times are entered as UK local time and stored as UTC.
   const fromLocal = (s: string) => {
-    if (!s) return null;
-    const withSec = s.length === 16 ? `${s}:00` : s;
-    return new Date(`${withSec}Z`).toISOString();
+      return fromUKLocalInput(s);
   };
 
   const saveAll = async () => {
@@ -1278,7 +1286,7 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Bulk add flights — {date}</DialogTitle>
+          <DialogTitle>Bulk add flights — {fmtUKDate(date)}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           {rows.map((r, i) => (
@@ -1293,11 +1301,11 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
                 />
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Takeoff (UTC)</Label>
+                  <Label className="text-xs">Takeoff (UK local)</Label>
                 <Input type="datetime-local" step="1" value={r.takeoff_time} onChange={(e) => update(i, { takeoff_time: e.target.value })} />
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Landing (UTC)</Label>
+                  <Label className="text-xs">Landing (UK local)</Label>
                 <Input type="datetime-local" step="1" value={r.landing_time} onChange={(e) => update(i, { landing_time: e.target.value })} />
               </div>
               <div className="md:col-span-2 space-y-1">

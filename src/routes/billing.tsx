@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Receipt, Download } from "lucide-react";
 import { format } from "date-fns";
 import { computeFlightCharge, fmtGBP, type FlightLike } from "@/lib/pricing";
+import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/billing")({
   beforeLoad: requireAuth,
@@ -33,7 +34,7 @@ type Mode = "day" | "month";
 function BillingPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [mode, setMode] = useState<Mode>("day");
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(todayUKDate());
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
   const [search, setSearch] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
@@ -128,7 +129,7 @@ function BillingPage() {
 
   const grandTotal = rows.reduce((s, r) => s + r.totalApplied, 0);
 
-  const periodLabel = mode === "day" ? date : month;
+  const periodLabel = mode === "day" ? fmtUKDate(date) : month;
   const csvEscape = (v: string | number) => {
     const s = String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -145,7 +146,7 @@ function BillingPage() {
     const lines = [headers.join(",")];
     for (const r of rows) for (const fe of r.flights) {
       lines.push([
-        fe.flight.flight_date, r.member.membership_number, r.member.full_name,
+        fmtUKDate(fe.flight.flight_date), r.member.membership_number, r.member.full_name,
         r.member.under_21 ? "Y" : "N",
         fe.flight.glider_registration || "", fe.role,
         fe.applied.launch.toFixed(2), fe.applied.soaring.toFixed(2), fe.applied.motorGlider.toFixed(2),
@@ -160,7 +161,7 @@ function BillingPage() {
     for (const r of rows) for (const fe of r.flights) {
       const desc = `${fe.flight.glider_registration || "Flight"} ${fe.role} — ${fe.applied.notes.join("; ")}`;
       lines.push([
-        r.member.membership_number, fe.flight.flight_date, desc,
+        r.member.membership_number, fmtUKDate(fe.flight.flight_date), desc,
         fe.applied.total.toFixed(2), fe.flight.id.slice(0, 8),
       ].map(csvEscape).join(","));
     }
@@ -249,7 +250,7 @@ function BillingPage() {
               <TableBody>
                 {r.flights.map(({ flight, standard, u21, role }, i) => (
                   <TableRow key={flight.id + role + i}>
-                    <TableCell className="font-mono text-xs">{flight.flight_date}</TableCell>
+                    <TableCell className="font-mono text-xs">{fmtUKDate(flight.flight_date)}</TableCell>
                     <TableCell className="font-medium">{flight.glider_registration || "—"}</TableCell>
                     <TableCell>{role}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{standard.notes.join(" · ")}</TableCell>
