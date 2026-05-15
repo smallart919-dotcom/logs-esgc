@@ -167,7 +167,7 @@ function FlightsPage() {
   // Realtime updates for the day
   useEffect(() => {
     const ch = supabase.channel("flights-rt").on("postgres_changes",
-      { event: "*", schema: "public", table: "flights" }, () => load()
+      { event: "*", schema: "public", table: "flights" }, () => { load().catch(() => undefined); }
     ).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [load]);
@@ -422,8 +422,8 @@ function FlightsPage() {
             className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap"
             title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s.`}
           >
-            <RefreshCw className={`size-3 mr-1 ${syncing ? "animate-spin" : ""}`} />
-            {icao} · {nextSync}s
+            <RefreshCw className={`size-3 mr-1 ${syncing || loadingFlights ? "animate-spin" : ""}`} />
+            {loadingFlights ? "Refreshing" : `${icao} · ${nextSync}s`}
           </div>
           <div className="flex flex-wrap gap-2 ml-auto">
             <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
