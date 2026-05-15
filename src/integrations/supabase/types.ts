@@ -312,6 +312,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      caravan_offset_editing_allowed: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -319,6 +320,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_caravan: { Args: never; Returns: boolean }
       is_office: { Args: never; Returns: boolean }
     }
     Enums: {
