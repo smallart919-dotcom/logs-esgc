@@ -119,9 +119,16 @@
   100% { transform: translate3d(112vw, 5px, 0) rotate(2deg); opacity: 0; }
 }
 @keyframes glider-land {
-  0%   { transform: translateX(-30px) translateY(-18px) rotate(-8deg); opacity: 0; }
-  25%  { opacity: 1; }
-  100% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 1; }
+  0%   { transform: translate3d(-40px, -22px, 0) rotate(-14deg); opacity: 0; }
+  35%  { opacity: 1; }
+  70%  { transform: translate3d(-4px, -2px, 0) rotate(-3deg); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+}
+@keyframes glider-touchdown {
+  0%   { transform: translate3d(-60px, -14px, 0) rotate(-10deg); opacity: 0; }
+  40%  { opacity: 0.9; }
+  80%  { transform: translate3d(-6px, 1px, 0) rotate(-2deg); opacity: 0.9; }
+  100% { transform: translate3d(0, 2px, 0) rotate(0deg); opacity: 0.85; }
 }
 @keyframes gentle-float {
   0%, 100% { transform: translateY(0) rotate(-1deg); }
