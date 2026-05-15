@@ -197,7 +197,6 @@ function RootComponent() {
         <Outlet />
       </main>
       <Toaster />
-      <SaveSplash />
     </div>
   );
 }
