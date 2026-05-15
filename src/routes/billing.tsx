@@ -277,3 +277,12 @@ function BillingPage() {
     </div>
   );
 }
+
+function AnimatedTotal({ value }: { value: number }) {
+  const animated = useCountUp(value);
+  return (
+    <Badge variant="default" className="text-sm px-3 py-1.5 truncate tabular-nums">
+      Total {fmtGBP(animated)}
+    </Badge>
+  );
+}
