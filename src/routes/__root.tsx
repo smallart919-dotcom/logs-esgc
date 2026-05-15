@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plane, Users, ListChecks, LogOut, History, Receipt, Activity, BookOpen, BarChart3, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import esgcLogo from "@/assets/esgc-logo.png";
+import { Murmuration } from "@/components/murmuration";
 
 import appCss from "../styles.css?url";
 
