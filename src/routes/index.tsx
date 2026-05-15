@@ -147,6 +147,13 @@ function FlightsPage() {
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
+  // Track which flight IDs we've already seen and which were still in-air,
+  // so we can animate brand-new rows and the moment a landing time appears.
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const inAirIdsRef = useRef<Set<string>>(new Set());
+  const [freshlyAdded, setFreshlyAdded] = useState<Set<string>>(new Set());
+  const [freshlyLanded, setFreshlyLanded] = useState<Set<string>>(new Set());
+
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoadingFlights(true);
     try {
