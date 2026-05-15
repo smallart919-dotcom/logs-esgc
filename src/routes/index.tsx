@@ -417,62 +417,19 @@ function FlightsPage() {
               max={todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
           <div
-            className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap"
-            title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s.`}
+            className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap gap-1.5"
+            title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s in the background.`}
           >
-            <RefreshCw className={`size-3 mr-1 ${syncing || loadingFlights ? "animate-spin" : ""}`} />
-            {loadingFlights ? "Refreshing" : `${icao} · ${nextSync}s`}
+            <span className={`inline-block size-1.5 rounded-full bg-primary ${loadingFlights ? "sky-shimmer" : ""}`} />
+            <span>Live · {icao}</span>
           </div>
           <div className="flex flex-wrap gap-2 ml-auto">
-            <Button onClick={() => syncOgn(false)} variant="outline" size="sm" disabled={syncing}>
-              <RefreshCw className={`size-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Refresh OGN
-            </Button>
             <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
             <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
             <Button onClick={() => setBulkOpen(true)} size="sm"><Plus className="size-4 mr-1" />Bulk add</Button>
           </div>
         </div>
       </div>
-
-      {(syncing || syncResult) && (
-        <Card className="border-primary/40">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <RefreshCw className={`size-4 ${syncing ? "animate-spin text-primary" : "text-muted-foreground"}`} />
-                {syncing ? "Syncing OGN…" : `Sync complete — ${syncResult?.icao} · ${syncResult?.date}`}
-              </CardTitle>
-              {syncResult && !syncing && (
-                <Button size="sm" variant="ghost" onClick={() => setSyncResult(null)}>Dismiss</Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {syncing && <div className="text-sm text-muted-foreground">Fetching flights from OGN flightbook and reconciling with your fleet…</div>}
-            {syncResult && (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="default">Total {syncResult.total}</Badge>
-                  <Badge variant="secondary">Inserted {syncResult.created}</Badge>
-                  <Badge variant="secondary">Updated {syncResult.updated}</Badge>
-                  <Badge variant="outline">Skipped {syncResult.skipped}</Badge>
-                  {syncResult.errors.length > 0 && <Badge variant="destructive">Errors {syncResult.errors.length}</Badge>}
-      <Badge variant="outline" className="ml-auto text-xs">at {fmtUKTimeSec(syncResult.synced_at)}</Badge>
-                </div>
-                {syncResult.errors.length > 0 && (
-                  <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1 text-xs">
-                    {syncResult.errors.map((e, i) => (
-                      <div key={i} className="font-mono">
-                        <span className="text-destructive font-semibold">{e.registration || e.flarm || "?"}</span>: {e.message}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       <DailyLogCard date={date} members={members} />
 
