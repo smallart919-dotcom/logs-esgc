@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Clock } from "lucide-react";
 import { computeOffsetFromCaravanHHMM, fmtOffset, useDayOffset } from "@/lib/clock-offset";
+import { fmtUKDate } from "@/lib/uktime";
 
 /** A small card on the daily log letting the user sync the day's offset
  * to the caravan clock. Disabled for the caravan account. */
