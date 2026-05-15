@@ -1,0 +1,1 @@
+ALTER TABLE public.clock_settings ADD COLUMN IF NOT EXISTS caravan_can_edit boolean NOT NULL DEFAULT true;
