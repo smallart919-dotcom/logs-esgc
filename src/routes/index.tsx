@@ -149,17 +149,20 @@ function FlightsPage() {
 
   const load = useCallback(async () => {
     setLoadingFlights(true);
-    const [{ data: f, error: fErr }, { data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
-      supabase.from("flights").select("*").eq("flight_date", date).order("takeoff_time", { ascending: true, nullsFirst: false }),
-      supabase.from("fleet_gliders").select("*").order("registration"),
-      supabase.from("club_members").select("*").order("full_name"),
-    ]);
-    const err = fErr || gErr || mErr;
-    if (err) { setLoadingFlights(false); throw err; }
-    setFlights((f as Flight[]) ?? []);
-    setGliders((g as Glider[]) ?? []);
-    setMembers((m as Member[]) ?? []);
-    setLoadingFlights(false);
+    try {
+      const [{ data: f, error: fErr }, { data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
+        supabase.from("flights").select("*").eq("flight_date", date).order("takeoff_time", { ascending: true, nullsFirst: false }),
+        supabase.from("fleet_gliders").select("*").order("registration"),
+        supabase.from("club_members").select("*").order("full_name"),
+      ]);
+      const err = fErr || gErr || mErr;
+      if (err) throw err;
+      setFlights((f as Flight[]) ?? []);
+      setGliders((g as Glider[]) ?? []);
+      setMembers((m as Member[]) ?? []);
+    } finally {
+      setLoadingFlights(false);
+    }
   }, [date]);
 
   useEffect(() => { load().catch((e) => toast.error(e.message || "Could not refresh the daily log")); }, [load]);
