@@ -5,7 +5,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plane, Users, ListChecks, LogOut, History, Receipt, Activity, BookOpen, BarChart3, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import esgcLogo from "@/assets/esgc-logo.png";
-import { Murmuration } from "@/components/murmuration";
+
+/** Sailplane silhouette — long slender wings, slim fuselage, T-tail. */
+function GliderIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 24" className={className} fill="currentColor" aria-hidden>
+      {/* Long slender wings */}
+      <path d="M2 12 Q 18 9 32 12 Q 46 9 62 12 L 62 12.6 Q 46 11 32 13 Q 18 11 2 12.6 Z" />
+      {/* Fuselage */}
+      <path d="M22 11.6 Q 32 10.8 50 12 L 50 12.6 Q 32 13.2 22 12.4 Z" />
+      {/* Cockpit bubble */}
+      <ellipse cx="48" cy="11.6" rx="2.4" ry="1.1" />
+      {/* T-tail */}
+      <path d="M22 9.6 L 24 9.6 L 24 14.6 L 22 14.6 Z" />
+      <path d="M20 9 L 26 9 L 26 9.8 L 20 9.8 Z" />
+    </svg>
+  );
+}
 
 import appCss from "../styles.css?url";
 
@@ -87,19 +103,15 @@ function RootComponent() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40 overflow-hidden">
-        {/* Ambient sky — soaring glider with starling flock */}
+        {/* Ambient sky — centered soaring glider with contrail */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          {/* Soft contrail */}
-          <div className="absolute top-[18px] left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent contrail-shimmer" />
-          {/* Hero glider — bigger, with trail */}
-          <div className="absolute top-2 left-0 glider-soar-hero">
+          <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent contrail-shimmer" />
+          <div className="absolute top-1/2 left-0 -translate-y-1/2 glider-soar-hero">
             <div className="relative flex items-center">
-              <span className="absolute right-full mr-1 h-px w-10 bg-gradient-to-l from-primary/60 to-transparent" />
-              <Plane className="size-5 text-primary/70 -rotate-6 drop-shadow-[0_2px_6px_color-mix(in_oklab,var(--primary)_45%,transparent)]" />
+              <span className="absolute right-full mr-1 h-px w-14 bg-gradient-to-l from-primary/70 to-transparent" />
+              <GliderIcon className="size-6 text-primary/80 -rotate-6 drop-shadow-[0_2px_8px_color-mix(in_oklab,var(--primary)_55%,transparent)]" />
             </div>
           </div>
-          {/* Pixel murmuration — flock of pixels forming flowing shapes */}
-          <Murmuration className="absolute inset-0 w-full h-full opacity-70 mix-blend-multiply dark:mix-blend-screen" />
         </div>
         <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3 relative">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0 group">
