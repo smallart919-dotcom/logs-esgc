@@ -410,23 +410,25 @@ function FlightsPage() {
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2"><Plane className="size-6 md:size-7 text-primary" /> Daily Flight Log</h1>
           <p className="text-sm text-muted-foreground">OGN-fed flights for your club fleet. Add pilot details and export.</p>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex-1 min-w-[150px] sm:flex-none">
+        <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-end sm:flex-wrap">
+          <div className="w-full sm:w-auto">
             <Label className="text-xs">Date</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full sm:w-44"
               max={todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
-          <div
-            className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap gap-1.5"
-            title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s in the background.`}
-          >
-            <span className={`inline-block size-1.5 rounded-full bg-primary ${loadingFlights ? "sky-shimmer" : ""}`} />
-            <span>Live · {icao}</span>
-          </div>
-          <div className="flex flex-wrap gap-2 ml-auto">
-            <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
-            <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
-            <Button onClick={() => setBulkOpen(true)} size="sm"><Plus className="size-4 mr-1" />Bulk add</Button>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div
+              className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap gap-1.5"
+              title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s in the background.`}
+            >
+              <span className={`inline-block size-1.5 rounded-full bg-primary ${loadingFlights ? "sky-shimmer" : ""}`} />
+              <span>Live · {icao}</span>
+            </div>
+            <div className="flex flex-wrap gap-2 ml-auto">
+              <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
+              <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
+              <Button onClick={() => setBulkOpen(true)} size="sm"><Plus className="size-4 mr-1" />Bulk add</Button>
+            </div>
           </div>
         </div>
       </div>
