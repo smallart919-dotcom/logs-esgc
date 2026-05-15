@@ -22,8 +22,10 @@ function todayUTC() {
 
 function parseTimeOnDate(date: string, hms?: string): string | null {
   if (!hms) return null;
-  // OGN times are UTC HH:MM:SS
-  return new Date(`${date}T${hms}Z`).toISOString();
+  // OGN HTML logbook (u=M) shows times in UK local wall-clock. Convert
+  // that wall time to the correct UTC instant so subsequent UK formatting
+  // round-trips to the same HH:mm the user saw on glidernet.
+  return fromUKLocalInput(`${date}T${hms}`);
 }
 
 export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
