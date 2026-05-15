@@ -430,7 +430,7 @@ function FlightsPage() {
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <div
               className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap gap-1.5"
-              title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s in the background.`}
+              title={`Auto-syncing ${icao} from OGN — every 3s when tab is visible.`}
             >
               <span className={`inline-block size-1.5 rounded-full bg-primary ${loadingFlights ? "sky-shimmer" : ""}`} />
               <span>Live · {icao}</span>
