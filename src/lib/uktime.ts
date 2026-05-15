@@ -55,20 +55,42 @@ export function toUKLocalInput(iso: string | null | undefined): string {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
 }
 
-/** Convert a UK local datetime-local value back to a UTC ISO string. */
-export function fromUKLocalInput(s: string | null | undefined): string | null {
-  if (!s) return null;
+function parseYmdHms(s: string): { Y: number; M: number; D: number; h: number; m: number; sec: number } | null {
   const withSec = s.length === 16 ? `${s}:00` : s;
   const [datePart, timePart] = withSec.split("T");
   if (!datePart || !timePart) return null;
   const [Y, M, D] = datePart.split("-").map(Number);
-  const [h, m, sec] = timePart.split(":").map(Number);
-  // Treat the entered wall time as UTC, then subtract the London offset at
-  // that wall-clock moment to get the true UTC instant.
-  const asIfUtc = Date.UTC(Y, M - 1, D, h, m, sec || 0);
-  // Offset in minutes London is ahead of UTC at this wall time.
-  const p = londonParts(new Date(asIfUtc));
-  const wallUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
-  const offsetMin = (wallUtc - asIfUtc) / 60_000;
-  return new Date(asIfUtc - offsetMin * 60_000).toISOString();
+  const [h, m, sec = 0] = timePart.split(":").map(Number);
+  if (![Y, M, D, h, m, sec].every(Number.isFinite)) return null;
+  if (M < 1 || M > 12 || D < 1 || D > 31 || h < 0 || h > 23 || m < 0 || m > 59 || sec < 0 || sec > 59) return null;
+  return { Y, M, D, h, m, sec };
+}
+
+function wallMatches(utcMs: number, wall: { Y: number; M: number; D: number; h: number; m: number; sec: number }) {
+  const p = londonParts(new Date(utcMs));
+  return +p.year === wall.Y && +p.month === wall.M && +p.day === wall.D && +p.hour === wall.h && +p.minute === wall.m && +p.second === wall.sec;
+}
+
+/** Convert a UK local datetime-local value back to a UTC ISO string. */
+export function fromUKLocalInput(s: string | null | undefined): string | null {
+  if (!s) return null;
+  const wall = parseYmdHms(s);
+  if (!wall) return null;
+  const asIfUtc = Date.UTC(wall.Y, wall.M - 1, wall.D, wall.h, wall.m, wall.sec);
+  const candidates = [asIfUtc - 60 * 60_000, asIfUtc, asIfUtc + 60 * 60_000];
+  const match = candidates.find((ms) => wallMatches(ms, wall));
+  return new Date(match ?? asIfUtc).toISOString();
+}
+
+export function todayUKDate(): string {
+  const p = londonParts(new Date());
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+export function dateToUKShortLabel(date: string | null | undefined): string {
+  if (!date) return "—";
+  const m = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return date;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(d).replace(/\//g, "-");
 }
