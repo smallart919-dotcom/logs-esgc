@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Settings as SettingsIcon } from "lucide-react";
 import { fmtOffset } from "@/lib/clock-offset";
+import { fmtUKDate } from "@/lib/uktime";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/settings")({
@@ -89,7 +90,7 @@ function SettingsPage() {
       flight_date: date, offset_seconds: n * 60, updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
     }, { onConflict: "flight_date" });
     setSavingOver(false);
-    if (error) toast.error(error.message); else { toast.success(`Offset for ${date} saved`); loadOver(date); }
+    if (error) toast.error(error.message); else { toast.success(`Offset for ${fmtUKDate(date)} saved`); loadOver(date); }
   };
   const clearOver = async () => {
     setSavingOver(true);
@@ -194,8 +195,8 @@ function SettingsPage() {
           </div>
           <div className="text-xs text-muted-foreground">
             {override === null
-              ? `No override for ${date} — falls back to permanent (${fmtOffset(permanent)}).`
-              : `Override active for ${date}: ${fmtOffset(override)}.`}
+              ? `No override for ${fmtUKDate(date)} — falls back to permanent (${fmtOffset(permanent)}).`
+              : `Override active for ${fmtUKDate(date)}: ${fmtOffset(override)}.`}
           </div>
         </CardContent>
       </Card>

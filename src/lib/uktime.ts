@@ -33,6 +33,14 @@ export function shiftIso(iso: string | null | undefined, offsetSec = 0): string 
   return new Date(new Date(iso).getTime() + offsetSec * 1000).toISOString();
 }
 
+/** Format a yyyy-MM-dd flight date as UK DD-MM-YYYY for display. */
+export function fmtUKDate(date: string | null | undefined): string {
+  if (!date) return "—";
+  const m = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return date;
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
 /** Format a UTC ISO string as UK local HH:mm:ss. */
 export function fmtUKTimeSec(iso: string | null | undefined): string {
   if (!iso) return "—";

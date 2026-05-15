@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from "lucide-react";
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
-import { fmtUKTime, toUKLocalInput, fromUKLocalInput } from "@/lib/uktime";
+import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 
@@ -474,7 +474,7 @@ function FlightsPage() {
       <ClockSyncCard date={date} isCaravan={isCaravan} />
 
       <Card>
-        <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {date}</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).length} flights on {fmtUKDate(date)}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
           <Table className="min-w-[900px]">
             <TableHeader><TableRow>
@@ -748,7 +748,7 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Daily Log — {date}</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Daily Log — {fmtUKDate(date)}</CardTitle></CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <Label>Duty Instructor</Label>
