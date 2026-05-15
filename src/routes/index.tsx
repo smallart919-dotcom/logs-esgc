@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireAuth } from "@/lib/auth-guard";
@@ -24,9 +24,40 @@ import { fmtUKTime, toUKLocalInput, fromUKLocalInput } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 
+function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+        <RefreshCw className="size-6 text-destructive" />
+      </div>
+      <div>
+        <h1 className="text-xl font-semibold">Couldn't load flights</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {error?.message ? error.message : "Something went wrong loading the daily log."}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <Button
+          onClick={() => {
+            router.invalidate();
+            reset();
+          }}
+        >
+          <RefreshCw className="size-4 mr-2" /> Retry
+        </Button>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Hard refresh
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
   component: FlightsPage,
+  errorComponent: FlightsErrorComponent,
 });
 
 type OgnSource = {
