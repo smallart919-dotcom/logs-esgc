@@ -147,8 +147,8 @@ function FlightsPage() {
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoadingFlights(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoadingFlights(true);
     try {
       const [{ data: f, error: fErr }, { data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
         supabase.from("flights").select("*").eq("flight_date", date).order("takeoff_time", { ascending: true, nullsFirst: false }),
@@ -161,7 +161,7 @@ function FlightsPage() {
       setGliders((g as Glider[]) ?? []);
       setMembers((m as Member[]) ?? []);
     } finally {
-      setLoadingFlights(false);
+      if (!silent) setLoadingFlights(false);
     }
   }, [date]);
 
@@ -170,7 +170,7 @@ function FlightsPage() {
   // Realtime updates for the day
   useEffect(() => {
     const ch = supabase.channel("flights-rt").on("postgres_changes",
-      { event: "*", schema: "public", table: "flights" }, () => { load().catch(() => undefined); }
+      { event: "*", schema: "public", table: "flights" }, () => { load(true).catch(() => undefined); }
     ).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [load]);
@@ -186,7 +186,7 @@ function FlightsPage() {
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
       if (!silent) setSyncResult(j);
-      await load();
+      await load(silent);
     } catch (e: any) {
       if (!silent) {
         toast.error(e.message);
@@ -196,20 +196,15 @@ function FlightsPage() {
     finally { if (!silent) setSyncing(false); }
   }, [icao, date, load]);
 
-  // Auto-sync at a steady cadence so landing times appear without hammering OGN.
-  const SYNC_INTERVAL = 30;
-  const [nextSync, setNextSync] = useState(SYNC_INTERVAL);
+  // Silent auto-sync every 5s so landing times appear naturally without any user action.
+  const SYNC_INTERVAL = 5;
   useEffect(() => {
     if (!icao) return;
-    syncOgn(true);
-    setNextSync(SYNC_INTERVAL);
-    const tick = setInterval(() => {
-      setNextSync((n) => {
-        if (n <= 1) { syncOgn(true); return SYNC_INTERVAL; }
-        return n - 1;
-      });
-    }, 1000);
-    return () => clearInterval(tick);
+    let cancelled = false;
+    const run = () => { if (!cancelled) syncOgn(true); };
+    run();
+    const tick = setInterval(run, SYNC_INTERVAL * 1000);
+    return () => { cancelled = true; clearInterval(tick); };
   }, [icao, syncOgn]);
 
 
