@@ -122,6 +122,51 @@ function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Caravan account permissions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-sm text-muted-foreground">
+            Caravan can edit the daily clock offset:{" "}
+            <Badge variant={caravanCanEdit ? "default" : "outline"}>{caravanCanEdit ? "Allowed" : "Restricted"}</Badge>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={caravanCanEdit ? "outline" : "default"}
+              disabled={savingCaravan || !caravanCanEdit}
+              onClick={async () => {
+                setSavingCaravan(true);
+                const { data: u } = await supabase.auth.getUser();
+                const { error } = await supabase.from("clock_settings").update({
+                  caravan_can_edit: false, updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
+                }).eq("id", 1);
+                setSavingCaravan(false);
+                if (error) toast.error(error.message); else { toast.success("Caravan editing restricted"); loadPerm(); }
+              }}
+            >Restrict caravan</Button>
+            <Button
+              size="sm"
+              variant={caravanCanEdit ? "default" : "outline"}
+              disabled={savingCaravan || caravanCanEdit}
+              onClick={async () => {
+                setSavingCaravan(true);
+                const { data: u } = await supabase.auth.getUser();
+                const { error } = await supabase.from("clock_settings").update({
+                  caravan_can_edit: true, updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
+                }).eq("id", 1);
+                setSavingCaravan(false);
+                if (error) toast.error(error.message); else { toast.success("Caravan editing allowed"); loadPerm(); }
+              }}
+            >Allow caravan</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            When restricted, the caravan account sees the offset as read-only on the daily log.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Per-date offset override</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
