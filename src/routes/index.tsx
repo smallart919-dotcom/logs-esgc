@@ -98,11 +98,15 @@ function FlightsPage() {
     : todayStr();
   const [date, setDate] = useState(initialDate);
   const [isOffice, setIsOffice] = useState(false);
+  const [isCaravan, setIsCaravan] = useState(false);
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setIsOffice((data.user?.email || "").toLowerCase() === "office@esgc.local");
+      const email = (data.user?.email || "").toLowerCase();
+      setIsOffice(email === "office@esgc.local");
+      setIsCaravan(email === "caravan@esgc.local");
     });
   }, []);
+  const { offsetSec } = useDayOffset(date);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
