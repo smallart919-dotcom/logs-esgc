@@ -12,7 +12,7 @@ import { computeOffsetFromCaravanHHMM, fmtOffset, useDayOffset } from "@/lib/clo
 /** A small card on the daily log letting the user sync the day's offset
  * to the caravan clock. Disabled for the caravan account. */
 export function ClockSyncCard({ date, isCaravan }: { date: string; isCaravan: boolean }) {
-  const { offsetSec, permanent, override, refresh } = useDayOffset(date);
+  const { offsetSec, permanent, override, caravanCanEdit, refresh } = useDayOffset(date);
   const [caravan, setCaravan] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -48,9 +48,9 @@ export function ClockSyncCard({ date, isCaravan }: { date: string; isCaravan: bo
           {permanent !== 0 && override === null && <Badge variant="outline">Permanent {fmtOffset(permanent)}</Badge>}
         </div>
 
-        {isCaravan ? (
+        {isCaravan && !caravanCanEdit ? (
           <p className="text-sm text-muted-foreground">
-            The caravan account can't change the clock offset. Ask the office to adjust it from Settings.
+            Editing the clock offset has been restricted by the office. Ask them to adjust it from Settings.
           </p>
         ) : (
           <>

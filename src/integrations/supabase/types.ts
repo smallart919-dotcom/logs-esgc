@@ -37,18 +37,21 @@ export type Database = {
       }
       clock_settings: {
         Row: {
+          caravan_can_edit: boolean
           id: number
           permanent_offset_seconds: number
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          caravan_can_edit?: boolean
           id?: number
           permanent_offset_seconds?: number
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          caravan_can_edit?: boolean
           id?: number
           permanent_offset_seconds?: number
           updated_at?: string

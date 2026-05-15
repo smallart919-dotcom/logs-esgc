@@ -9,15 +9,17 @@ import { supabase } from "@/integrations/supabase/client";
 export function useDayOffset(date: string) {
   const [permanent, setPermanent] = useState(0);
   const [override, setOverride] = useState<number | null>(null);
+  const [caravanCanEdit, setCaravanCanEdit] = useState(true);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     const [{ data: s }, { data: o }] = await Promise.all([
-      supabase.from("clock_settings").select("permanent_offset_seconds").eq("id", 1).maybeSingle(),
+      supabase.from("clock_settings").select("permanent_offset_seconds, caravan_can_edit").eq("id", 1).maybeSingle(),
       supabase.from("clock_offsets").select("offset_seconds").eq("flight_date", date).maybeSingle(),
     ]);
     setPermanent(s?.permanent_offset_seconds ?? 0);
+    setCaravanCanEdit(s?.caravan_can_edit ?? true);
     setOverride(o ? o.offset_seconds : null);
     setLoading(false);
   }, [date]);
@@ -35,7 +37,7 @@ export function useDayOffset(date: string) {
   }, [date, refresh]);
 
   const offsetSec = override ?? permanent;
-  return { offsetSec, permanent, override, loading, refresh };
+  return { offsetSec, permanent, override, caravanCanEdit, loading, refresh };
 }
 
 /** Compute a signed offset (seconds, range ±12h) from caravan HH:mm vs current UK wall time. */
