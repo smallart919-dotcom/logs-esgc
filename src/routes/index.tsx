@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireAuth } from "@/lib/auth-guard";
 import { Button } from "@/components/ui/button";
@@ -147,6 +147,13 @@ function FlightsPage() {
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
+  // Track which flight IDs we've already seen and which were still in-air,
+  // so we can animate brand-new rows and the moment a landing time appears.
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const inAirIdsRef = useRef<Set<string>>(new Set());
+  const [freshlyAdded, setFreshlyAdded] = useState<Set<string>>(new Set());
+  const [freshlyLanded, setFreshlyLanded] = useState<Set<string>>(new Set());
+
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoadingFlights(true);
     try {
@@ -157,7 +164,33 @@ function FlightsPage() {
       ]);
       const err = fErr || gErr || mErr;
       if (err) throw err;
-      setFlights((f as Flight[]) ?? []);
+      const next = (f as Flight[]) ?? [];
+
+      // Detect newly arrived flights and newly-landed flights for subtle animations.
+      const seen = seenIdsRef.current;
+      const inAir = inAirIdsRef.current;
+      const newIds = new Set<string>();
+      const landedIds = new Set<string>();
+      const isInitial = seen.size === 0;
+      for (const fl of next) {
+        if (!seen.has(fl.id)) { if (!isInitial) newIds.add(fl.id); seen.add(fl.id); }
+        if (fl.landing_time == null) inAir.add(fl.id);
+        else if (inAir.has(fl.id)) { inAir.delete(fl.id); if (!isInitial) landedIds.add(fl.id); }
+      }
+      // Drop ids that no longer exist (e.g. deletion)
+      const present = new Set(next.map((x) => x.id));
+      for (const id of Array.from(seen)) if (!present.has(id)) seen.delete(id);
+      for (const id of Array.from(inAir)) if (!present.has(id)) inAir.delete(id);
+
+      setFlights(next);
+      if (newIds.size) {
+        setFreshlyAdded((prev) => { const s = new Set(prev); newIds.forEach((id) => s.add(id)); return s; });
+        setTimeout(() => setFreshlyAdded((prev) => { const s = new Set(prev); newIds.forEach((id) => s.delete(id)); return s; }), 1600);
+      }
+      if (landedIds.size) {
+        setFreshlyLanded((prev) => { const s = new Set(prev); landedIds.forEach((id) => s.add(id)); return s; });
+        setTimeout(() => setFreshlyLanded((prev) => { const s = new Set(prev); landedIds.forEach((id) => s.delete(id)); return s; }), 1400);
+      }
       setGliders((g as Glider[]) ?? []);
       setMembers((m as Member[]) ?? []);
     } finally {
@@ -166,6 +199,9 @@ function FlightsPage() {
   }, [date]);
 
   useEffect(() => { load().catch((e) => toast.error(e.message || "Could not refresh the daily log")); }, [load]);
+
+  // Reset tracking when the date changes so we don't fire animations for the whole new day.
+  useEffect(() => { seenIdsRef.current = new Set(); inAirIdsRef.current = new Set(); }, [date]);
 
   // Realtime updates for the day
   useEffect(() => {
@@ -476,14 +512,16 @@ function FlightsPage() {
                   const m = Math.round((+new Date(f.landing_time) - +new Date(f.takeoff_time)) / 60000);
                   return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
                 })();
+                const isNew = freshlyAdded.has(f.id);
+                const justLanded = freshlyLanded.has(f.id);
                 return (
-                  <TableRow key={f.id} className="row-glide-in transition-colors hover:bg-muted/40">
+                  <TableRow key={f.id} className={`transition-colors hover:bg-muted/40 ${isNew ? "row-land-in" : "row-glide-in"}`}>
                     <TableCell className="font-medium">
                       {f.glider_registration || <span className="text-muted-foreground">unknown</span>}
                       {f.flarm_id && <div className="text-xs font-mono text-muted-foreground">{f.flarm_id}</div>}
                     </TableCell>
                     <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time, offsetSec)}</TableCell>
-                    <TableCell className="font-mono text-sm">{fmtUKTime(f.landing_time, offsetSec)}</TableCell>
+                    <TableCell className={`font-mono text-sm ${justLanded ? "landing-pop" : ""}`}>{fmtUKTime(f.landing_time, offsetSec)}</TableCell>
                     <TableCell className="text-sm">{dur}</TableCell>
                     <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
                     <TableCell><PilotCell name={f.p2_name} membership={f.p2_membership} kind={f.p2_kind} /></TableCell>

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart3 } from "lucide-react";
 import { format, subDays, eachDayOfInterval, startOfMonth } from "date-fns";
 import { fmtUKDate, todayUKDate } from "@/lib/uktime";
+import { useCountUp } from "@/lib/count-up";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend, LineChart, Line,
@@ -172,10 +173,10 @@ function StatsPage() {
       </Card>
 
       <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-        <StatCard label="Flights" value={String(totals.count)} />
-        <StatCard label="Hours" value={(totals.mins / 60).toFixed(1)} />
-        <StatCard label="Aerotow" value={String(totals.aerotow)} />
-        <StatCard label="Winch" value={String(totals.winch)} />
+        <StatCard label="Flights" value={totals.count} />
+        <StatCard label="Hours" value={totals.mins / 60} decimals={1} />
+        <StatCard label="Aerotow" value={totals.aerotow} />
+        <StatCard label="Winch" value={totals.winch} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -276,12 +277,14 @@ function StatsPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, decimals = 0 }: { label: string; value: number; decimals?: number }) {
+  const animated = useCountUp(value);
+  const text = decimals > 0 ? animated.toFixed(decimals) : Math.round(animated).toLocaleString("en-GB");
   return (
     <Card>
       <CardContent className="p-4">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className="text-2xl font-bold mt-1">{value}</div>
+        <div className="text-2xl font-bold mt-1 tabular-nums">{text}</div>
       </CardContent>
     </Card>
   );

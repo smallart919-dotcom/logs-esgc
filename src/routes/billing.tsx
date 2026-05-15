@@ -13,6 +13,7 @@ import { Receipt, Download } from "lucide-react";
 import { format } from "date-fns";
 import { computeFlightCharge, fmtGBP, type FlightLike } from "@/lib/pricing";
 import { fmtUKDate, todayUKDate } from "@/lib/uktime";
+import { useCountUp } from "@/lib/count-up";
 
 export const Route = createFileRoute("/billing")({
   beforeLoad: requireAuth,
@@ -201,7 +202,7 @@ function BillingPage() {
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Smith or 1234" />
           </div>
           <div className="flex items-center justify-between gap-2 sm:col-span-2 lg:col-span-1">
-            <Badge variant="default" className="text-sm px-3 py-1.5 truncate">Total {fmtGBP(grandTotal)}</Badge>
+            <AnimatedTotal value={grandTotal} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={rows.length === 0}>
@@ -274,5 +275,14 @@ function BillingPage() {
         <Card><CardContent className="text-center text-muted-foreground py-12">No charges in this period{search ? " for that search" : ""}.</CardContent></Card>
       )}
     </div>
+  );
+}
+
+function AnimatedTotal({ value }: { value: number }) {
+  const animated = useCountUp(value);
+  return (
+    <Badge variant="default" className="text-sm px-3 py-1.5 truncate tabular-nums">
+      Total {fmtGBP(animated)}
+    </Badge>
   );
 }
