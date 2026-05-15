@@ -87,19 +87,15 @@ function RootComponent() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40 overflow-hidden">
-        {/* Ambient sky — soaring glider with starling flock */}
+        {/* Ambient sky — centered soaring glider with contrail */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          {/* Soft contrail */}
-          <div className="absolute top-[18px] left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent contrail-shimmer" />
-          {/* Hero glider — bigger, with trail */}
-          <div className="absolute top-2 left-0 glider-soar-hero">
+          <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent contrail-shimmer" />
+          <div className="absolute top-1/2 left-0 -translate-y-1/2 glider-soar-hero">
             <div className="relative flex items-center">
-              <span className="absolute right-full mr-1 h-px w-10 bg-gradient-to-l from-primary/60 to-transparent" />
-              <Plane className="size-5 text-primary/70 -rotate-6 drop-shadow-[0_2px_6px_color-mix(in_oklab,var(--primary)_45%,transparent)]" />
+              <span className="absolute right-full mr-1 h-px w-14 bg-gradient-to-l from-primary/70 to-transparent" />
+              <GliderIcon className="size-6 text-primary/80 -rotate-6 drop-shadow-[0_2px_8px_color-mix(in_oklab,var(--primary)_55%,transparent)]" />
             </div>
           </div>
-          {/* Pixel murmuration — flock of pixels forming flowing shapes */}
-          <Murmuration className="absolute inset-0 w-full h-full opacity-70 mix-blend-multiply dark:mix-blend-screen" />
         </div>
         <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3 relative">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0 group">
