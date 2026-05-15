@@ -90,7 +90,7 @@ function SettingsPage() {
       flight_date: date, offset_seconds: n * 60, updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
     }, { onConflict: "flight_date" });
     setSavingOver(false);
-    if (error) toast.error(error.message); else { toast.success(`Offset for ${date} saved`); loadOver(date); }
+    if (error) toast.error(error.message); else { toast.success(`Offset for ${fmtUKDate(date)} saved`); loadOver(date); }
   };
   const clearOver = async () => {
     setSavingOver(true);
