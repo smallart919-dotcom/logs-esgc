@@ -748,7 +748,7 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Daily Log — {date}</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Daily Log — {fmtUKDate(date)}</CardTitle></CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <Label>Duty Instructor</Label>
