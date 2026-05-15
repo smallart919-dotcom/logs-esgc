@@ -287,7 +287,7 @@ function FlightsPage() {
       setBox("L2:L2", { value: launch === "winch" ? "✓" : "", bold: true });
       setBox("M1:M2", { value: "Of", bold: true });
       setBox("N1:O1", { value: "Day & Date", bold: true });
-      setBox("N2:O2", { value: date });
+      setBox("N2:O2", { value: fmtUKDate(date) });
 
       ws.getRow(3).height = 40;
       setBox("A3:I3", { value: "LOG KEEPERS PLEASE MAKE ALL ENTRIES IN BLOCK CAPITALS AND LEGIBLE", bold: true, color: "FFFFFFFF", fill: RED, size: 10 });
@@ -1236,11 +1236,9 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
     setRows((r) => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
   };
 
-  // Bulk row times are entered as UTC to match the rest of the app.
+    // Bulk row times are entered as UK local time and stored as UTC.
   const fromLocal = (s: string) => {
-    if (!s) return null;
-    const withSec = s.length === 16 ? `${s}:00` : s;
-    return new Date(`${withSec}Z`).toISOString();
+      return fromUKLocalInput(s);
   };
 
   const saveAll = async () => {
