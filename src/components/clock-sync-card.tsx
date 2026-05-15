@@ -42,18 +42,15 @@ export function ClockSyncCard({ date, isCaravan }: { date: string; isCaravan: bo
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Badge variant={offsetSec ? "default" : "outline"}>Effective offset: {fmtOffset(offsetSec)}</Badge>
-          {override !== null && <Badge variant="secondary">Today override</Badge>}
-          {permanent !== 0 && override === null && <Badge variant="outline">Permanent {fmtOffset(permanent)}</Badge>}
-        </div>
-
-        {isCaravan && !caravanCanEdit ? (
-          <p className="text-sm text-muted-foreground">
-            Editing the clock offset has been restricted by the office. Ask them to adjust it from Settings.
-          </p>
-        ) : (
+        {(() => { const locked = isCaravan && !caravanCanEdit; return (
           <>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Badge variant={offsetSec ? "default" : "outline"}>Effective offset: {fmtOffset(offsetSec)}</Badge>
+              {override !== null && <Badge variant="secondary">Today override</Badge>}
+              {permanent !== 0 && override === null && <Badge variant="outline">Permanent {fmtOffset(permanent)}</Badge>}
+              {locked && <Badge variant="destructive">Restricted by office</Badge>}
+            </div>
+
             <div className="flex flex-wrap items-end gap-2">
               <div>
                 <Label className="text-xs">Time shown on caravan clock</Label>
@@ -62,20 +59,27 @@ export function ClockSyncCard({ date, isCaravan }: { date: string; isCaravan: bo
                   value={caravan}
                   onChange={(e) => setCaravan(e.target.value)}
                   className="w-32"
+                  disabled={locked}
                 />
               </div>
-              <Button onClick={sync} disabled={saving || !caravan} size="sm">
+              <Button onClick={sync} disabled={locked || saving || !caravan} size="sm">
                 {saving ? "Syncing…" : "Sync now"}
               </Button>
               {override !== null && (
-                <Button onClick={clearToday} variant="ghost" size="sm">Clear today</Button>
+                <Button onClick={clearToday} variant="ghost" size="sm" disabled={locked}>Clear today</Button>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Read the caravan clock and type the time it currently shows. We'll record the difference and shift every flight time on {date} to match.
-            </p>
+            {locked ? (
+              <p className="text-xs text-muted-foreground">
+                Editing the clock offset has been restricted by the office. Ask them to adjust it from Settings.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Read the caravan clock and type the time it currently shows. We'll record the difference and shift every flight time on {date} to match.
+              </p>
+            )}
           </>
-        )}
+        ); })()}
       </CardContent>
     </Card>
   );
