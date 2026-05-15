@@ -914,9 +914,6 @@ function FlightDialog({
     ]);
     // Auto-sync glider type/callsign into fleet so it auto-fills next time
     await maybeUpsertFleet(gliders, payload.glider_registration, gliderType, gliderCallsign, payload.flarm_id);
-    if (typeof window !== "undefined" && flight?.id) {
-      window.dispatchEvent(new Event("save-splash"));
-    }
     toast.success("Saved");
     onSaved();
   };
