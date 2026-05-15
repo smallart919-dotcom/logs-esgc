@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from "lucide-react";
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
+import { fmtUKTime, toUKLocalInput, fromUKLocalInput } from "@/lib/uktime";
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
@@ -151,8 +152,8 @@ function FlightsPage() {
     finally { if (!silent) setSyncing(false); }
   }, [icao, date, load]);
 
-  // Auto-sync every 10 seconds in the background.
-  const SYNC_INTERVAL = 10;
+  // Auto-sync every 5 seconds so landing times appear quickly.
+  const SYNC_INTERVAL = 5;
   const [nextSync, setNextSync] = useState(SYNC_INTERVAL);
   useEffect(() => {
     if (!icao) return;
@@ -186,7 +187,7 @@ function FlightsPage() {
   };
 
   const exportXlsx = async () => {
-    const fmtTime = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "";
+    const fmtTime = (iso: string | null) => iso ? fmtUKTime(iso) : "";
     const dur = (a: string | null, b: string | null) => {
       if (!a || !b) return "";
       const m = Math.round((+new Date(b) - +new Date(a)) / 60000);
@@ -460,8 +461,8 @@ function FlightsPage() {
                       {f.glider_registration || <span className="text-muted-foreground">unknown</span>}
                       {f.flarm_id && <div className="text-xs font-mono text-muted-foreground">{f.flarm_id}</div>}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{f.takeoff_time ? new Date(f.takeoff_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
-                    <TableCell className="font-mono text-sm">{f.landing_time ? new Date(f.landing_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
+                    <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time)}</TableCell>
+                    <TableCell className="font-mono text-sm">{fmtUKTime(f.landing_time)}</TableCell>
                     <TableCell className="text-sm">{dur}</TableCell>
                     <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
                     <TableCell><PilotCell name={f.p2_name} membership={f.p2_membership} kind={f.p2_kind} /></TableCell>
@@ -546,8 +547,7 @@ function DeletedFlights({ date, onRestored }: { date: string; onRestored: () => 
     onRestored();
   };
 
-  const fmt = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—";
+  const fmt = (iso: string | null) => fmtUKTime(iso);
 
   return (
     <div className="mt-2">
@@ -636,8 +636,8 @@ function MotorGliderCosts({ flights, onEdit, onDelete }: { flights: Flight[]; on
                   {rows.map(({ f, std, u21, mins }) => (
                     <TableRow key={f.id}>
                       <TableCell className="font-medium">{f.glider_registration}</TableCell>
-                      <TableCell className="font-mono text-sm">{f.takeoff_time ? new Date(f.takeoff_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
-                      <TableCell className="font-mono text-sm">{f.landing_time ? new Date(f.landing_time).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
+                      <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time)}</TableCell>
+                      <TableCell className="font-mono text-sm">{fmtUKTime(f.landing_time)}</TableCell>
                       <TableCell className="text-sm">{`${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`}</TableCell>
                       <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
                       <TableCell>{f.p1_charge ? <Badge variant="default">✓</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
@@ -848,20 +848,9 @@ function FlightDialog({
     onSaved();
   };
 
-  // local time -> ISO helper
-  // Edit times in UTC (matching how times are displayed elsewhere) and preserve seconds.
-  const toLocalInput = (iso: string | null | undefined) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
-  };
-  const fromLocal = (s: string) => {
-    if (!s) return null;
-    // datetime-local may omit seconds; treat the entered value as UTC.
-    const withSec = s.length === 16 ? `${s}:00` : s;
-    return new Date(`${withSec}Z`).toISOString();
-  };
+  // Edit times in UK local (Europe/London) — handles BST/GMT automatically.
+  const toLocalInput = (iso: string | null | undefined) => toUKLocalInput(iso);
+  const fromLocal = (s: string) => fromUKLocalInput(s);
 
   const renderPilot = (which: 1 | 2, label: string) => {
     const kind = ((which === 1 ? form.p1_kind : form.p2_kind) ?? "member") as PilotKind;
@@ -924,11 +913,11 @@ function FlightDialog({
             <Input placeholder="e.g. KA" value={gliderCallsign} onChange={(e) => setGliderCallsign(e.target.value)} />
           </div>
           <div>
-            <Label>Takeoff time (UTC)</Label>
+            <Label>Takeoff time (UK local)</Label>
             <Input type="datetime-local" step="1" value={toLocalInput(form.takeoff_time)} onChange={(e) => setForm({ ...form, takeoff_time: fromLocal(e.target.value) })} />
           </div>
           <div>
-            <Label>Landing time (UTC)</Label>
+            <Label>Landing time (UK local)</Label>
             <Input type="datetime-local" step="1" value={toLocalInput(form.landing_time)} onChange={(e) => setForm({ ...form, landing_time: fromLocal(e.target.value) })} />
           </div>
 
