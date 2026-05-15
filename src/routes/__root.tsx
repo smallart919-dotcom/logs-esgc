@@ -1,6 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
+import { SaveSplash } from "@/components/save-splash";
 import { supabase } from "@/integrations/supabase/client";
 import { Plane, Users, ListChecks, LogOut, History, Receipt, Activity, BookOpen, BarChart3, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
