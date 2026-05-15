@@ -202,7 +202,7 @@ function BillingPage() {
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Smith or 1234" />
           </div>
           <div className="flex items-center justify-between gap-2 sm:col-span-2 lg:col-span-1">
-            <Badge variant="default" className="text-sm px-3 py-1.5 truncate">Total {fmtGBP(grandTotal)}</Badge>
+            <AnimatedTotal value={grandTotal} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={rows.length === 0}>
