@@ -97,18 +97,8 @@ function RootComponent() {
               <Plane className="size-5 text-primary/70 -rotate-6 drop-shadow-[0_2px_6px_color-mix(in_oklab,var(--primary)_45%,transparent)]" />
             </div>
           </div>
-          {/* Starling flock */}
-          <div className="absolute top-[22px] left-0 flock-drift">
-            <svg width="84" height="22" viewBox="0 0 84 22" className="text-sky-deep/55">
-              <g fill="currentColor">
-                <path className="starling s1" d="M2 11 q3 -4 6 0 q3 -4 6 0" stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
-                <path className="starling s2" d="M20 9 q2.5 -3 5 0 q2.5 -3 5 0" stroke="currentColor" strokeWidth="1" fill="none" strokeLinecap="round"/>
-                <path className="starling s3" d="M36 13 q2 -3 4 0 q2 -3 4 0" stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
-                <path className="starling s4" d="M50 10 q2.5 -3 5 0 q2.5 -3 5 0" stroke="currentColor" strokeWidth="1" fill="none" strokeLinecap="round"/>
-                <path className="starling s5" d="M66 12 q2 -3 4 0 q2 -3 4 0" stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
-              </g>
-            </svg>
-          </div>
+          {/* Pixel murmuration — flock of pixels forming flowing shapes */}
+          <Murmuration className="absolute inset-0 w-full h-full opacity-70 mix-blend-multiply dark:mix-blend-screen" />
         </div>
         <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3 relative">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0 group">
