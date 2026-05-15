@@ -112,11 +112,11 @@ function RootComponent() {
           >
             <defs>
               <linearGradient id="waveStroke" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0" />
-                <stop offset="20%" stopColor="var(--primary)" stopOpacity="0.85" />
-                <stop offset="50%" stopColor="var(--accent)" stopOpacity="0.9" />
-                <stop offset="80%" stopColor="var(--sky)" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+                <stop offset="0%"   stopColor="var(--primary)"  stopOpacity="0" />
+                <stop offset="25%"  stopColor="var(--sky-deep)" stopOpacity="0.9" />
+                <stop offset="50%"  stopColor="var(--primary)"  stopOpacity="1" />
+                <stop offset="75%"  stopColor="var(--sky)"      stopOpacity="0.9" />
+                <stop offset="100%" stopColor="var(--primary)"  stopOpacity="0" />
               </linearGradient>
             </defs>
             <g fill="none" stroke="url(#waveStroke)" strokeLinecap="round">
