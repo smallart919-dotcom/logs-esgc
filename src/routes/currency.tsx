@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Pencil, Save, X } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { toast } from "sonner";
+import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/currency")({
   beforeLoad: requireAuth,
@@ -159,13 +160,13 @@ function CurrencyPage() {
 
   const fmtCell = (d: string | null) => {
     if (!d) return "—";
-    const days = differenceInDays(new Date(), new Date(d));
-    return `${format(new Date(d), "d MMM yyyy")} · ${days === 0 ? "today" : `${days}d`}`;
+    const days = differenceInDays(new Date(`${todayUKDate()}T12:00:00Z`), new Date(`${d}T12:00:00Z`));
+    return `${fmtUKDate(d)} · ${days === 0 ? "today" : `${days}d`}`;
   };
 
   const currencyBadge = (d: string | null) => {
     if (!d) return <Badge variant="destructive">never</Badge>;
-    const days = differenceInDays(new Date(), new Date(d));
+    const days = differenceInDays(new Date(`${todayUKDate()}T12:00:00Z`), new Date(`${d}T12:00:00Z`));
     if (days <= GREEN_DAYS) return <Badge className="bg-emerald-600 hover:bg-emerald-600">current</Badge>;
     if (days <= AMBER_DAYS) return <Badge className="bg-amber-500 hover:bg-amber-500">watch</Badge>;
     return <Badge variant="destructive">lapsed</Badge>;
