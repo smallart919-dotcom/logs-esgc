@@ -5,7 +5,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plane, Users, ListChecks, LogOut, History, Receipt, Activity, BookOpen, BarChart3, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import esgcLogo from "@/assets/esgc-logo.png";
-import { Murmuration } from "@/components/murmuration";
+
+/** Sailplane silhouette — long slender wings, slim fuselage, T-tail. */
+function GliderIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 24" className={className} fill="currentColor" aria-hidden>
+      {/* Long slender wings */}
+      <path d="M2 12 Q 18 9 32 12 Q 46 9 62 12 L 62 12.6 Q 46 11 32 13 Q 18 11 2 12.6 Z" />
+      {/* Fuselage */}
+      <path d="M22 11.6 Q 32 10.8 50 12 L 50 12.6 Q 32 13.2 22 12.4 Z" />
+      {/* Cockpit bubble */}
+      <ellipse cx="48" cy="11.6" rx="2.4" ry="1.1" />
+      {/* T-tail */}
+      <path d="M22 9.6 L 24 9.6 L 24 14.6 L 22 14.6 Z" />
+      <path d="M20 9 L 26 9 L 26 9.8 L 20 9.8 Z" />
+    </svg>
+  );
+}
 
 import appCss from "../styles.css?url";
 
