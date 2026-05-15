@@ -141,23 +141,28 @@ function FlightsPage() {
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [loadingFlights, setLoadingFlights] = useState(false);
   const [syncResult, setSyncResult] = useState<null | { icao: string; date: string; created: number; updated: number; skipped: number; total: number; synced_at: string; errors: Array<{ flarm: string | null; registration: string | null; message: string }>; matches: Array<any> }>(null);
   const [editing, setEditing] = useState<Flight | null>(null);
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const [{ data: f }, { data: g }, { data: m }] = await Promise.all([
+    setLoadingFlights(true);
+    const [{ data: f, error: fErr }, { data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
       supabase.from("flights").select("*").eq("flight_date", date).order("takeoff_time", { ascending: true, nullsFirst: false }),
       supabase.from("fleet_gliders").select("*").order("registration"),
       supabase.from("club_members").select("*").order("full_name"),
     ]);
+    const err = fErr || gErr || mErr;
+    if (err) { setLoadingFlights(false); throw err; }
     setFlights((f as Flight[]) ?? []);
     setGliders((g as Glider[]) ?? []);
     setMembers((m as Member[]) ?? []);
+    setLoadingFlights(false);
   }, [date]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load().catch((e) => toast.error(e.message || "Could not refresh the daily log")); }, [load]);
 
   // Realtime updates for the day
   useEffect(() => {
@@ -178,7 +183,7 @@ function FlightsPage() {
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
       if (!silent) setSyncResult(j);
-      load();
+      await load();
     } catch (e: any) {
       if (!silent) {
         toast.error(e.message);
