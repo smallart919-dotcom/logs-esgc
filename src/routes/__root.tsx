@@ -2,7 +2,18 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } f
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Plane, Users, ListChecks, LogOut, History, Receipt, Activity, BookOpen, BarChart3, Settings as SettingsIcon } from "lucide-react";
+import {
+  Plane,
+  Users,
+  ListChecks,
+  LogOut,
+  History,
+  Receipt,
+  Activity,
+  BookOpen,
+  BarChart3,
+  Settings as SettingsIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import esgcLogo from "@/assets/esgc-logo.png";
 
@@ -31,7 +42,9 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold">404</h1>
         <p className="mt-2 text-muted-foreground">Page not found</p>
-        <Link to="/" className="mt-6 inline-block underline">Go home</Link>
+        <Link to="/" className="mt-6 inline-block underline">
+          Go home
+        </Link>
       </div>
     </div>
   );
@@ -48,8 +61,16 @@ export const Route = createRootRoute({
       { name: "twitter:title", content: "ESGC Logs" },
       { property: "og:description", content: "East Sussex Gliding Club daily flight log with OGN integration." },
       { name: "twitter:description", content: "East Sussex Gliding Club daily flight log with OGN integration." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0ceabb1e-b10c-4647-af03-c6f2663dfd57" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0ceabb1e-b10c-4647-af03-c6f2663dfd57" },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0ceabb1e-b10c-4647-af03-c6f2663dfd57",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0ceabb1e-b10c-4647-af03-c6f2663dfd57",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
       { name: "theme-color", content: "#ffffff" },
@@ -62,7 +83,10 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap",
+      },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "manifest", href: "/manifest.json" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
@@ -76,7 +100,9 @@ export const Route = createRootRoute({
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head><HeadContent /></head>
+      <head>
+        <HeadContent />
+      </head>
       <body>
         {children}
         <Scripts />
@@ -98,7 +124,13 @@ function RootComponent() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (isAuth) return <><Outlet /><Toaster /></>;
+  if (isAuth)
+    return (
+      <>
+        <Outlet />
+        <Toaster />
+      </>
+    );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -112,16 +144,16 @@ function RootComponent() {
           >
             <defs>
               <linearGradient id="waveStroke" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0%"   stopColor="var(--primary)"  stopOpacity="0" />
-                <stop offset="25%"  stopColor="var(--sky-deep)" stopOpacity="0.9" />
-                <stop offset="50%"  stopColor="var(--primary)"  stopOpacity="1" />
-                <stop offset="75%"  stopColor="var(--sky)"      stopOpacity="0.9" />
-                <stop offset="100%" stopColor="var(--primary)"  stopOpacity="0" />
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
+                <stop offset="25%" stopColor="var(--sky-deep)" stopOpacity="0.2" />
+                <stop offset="50%" stopColor="var(--primary)" stopOpacity="1" />
+                <stop offset="75%" stopColor="var(--sky)" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.3" />
               </linearGradient>
             </defs>
             <g fill="none" stroke="url(#waveStroke)" strokeLinecap="round">
               <path className="wave-line wl-1" strokeWidth="1.2" d="M-200,28 Q100,8 400,28 T1000,28 T1600,28" />
-              <path className="wave-line wl-2" strokeWidth="1"   d="M-200,32 Q150,14 450,32 T1050,32 T1650,32" />
+              <path className="wave-line wl-2" strokeWidth="1" d="M-200,32 Q150,14 450,32 T1050,32 T1650,32" />
               <path className="wave-line wl-3" strokeWidth="0.8" d="M-200,24 Q120,44 420,24 T1020,24 T1620,24" />
               <path className="wave-line wl-4" strokeWidth="0.8" d="M-200,36 Q180,20 480,36 T1080,36 T1680,36" />
               <path className="wave-line wl-5" strokeWidth="0.6" d="M-200,20 Q160,40 460,20 T1060,20 T1660,20" />
@@ -130,7 +162,11 @@ function RootComponent() {
         </div>
         <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3 relative">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0 group">
-            <img src={esgcLogo} alt="ESGC" className="size-8 object-contain transition-transform duration-500 group-hover:rotate-[-6deg] group-hover:scale-105" />
+            <img
+              src={esgcLogo}
+              alt="ESGC"
+              className="size-8 object-contain transition-transform duration-500 group-hover:rotate-[-6deg] group-hover:scale-105"
+            />
             <span className="hidden sm:inline">ESGC Logs</span>
           </Link>
           <nav className="hidden lg:flex items-center gap-1 min-w-0 overflow-x-auto">
@@ -158,11 +194,21 @@ function RootComponent() {
           </nav>
           <div className="flex items-center gap-2 shrink-0">
             {userEmail ? (
-              <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }}>
-                <LogOut className="size-4 sm:mr-1" /><span className="hidden sm:inline">Sign out</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  window.location.href = "/auth";
+                }}
+              >
+                <LogOut className="size-4 sm:mr-1" />
+                <span className="hidden sm:inline">Sign out</span>
               </Button>
             ) : (
-              <Link to="/auth"><Button size="sm">Sign in</Button></Link>
+              <Link to="/auth">
+                <Button size="sm">Sign in</Button>
+              </Link>
             )}
           </div>
         </div>
@@ -201,7 +247,17 @@ function RootComponent() {
   );
 }
 
-function NavLink({ to, icon, label, compact }: { to: string; icon: React.ReactNode; label: string; compact?: boolean }) {
+function NavLink({
+  to,
+  icon,
+  label,
+  compact,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  compact?: boolean;
+}) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const active = path === to;
   return (
@@ -211,7 +267,8 @@ function NavLink({ to, icon, label, compact }: { to: string; icon: React.ReactNo
         compact ? "px-2.5 py-1.5" : "px-3 py-2"
       } ${active ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
     >
-      {icon}<span className={compact ? "" : "hidden sm:inline"}>{label}</span>
+      {icon}
+      <span className={compact ? "" : "hidden sm:inline"}>{label}</span>
     </Link>
   );
 }
