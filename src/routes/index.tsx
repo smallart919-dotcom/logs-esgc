@@ -819,9 +819,20 @@ function FlightDialog({
     setForm((f) => ({ ...f, [`p${which}_name`]: name, [`p${which}_membership`]: membership }));
   };
 
+  const p1Kind = (form.p1_kind ?? "member") as PilotKind;
+  const p2Kind = (form.p2_kind ?? "member") as PilotKind;
+  const notes = (form.notes ?? "").trim();
+  // If a GFE is ticked AND charged, a voucher ID must be recorded in the comments.
+  const gfeChargedNeedsVoucher =
+    ((p1Kind === "gfe" && !!form.p1_charge) || (p2Kind === "gfe" && !!form.p2_charge));
+  const hasVoucherId = /(?:voucher|vch|gfe)[^a-z0-9]{0,3}[a-z0-9-]{3,}/i.test(notes)
+    || /\b[A-Z]{1,3}[-/ ]?\d{3,}\b/.test(notes); // e.g. "V-1234", "GFE 12345"
+
   const save = async () => {
-    const p1Kind = (form.p1_kind ?? "member") as PilotKind;
-    const p2Kind = (form.p2_kind ?? "member") as PilotKind;
+    if (gfeChargedNeedsVoucher && !hasVoucherId) {
+      toast.error("Voucher ID required in comments for a charged GFE flight (e.g. \"Voucher V-1234\").");
+      return;
+    }
     const payload: any = {
       flight_date: form.flight_date || date,
       glider_id: form.glider_id || null,
@@ -840,7 +851,7 @@ function FlightDialog({
       launch_type: form.launch_type || null,
       aerotow_height_ft: form.launch_type === "aerotow" ? (form.aerotow_height_ft ?? null) : null,
       manual: !!form.manual,
-      notes: form.notes || null,
+      notes: notes || null,
       logged_by: form.logged_by || null,
     };
     let error;
