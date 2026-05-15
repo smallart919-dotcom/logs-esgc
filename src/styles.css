@@ -205,5 +205,36 @@
 .row-glide-in  { animation: row-glide-in 280ms ease-out both; }
 
 /* Subtle interactive polish for cards */
-[data-slot="card"]:hover { box-shadow: 0 8px 24px -12px color-mix(in oklab, var(--sky-deep) 35%, transparent); }
+[data-slot="card"] {
+  box-shadow:
+    0 1px 0 color-mix(in oklab, var(--color-foreground) 4%, transparent),
+    0 1px 2px color-mix(in oklab, var(--sky-deep) 6%, transparent),
+    0 8px 24px -18px color-mix(in oklab, var(--sky-deep) 25%, transparent);
+}
+[data-slot="card"]:hover {
+  box-shadow:
+    0 1px 0 color-mix(in oklab, var(--color-foreground) 5%, transparent),
+    0 6px 16px -10px color-mix(in oklab, var(--sky-deep) 25%, transparent),
+    0 18px 40px -22px color-mix(in oklab, var(--sky-deep) 45%, transparent);
+  transform: translateY(-1px);
+}
+
+/* Polished sticky header surface */
+header.sticky {
+  box-shadow: 0 1px 0 color-mix(in oklab, var(--color-foreground) 5%, transparent);
+}
+
+/* Dialogs / popovers feel lighter */
+[data-slot="dialog-content"], [role="dialog"] {
+  box-shadow: 0 30px 80px -30px color-mix(in oklab, var(--sky-deep) 55%, transparent),
+              0 8px 24px -12px color-mix(in oklab, var(--sky-deep) 25%, transparent);
+}
+
+/* Mobile content rhythm */
+@media (max-width: 640px) {
+  main.container { padding-left: 0.875rem; padding-right: 0.875rem; }
+  [data-slot="card-header"] { padding: 1rem 1rem 0.5rem; }
+  [data-slot="card-content"] { padding: 0.875rem 1rem 1rem; }
+  h1 { font-size: clamp(1.35rem, 5.5vw, 1.75rem); }
+}
 
