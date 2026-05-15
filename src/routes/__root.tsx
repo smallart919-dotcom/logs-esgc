@@ -82,10 +82,14 @@ function RootComponent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0">
-            <img src={esgcLogo} alt="ESGC" className="size-8 object-contain" />
+      <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40 overflow-hidden">
+        {/* Ambient soaring glider — purely decorative */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <Plane className="absolute top-2 left-0 size-4 text-primary/40 glider-soar" />
+        </div>
+        <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3 relative">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0 group">
+            <img src={esgcLogo} alt="ESGC" className="size-8 object-contain transition-transform duration-500 group-hover:rotate-[-6deg] group-hover:scale-105" />
             <span className="hidden sm:inline">ESGC Logs</span>
           </Link>
           <nav className="hidden lg:flex items-center gap-1 min-w-0 overflow-x-auto">
@@ -122,7 +126,7 @@ function RootComponent() {
           </div>
         </div>
         {/* Secondary scrollable nav for tablet/mobile */}
-        <nav className="lg:hidden border-t bg-background/60">
+        <nav className="lg:hidden border-t bg-background/60 relative">
           <div className="container mx-auto px-2 flex items-center gap-1 overflow-x-auto py-1.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {(() => {
               const email = (userEmail || "").toLowerCase();
@@ -148,7 +152,7 @@ function RootComponent() {
           </div>
         </nav>
       </header>
-      <main className="flex-1 container mx-auto px-4 py-6">
+      <main key={path} className="flex-1 container mx-auto px-4 py-6 soft-rise">
         <Outlet />
       </main>
       <Toaster />
