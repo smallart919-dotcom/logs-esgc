@@ -37,7 +37,7 @@ export function useDayOffset(date: string) {
   }, [date, refresh]);
 
   const offsetSec = override ?? permanent;
-  return { offsetSec, permanent, override, loading, refresh };
+  return { offsetSec, permanent, override, caravanCanEdit, loading, refresh };
 }
 
 /** Compute a signed offset (seconds, range ±12h) from caravan HH:mm vs current UK wall time. */
