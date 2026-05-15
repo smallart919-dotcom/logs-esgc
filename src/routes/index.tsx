@@ -532,7 +532,7 @@ function FlightsPage() {
                 );
               })}
               {flights.length === 0 && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">
-                No flights yet. Click <strong>Sync OGN</strong> or <strong>Add manual</strong>.
+                No flights yet. Click <strong>Refresh OGN</strong> or <strong>Add</strong>.
               </TableCell></TableRow>}
             </TableBody>
           </Table>
