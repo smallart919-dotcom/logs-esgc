@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { BookOpen, ChevronsUpDown } from "lucide-react";
-import { format } from "date-fns";
+import { dateToUKShortLabel, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/logbook")({
   beforeLoad: requireAuth,
@@ -102,7 +102,7 @@ function LogbookPage() {
 
   const totals = useMemo(() => {
     const t = { count: 0, mins: 0, aerotow: 0, winch: 0, p1: 0, p2: 0, gliders: new Set<string>(), thisYear: 0, last30: 0 };
-    const yr = new Date().getUTCFullYear();
+    const yr = todayUKDate().slice(0, 4);
     const cutoff = new Date(); cutoff.setUTCDate(cutoff.getUTCDate() - 30);
     const cutoffStr = cutoff.toISOString().slice(0, 10);
     for (const f of myFlights) {
@@ -112,7 +112,7 @@ function LogbookPage() {
       if (f.launch_type === "winch") t.winch++;
       if (f.role === "P1") t.p1++; else t.p2++;
       if (f.glider_registration) t.gliders.add(f.glider_registration.toUpperCase());
-      if (f.flight_date.startsWith(String(yr))) t.thisYear++;
+      if (f.flight_date.startsWith(yr)) t.thisYear++;
       if (f.flight_date >= cutoffStr) t.last30++;
     }
     return t;
@@ -222,7 +222,7 @@ function LogbookPage() {
                     const other = f.role === "P1" ? f.p2_name : f.p1_name;
                     return (
                       <TableRow key={f.id}>
-                        <TableCell>{format(new Date(f.flight_date + "T00:00:00Z"), "EEE d MMM yyyy")}</TableCell>
+                        <TableCell>{dateToUKShortLabel(f.flight_date)}</TableCell>
                         <TableCell className="font-mono">{f.glider_registration || "—"}</TableCell>
                         <TableCell>
                           {f.launch_type === "aerotow"
