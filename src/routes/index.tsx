@@ -196,15 +196,26 @@ function FlightsPage() {
     finally { if (!silent) setSyncing(false); }
   }, [icao, date, load]);
 
-  // Silent auto-sync every 5s so landing times appear naturally without any user action.
-  const SYNC_INTERVAL = 5;
+  // Silent auto-sync so landing times appear naturally. Fast cadence when the
+  // tab is visible, lighter cadence in the background to save bandwidth.
   useEffect(() => {
     if (!icao) return;
     let cancelled = false;
-    const run = () => { if (!cancelled) syncOgn(true); };
-    run();
-    const tick = setInterval(run, SYNC_INTERVAL * 1000);
-    return () => { cancelled = true; clearInterval(tick); };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const tick = () => {
+      if (cancelled) return;
+      const visible = typeof document !== "undefined" && document.visibilityState === "visible";
+      syncOgn(true).finally(() => {
+        if (cancelled) return;
+        timer = setTimeout(tick, visible ? 3000 : 15000);
+      });
+    };
+    tick();
+    const onVis = () => {
+      if (document.visibilityState === "visible") { if (timer) clearTimeout(timer); tick(); }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
   }, [icao, syncOgn]);
 
 
@@ -419,7 +430,7 @@ function FlightsPage() {
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <div
               className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap gap-1.5"
-              title={`Auto-syncing ${icao} every ${SYNC_INTERVAL}s in the background.`}
+              title={`Auto-syncing ${icao} from OGN — every 3s when tab is visible.`}
             >
               <span className={`inline-block size-1.5 rounded-full bg-primary ${loadingFlights ? "sky-shimmer" : ""}`} />
               <span>Live · {icao}</span>
@@ -819,9 +830,20 @@ function FlightDialog({
     setForm((f) => ({ ...f, [`p${which}_name`]: name, [`p${which}_membership`]: membership }));
   };
 
+  const p1Kind = (form.p1_kind ?? "member") as PilotKind;
+  const p2Kind = (form.p2_kind ?? "member") as PilotKind;
+  const notes = (form.notes ?? "").trim();
+  // If a GFE is ticked AND charged, a voucher ID must be recorded in the comments.
+  const gfeChargedNeedsVoucher =
+    ((p1Kind === "gfe" && !!form.p1_charge) || (p2Kind === "gfe" && !!form.p2_charge));
+  const hasVoucherId = /(?:voucher|vch|gfe)[^a-z0-9]{0,3}[a-z0-9-]{3,}/i.test(notes)
+    || /\b[A-Z]{1,3}[-/ ]?\d{3,}\b/.test(notes); // e.g. "V-1234", "GFE 12345"
+
   const save = async () => {
-    const p1Kind = (form.p1_kind ?? "member") as PilotKind;
-    const p2Kind = (form.p2_kind ?? "member") as PilotKind;
+    if (gfeChargedNeedsVoucher && !hasVoucherId) {
+      toast.error("Voucher ID required in comments for a charged GFE flight (e.g. \"Voucher V-1234\").");
+      return;
+    }
     const payload: any = {
       flight_date: form.flight_date || date,
       glider_id: form.glider_id || null,
@@ -840,7 +862,7 @@ function FlightDialog({
       launch_type: form.launch_type || null,
       aerotow_height_ft: form.launch_type === "aerotow" ? (form.aerotow_height_ft ?? null) : null,
       manual: !!form.manual,
-      notes: form.notes || null,
+      notes: notes || null,
       logged_by: form.logged_by || null,
     };
     let error;
@@ -958,8 +980,20 @@ function FlightDialog({
             </div>
           )}
           <div className="md:col-span-2">
-            <Label>Comments</Label>
-            <Textarea rows={3} placeholder="Add any comments about this flight…" value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <Label>
+              Comments {gfeChargedNeedsVoucher && (
+                <span className={hasVoucherId ? "text-muted-foreground text-xs ml-1" : "text-destructive text-xs ml-1"}>
+                  · Voucher ID required (e.g. "Voucher V-1234")
+                </span>
+              )}
+            </Label>
+            <Textarea
+              rows={3}
+              placeholder={gfeChargedNeedsVoucher ? "Voucher ID required, e.g. Voucher V-1234" : "Add any comments about this flight…"}
+              value={form.notes ?? ""}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className={gfeChargedNeedsVoucher && !hasVoucherId ? "border-destructive/60 focus-visible:ring-destructive/40" : ""}
+            />
           </div>
           <div>
             <Label>Logged By (initials)</Label>
