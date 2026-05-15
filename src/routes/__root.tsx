@@ -86,10 +86,28 @@ function RootComponent() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40 overflow-hidden">
-        {/* Ambient soaring glider — purely decorative */}
+        {/* Ambient sky — soaring glider with starling flock */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute top-3 left-0 glider-soar">
-            <Plane className="size-3.5 text-primary/30 rotate-45" />
+          {/* Soft contrail */}
+          <div className="absolute top-[18px] left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent contrail-shimmer" />
+          {/* Hero glider — bigger, with trail */}
+          <div className="absolute top-2 left-0 glider-soar-hero">
+            <div className="relative flex items-center">
+              <span className="absolute right-full mr-1 h-px w-10 bg-gradient-to-l from-primary/60 to-transparent" />
+              <Plane className="size-5 text-primary/70 -rotate-6 drop-shadow-[0_2px_6px_color-mix(in_oklab,var(--primary)_45%,transparent)]" />
+            </div>
+          </div>
+          {/* Starling flock */}
+          <div className="absolute top-[22px] left-0 flock-drift">
+            <svg width="84" height="22" viewBox="0 0 84 22" className="text-sky-deep/55">
+              <g fill="currentColor">
+                <path className="starling s1" d="M2 11 q3 -4 6 0 q3 -4 6 0" stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
+                <path className="starling s2" d="M20 9 q2.5 -3 5 0 q2.5 -3 5 0" stroke="currentColor" strokeWidth="1" fill="none" strokeLinecap="round"/>
+                <path className="starling s3" d="M36 13 q2 -3 4 0 q2 -3 4 0" stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+                <path className="starling s4" d="M50 10 q2.5 -3 5 0 q2.5 -3 5 0" stroke="currentColor" strokeWidth="1" fill="none" strokeLinecap="round"/>
+                <path className="starling s5" d="M66 12 q2 -3 4 0 q2 -3 4 0" stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+              </g>
+            </svg>
           </div>
         </div>
         <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3 relative">
