@@ -19,8 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { toast } from "sonner";
 import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from "lucide-react";
 import ExcelJS from "exceljs";
-import { format } from "date-fns";
-import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate } from "@/lib/uktime";
+import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 
@@ -82,7 +81,7 @@ type Flight = {
 type Glider = { id: string; registration: string; callsign: string | null; flarm_id: string | null; glider_type: string | null };
 type Member = { id: string; full_name: string; membership_number: string };
 
-const todayStr = () => format(new Date(), "yyyy-MM-dd");
+const todayStr = () => todayUKDate();
 
 async function maybeAddMember(existing: Member[], kind: PilotKind | null | undefined, name: string | null, membership: string | null) {
   if (kind !== "member") return;
@@ -452,7 +451,7 @@ function FlightsPage() {
                   <Badge variant="secondary">Updated {syncResult.updated}</Badge>
                   <Badge variant="outline">Skipped {syncResult.skipped}</Badge>
                   {syncResult.errors.length > 0 && <Badge variant="destructive">Errors {syncResult.errors.length}</Badge>}
-                  <Badge variant="outline" className="ml-auto text-xs">at {format(new Date(syncResult.synced_at), "HH:mm:ss")}</Badge>
+      <Badge variant="outline" className="ml-auto text-xs">at {fmtUKTimeSec(syncResult.synced_at)}</Badge>
                 </div>
                 {syncResult.errors.length > 0 && (
                   <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1 text-xs">
@@ -595,7 +594,7 @@ function DeletedFlights({ date, offsetSec, onRestored }: { date: string; offsetS
       </Button>
       {open && (
         <Card className="mt-2">
-          <CardHeader><CardTitle className="text-base">Deleted on {date}</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Deleted on {fmtUKDate(date)}</CardTitle></CardHeader>
           <CardContent>
             {loading ? (
               <div className="text-sm text-muted-foreground">Loading…</div>
@@ -775,7 +774,7 @@ function OgnSourceCell({ flight }: { flight: Flight }) {
   const src = flight.ogn_source;
   const matched = !!src?.match?.flarm;
   const conf = src?.match?.confidence ?? (matched ? "high" : "low");
-  const synced = src?.synced_at ? format(new Date(src.synced_at), "HH:mm:ss") : null;
+  const synced = src?.synced_at ? fmtUKTimeSec(src.synced_at) : null;
   return (
     <div className="space-y-0.5">
       <div className="flex items-center gap-1">
@@ -1278,7 +1277,7 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Bulk add flights — {date}</DialogTitle>
+          <DialogTitle>Bulk add flights — {fmtUKDate(date)}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           {rows.map((r, i) => (
@@ -1293,11 +1292,11 @@ function BulkAddDialog({ open, onOpenChange, date, gliders, members, onSaved }: 
                 />
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Takeoff (UTC)</Label>
+                  <Label className="text-xs">Takeoff (UK local)</Label>
                 <Input type="datetime-local" step="1" value={r.takeoff_time} onChange={(e) => update(i, { takeoff_time: e.target.value })} />
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Landing (UTC)</Label>
+                  <Label className="text-xs">Landing (UK local)</Label>
                 <Input type="datetime-local" step="1" value={r.landing_time} onChange={(e) => update(i, { landing_time: e.target.value })} />
               </div>
               <div className="md:col-span-2 space-y-1">
