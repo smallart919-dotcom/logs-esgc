@@ -21,6 +21,8 @@ import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
 import { fmtUKTime, toUKLocalInput, fromUKLocalInput } from "@/lib/uktime";
+import { useDayOffset } from "@/lib/clock-offset";
+import { ClockSyncCard } from "@/components/clock-sync-card";
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
