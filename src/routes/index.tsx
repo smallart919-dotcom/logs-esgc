@@ -512,14 +512,16 @@ function FlightsPage() {
                   const m = Math.round((+new Date(f.landing_time) - +new Date(f.takeoff_time)) / 60000);
                   return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
                 })();
+                const isNew = freshlyAdded.has(f.id);
+                const justLanded = freshlyLanded.has(f.id);
                 return (
-                  <TableRow key={f.id} className="row-glide-in transition-colors hover:bg-muted/40">
+                  <TableRow key={f.id} className={`transition-colors hover:bg-muted/40 ${isNew ? "row-land-in" : "row-glide-in"}`}>
                     <TableCell className="font-medium">
                       {f.glider_registration || <span className="text-muted-foreground">unknown</span>}
                       {f.flarm_id && <div className="text-xs font-mono text-muted-foreground">{f.flarm_id}</div>}
                     </TableCell>
                     <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time, offsetSec)}</TableCell>
-                    <TableCell className="font-mono text-sm">{fmtUKTime(f.landing_time, offsetSec)}</TableCell>
+                    <TableCell className={`font-mono text-sm ${justLanded ? "landing-pop" : ""}`}>{fmtUKTime(f.landing_time, offsetSec)}</TableCell>
                     <TableCell className="text-sm">{dur}</TableCell>
                     <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
                     <TableCell><PilotCell name={f.p2_name} membership={f.p2_membership} kind={f.p2_kind} /></TableCell>
