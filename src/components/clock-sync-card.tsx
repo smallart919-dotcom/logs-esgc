@@ -12,7 +12,7 @@ import { computeOffsetFromCaravanHHMM, fmtOffset, useDayOffset } from "@/lib/clo
 /** A small card on the daily log letting the user sync the day's offset
  * to the caravan clock. Disabled for the caravan account. */
 export function ClockSyncCard({ date, isCaravan }: { date: string; isCaravan: boolean }) {
-  const { offsetSec, permanent, override, refresh } = useDayOffset(date);
+  const { offsetSec, permanent, override, caravanCanEdit, refresh } = useDayOffset(date);
   const [caravan, setCaravan] = useState("");
   const [saving, setSaving] = useState(false);
 
