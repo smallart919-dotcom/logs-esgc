@@ -276,12 +276,14 @@ function StatsPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, decimals = 0 }: { label: string; value: number; decimals?: number }) {
+  const animated = useCountUp(value);
+  const text = decimals > 0 ? animated.toFixed(decimals) : Math.round(animated).toLocaleString("en-GB");
   return (
     <Card>
       <CardContent className="p-4">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className="text-2xl font-bold mt-1">{value}</div>
+        <div className="text-2xl font-bold mt-1 tabular-nums">{text}</div>
       </CardContent>
     </Card>
   );
