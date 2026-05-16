@@ -207,7 +207,7 @@ function LogbookPage() {
           <Card>
             <CardHeader><CardTitle>Flights ({myFlights.length})</CardTitle></CardHeader>
             <CardContent className="overflow-x-auto p-0">
-              <Table className="min-w-[640px]">
+              <Table className="min-w-[680px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
@@ -216,6 +216,7 @@ function LogbookPage() {
                     <TableHead>Role</TableHead>
                     <TableHead>Other pilot</TableHead>
                     <TableHead className="text-right">Duration</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -235,11 +236,28 @@ function LogbookPage() {
                         <TableCell><Badge>{f.role}</Badge></TableCell>
                         <TableCell>{other || <span className="text-muted-foreground">solo</span>}</TableCell>
                         <TableCell className="text-right font-mono">{f.mins ? fmtHM(f.mins) : "—"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-muted-foreground hover:text-destructive"
+                            onClick={async () => {
+                              if (!confirm(`Delete this flight on ${dateToUKShortLabel(f.flight_date)}? This removes it from the daily log as well.`)) return;
+                              const { error } = await supabase.from("flights").delete().eq("id", f.id);
+                              if (error) { toast.error(error.message); return; }
+                              setFlights((prev) => prev.filter((x) => x.id !== f.id));
+                              toast.success("Flight deleted");
+                            }}
+                            aria-label="Delete flight"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
                   {myFlights.length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No flights for this pilot in range.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No flights for this pilot in range.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
