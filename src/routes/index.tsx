@@ -562,7 +562,12 @@ function FlightsPage() {
         gliders={gliders}
         members={members}
         previousInitials={Array.from(new Set(flights.map((f) => (f.logged_by || "").trim()).filter(Boolean))).sort()}
-        onSaved={() => { setEditing(null); setAdding(false); load(); }}
+        onSaved={async (savedDate) => {
+          setEditing(null);
+          setAdding(false);
+          if (savedDate && savedDate !== date) setDate(savedDate);
+          else await load();
+        }}
       />
       <BulkAddDialog open={bulkOpen} onOpenChange={setBulkOpen} date={date} gliders={gliders} members={members} onSaved={() => { setBulkOpen(false); load(); }} />
     </div>
