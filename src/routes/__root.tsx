@@ -134,32 +134,7 @@ function RootComponent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b backdrop-blur-md bg-background/70 sticky top-0 z-40 overflow-hidden">
-        {/* Ambient wave lines — looping flowing animation matching brand */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <svg
-            className="absolute inset-0 w-full h-full opacity-70 dark:opacity-50"
-            viewBox="0 0 1200 56"
-            preserveAspectRatio="none"
-          >
-            <defs>
-              <linearGradient id="waveStroke" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
-                <stop offset="25%" stopColor="var(--sky-deep)" stopOpacity="0.2" />
-                <stop offset="50%" stopColor="var(--primary)" stopOpacity="1" />
-                <stop offset="75%" stopColor="var(--sky)" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.3" />
-              </linearGradient>
-            </defs>
-            <g fill="none" stroke="url(#waveStroke)" strokeLinecap="round">
-              <path className="wave-line wl-1" strokeWidth="1.2" d="M-200,28 Q100,8 400,28 T1000,28 T1600,28" />
-              <path className="wave-line wl-2" strokeWidth="1" d="M-200,32 Q150,14 450,32 T1050,32 T1650,32" />
-              <path className="wave-line wl-3" strokeWidth="0.8" d="M-200,24 Q120,44 420,24 T1020,24 T1620,24" />
-              <path className="wave-line wl-4" strokeWidth="0.8" d="M-200,36 Q180,20 480,36 T1080,36 T1680,36" />
-              <path className="wave-line wl-5" strokeWidth="0.6" d="M-200,20 Q160,40 460,20 T1060,20 T1660,20" />
-            </g>
-          </svg>
-        </div>
+      <header className="border-b backdrop-blur-md bg-background/80 sticky top-0 z-40">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3 relative">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0 group">
             <img
