@@ -915,7 +915,7 @@ function FlightDialog({
     // Auto-sync glider type/callsign into fleet so it auto-fills next time
     await maybeUpsertFleet(gliders, payload.glider_registration, gliderType, gliderCallsign, payload.flarm_id);
     toast.success("Saved");
-    onSaved();
+    onSaved(payload.flight_date);
   };
 
   // Edit times in UK local (Europe/London) — handles BST/GMT automatically.
