@@ -562,7 +562,12 @@ function FlightsPage() {
         gliders={gliders}
         members={members}
         previousInitials={Array.from(new Set(flights.map((f) => (f.logged_by || "").trim()).filter(Boolean))).sort()}
-        onSaved={() => { setEditing(null); setAdding(false); load(); }}
+        onSaved={async (savedDate) => {
+          setEditing(null);
+          setAdding(false);
+          if (savedDate && savedDate !== date) setDate(savedDate);
+          else await load();
+        }}
       />
       <BulkAddDialog open={bulkOpen} onOpenChange={setBulkOpen} date={date} gliders={gliders} members={members} onSaved={() => { setBulkOpen(false); load(); }} />
     </div>
@@ -830,7 +835,7 @@ function FlightDialog({
 }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   flight: Flight | null; manual: boolean; date: string;
-  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: () => void;
+  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void;
 }) {
   const [form, setForm] = useState<Partial<Flight>>({});
   const [gliderType, setGliderType] = useState("");
@@ -915,7 +920,7 @@ function FlightDialog({
     // Auto-sync glider type/callsign into fleet so it auto-fills next time
     await maybeUpsertFleet(gliders, payload.glider_registration, gliderType, gliderCallsign, payload.flarm_id);
     toast.success("Saved");
-    onSaved();
+    onSaved(payload.flight_date);
   };
 
   // Edit times in UK local (Europe/London) — handles BST/GMT automatically.
