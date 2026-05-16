@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { BookOpen, ChevronsUpDown } from "lucide-react";
+import { BookOpen, ChevronsUpDown, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { dateToUKShortLabel, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/logbook")({
