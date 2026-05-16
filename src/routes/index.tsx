@@ -830,7 +830,7 @@ function FlightDialog({
 }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   flight: Flight | null; manual: boolean; date: string;
-  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: () => void;
+  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void;
 }) {
   const [form, setForm] = useState<Partial<Flight>>({});
   const [gliderType, setGliderType] = useState("");
