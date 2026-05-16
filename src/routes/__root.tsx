@@ -134,7 +134,32 @@ function RootComponent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b backdrop-blur-md bg-background/80 sticky top-0 z-40">
+      <header className="border-b backdrop-blur-md bg-background/80 sticky top-0 z-40 relative overflow-hidden">
+        {/* Wave animation behind the logo/signout bar */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <svg
+            className="absolute inset-0 w-full h-full opacity-40 dark:opacity-30"
+            viewBox="0 0 1200 56"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="waveStroke" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.25" />
+                <stop offset="25%" stopColor="var(--sky-deep)" stopOpacity="0.18" />
+                <stop offset="50%" stopColor="var(--primary)" stopOpacity="0.9" />
+                <stop offset="75%" stopColor="var(--sky)" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.25" />
+              </linearGradient>
+            </defs>
+            <g fill="none" stroke="url(#waveStroke)" strokeLinecap="round">
+              <path className="wave-line wl-1" strokeWidth="1.2" d="M-200,28 Q100,8 400,28 T1000,28 T1600,28" />
+              <path className="wave-line wl-2" strokeWidth="1" d="M-200,32 Q150,14 450,32 T1050,32 T1650,32" />
+              <path className="wave-line wl-3" strokeWidth="0.8" d="M-200,24 Q120,44 420,24 T1020,24 T1620,24" />
+              <path className="wave-line wl-4" strokeWidth="0.8" d="M-200,36 Q180,20 480,36 T1080,36 T1680,36" />
+              <path className="wave-line wl-5" strokeWidth="0.6" d="M-200,20 Q160,40 460,20 T1060,20 T1660,20" />
+            </g>
+          </svg>
+        </div>
         <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3 relative">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0 group">
             <img
@@ -144,29 +169,6 @@ function RootComponent() {
             />
             <span className="hidden sm:inline">ESGC Logs</span>
           </Link>
-          <nav className="hidden lg:flex items-center gap-1 min-w-0 overflow-x-auto">
-            {(() => {
-              const email = (userEmail || "").toLowerCase();
-              const isOffice = email === "office@esgc.local";
-              return (
-                <>
-                  <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" />
-                  <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" />
-                  <NavLink to="/currency" icon={<Activity className="size-4" />} label="Currency" />
-                  <NavLink to="/logbook" icon={<BookOpen className="size-4" />} label="Logbook" />
-                  <NavLink to="/stats" icon={<BarChart3 className="size-4" />} label="Stats" />
-                  {isOffice && (
-                    <>
-                      <NavLink to="/history" icon={<History className="size-4" />} label="History" />
-                      <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" />
-                      <NavLink to="/members" icon={<Users className="size-4" />} label="Members" />
-                      <NavLink to="/settings" icon={<SettingsIcon className="size-4" />} label="Settings" />
-                    </>
-                  )}
-                </>
-              );
-            })()}
-          </nav>
           <div className="flex items-center gap-2 shrink-0">
             {userEmail ? (
               <Button
@@ -187,61 +189,33 @@ function RootComponent() {
             )}
           </div>
         </div>
-        {/* Secondary scrollable nav for tablet/mobile */}
-        <nav className="lg:hidden border-t bg-background/60 relative">
-          <div className="container mx-auto px-2 flex items-center gap-1 overflow-x-auto py-1.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {(() => {
-              const email = (userEmail || "").toLowerCase();
-              const isOffice = email === "office@esgc.local";
-              return (
-                <>
-                  <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" compact />
-                  <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" compact />
-                  <NavLink to="/currency" icon={<Activity className="size-4" />} label="Currency" compact />
-                  <NavLink to="/logbook" icon={<BookOpen className="size-4" />} label="Logbook" compact />
-                  <NavLink to="/stats" icon={<BarChart3 className="size-4" />} label="Stats" compact />
-                  {isOffice && (
-                    <>
-                      <NavLink to="/history" icon={<History className="size-4" />} label="History" compact />
-                      <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" compact />
-                      <NavLink to="/members" icon={<Users className="size-4" />} label="Members" compact />
-                      <NavLink to="/settings" icon={<SettingsIcon className="size-4" />} label="Settings" compact />
-                    </>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        </nav>
       </header>
-      {/* Wave band — dedicated horizontal section under the toolbar */}
-      <div
-        aria-hidden
-        className="relative w-full h-10 sm:h-12 overflow-hidden border-b bg-background"
-      >
-        <svg
-          className="absolute inset-0 w-full h-full opacity-40 dark:opacity-30"
-          viewBox="0 0 1200 56"
-          preserveAspectRatio="none"
-        >
-          <defs>
-            <linearGradient id="waveStroke" x1="0" x2="1" y1="0" y2="0">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.25" />
-              <stop offset="25%" stopColor="var(--sky-deep)" stopOpacity="0.18" />
-              <stop offset="50%" stopColor="var(--primary)" stopOpacity="0.9" />
-              <stop offset="75%" stopColor="var(--sky)" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.25" />
-            </linearGradient>
-          </defs>
-          <g fill="none" stroke="url(#waveStroke)" strokeLinecap="round">
-            <path className="wave-line wl-1" strokeWidth="1.2" d="M-200,28 Q100,8 400,28 T1000,28 T1600,28" />
-            <path className="wave-line wl-2" strokeWidth="1" d="M-200,32 Q150,14 450,32 T1050,32 T1650,32" />
-            <path className="wave-line wl-3" strokeWidth="0.8" d="M-200,24 Q120,44 420,24 T1020,24 T1620,24" />
-            <path className="wave-line wl-4" strokeWidth="0.8" d="M-200,36 Q180,20 480,36 T1080,36 T1680,36" />
-            <path className="wave-line wl-5" strokeWidth="0.6" d="M-200,20 Q160,40 460,20 T1060,20 T1660,20" />
-          </g>
-        </svg>
-      </div>
+      {/* Navigation bar — separate row below the logo/waves bar */}
+      <nav className="border-b bg-background/80 backdrop-blur-md sticky top-14 z-30">
+        <div className="container mx-auto px-2 sm:px-4 flex items-center gap-1 overflow-x-auto py-1.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {(() => {
+            const email = (userEmail || "").toLowerCase();
+            const isOffice = email === "office@esgc.local";
+            return (
+              <>
+                <NavLink to="/" icon={<ListChecks className="size-4" />} label="Flights" compact />
+                <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" compact />
+                <NavLink to="/currency" icon={<Activity className="size-4" />} label="Currency" compact />
+                <NavLink to="/logbook" icon={<BookOpen className="size-4" />} label="Logbook" compact />
+                <NavLink to="/stats" icon={<BarChart3 className="size-4" />} label="Stats" compact />
+                {isOffice && (
+                  <>
+                    <NavLink to="/history" icon={<History className="size-4" />} label="History" compact />
+                    <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" compact />
+                    <NavLink to="/members" icon={<Users className="size-4" />} label="Members" compact />
+                    <NavLink to="/settings" icon={<SettingsIcon className="size-4" />} label="Settings" compact />
+                  </>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      </nav>
       <main key={path} className="flex-1 container mx-auto px-4 py-6 soft-rise">
         <Outlet />
       </main>
