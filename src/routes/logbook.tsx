@@ -23,6 +23,8 @@ type Flight = {
   id: string;
   flight_date: string;
   glider_registration: string | null;
+  flarm_id: string | null;
+  manual: boolean;
   launch_type: "aerotow" | "winch" | null;
   aerotow_height_ft: number | null;
   takeoff_time: string | null;
@@ -70,7 +72,7 @@ function LogbookPage() {
       const [{ data: m }, { data: f }] = await Promise.all([
         supabase.from("club_members").select("id, full_name, membership_number").order("full_name"),
         supabase.from("flights")
-          .select("id, flight_date, glider_registration, launch_type, aerotow_height_ft, takeoff_time, landing_time, p1_name, p1_membership, p1_kind, p1_charge, p2_name, p2_membership, p2_kind, p2_charge, notes")
+          .select("id, flight_date, glider_registration, flarm_id, manual, launch_type, aerotow_height_ft, takeoff_time, landing_time, p1_name, p1_membership, p1_kind, p1_charge, p2_name, p2_membership, p2_kind, p2_charge, notes")
           .neq("glider_registration", "G-ESGC")
           .order("flight_date", { ascending: false })
           .order("takeoff_time", { ascending: false, nullsFirst: false })
@@ -243,6 +245,15 @@ function LogbookPage() {
                             className="size-8 text-muted-foreground hover:text-destructive"
                             onClick={async () => {
                               if (!confirm(`Delete this flight on ${dateToUKShortLabel(f.flight_date)}? This removes it from the daily log as well.`)) return;
+                              if (!f.manual) {
+                                await supabase.from("flight_tombstones").insert({
+                                  flight_date: f.flight_date,
+                                  flarm_id: f.flarm_id,
+                                  glider_registration: f.glider_registration,
+                                  takeoff_time: f.takeoff_time,
+                                  landing_time: f.landing_time,
+                                });
+                              }
                               const { error } = await supabase.from("flights").delete().eq("id", f.id);
                               if (error) { toast.error(error.message); return; }
                               setFlights((prev) => prev.filter((x) => x.id !== f.id));
