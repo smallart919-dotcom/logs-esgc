@@ -476,13 +476,17 @@ function FlightsPage() {
               max={todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <div
-              className="text-xs text-muted-foreground px-2 h-9 inline-flex items-center rounded-md border bg-muted/40 select-none whitespace-nowrap gap-1.5"
-              title={`Auto-syncing ${icao} from OGN — every 3s when tab is visible.`}
+            <Button
+              type="button"
+              variant={autoSyncEnabled ? "secondary" : "outline"}
+              size="sm"
+              onClick={toggleOgnSync}
+              className="gap-1.5 whitespace-nowrap"
+              title={autoSyncEnabled ? `Auto-syncing ${icao} from OGN — tap to pause.` : `OGN sync paused for ${icao} — tap to resume.`}
             >
-              <span className={`inline-block size-1.5 rounded-full bg-primary ${loadingFlights ? "sky-shimmer" : ""}`} />
-              <span>Live · {icao}</span>
-            </div>
+              <RefreshCw className={`size-3.5 ${syncing || loadingFlights ? "animate-spin" : ""}`} />
+              <span>OGN Sync {autoSyncEnabled ? "On" : "Off"}</span>
+            </Button>
             <div className="flex flex-wrap gap-2 ml-auto">
               <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
               <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
