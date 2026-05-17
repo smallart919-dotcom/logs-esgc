@@ -172,17 +172,17 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             const tombstoned = tombstones.find((t) => {
               const tRef = t.takeoff_time ?? t.landing_time;
               if (!tRef) {
-                const sameFlarm = flarm && t.flarm_id && t.flarm_id.toUpperCase() === flarm;
-                const sameReg = regKey && t.glider_registration && t.glider_registration.trim().toUpperCase() === regKey;
-                return sameFlarm || sameReg;
+                return sameAircraft(t, flarm, regKey);
               }
               const dt = Math.abs(+new Date(tRef) - refMs);
               if (dt > TIME_WINDOW_MS) return false;
-              const sameFlarm = flarm && t.flarm_id && t.flarm_id.toUpperCase() === flarm;
-              const sameReg = regKey && t.glider_registration && t.glider_registration.trim().toUpperCase() === regKey;
-              return sameFlarm || sameReg;
+              return sameAircraft(t, flarm, regKey);
             });
-            if (tombstoned) { skipped++; continue; }
+            if (tombstoned) {
+              skipped++;
+              matches.push({ status: "skipped", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
+              continue;
+            }
           }
 
           if (existing) {
@@ -224,7 +224,15 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
               ogn_source: sourceMeta,
             };
             const { data: inserted, error: insErr } = await supabaseAdmin.from("flights").insert(insertRow).select("id, flarm_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft, manual").single();
-            if (insErr) { errors.push({ flarm, registration: matchedReg, message: insErr.message }); continue; }
+            if (insErr) {
+              if (insErr.code === "23505") {
+                skipped++;
+                matches.push({ status: "skipped", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
+                continue;
+              }
+              errors.push({ flarm, registration: matchedReg, message: insErr.message });
+              continue;
+            }
             if (inserted) dayFlights.push(inserted as any);
             created++;
             matches.push({ status: "created", flarm, registration: matchedReg, callsign: dev?.cn ?? null, confidence, takeoff, landing, launch_type: launchType, tow_height_ft: towHeightFt, synced_at });
