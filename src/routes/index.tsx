@@ -141,6 +141,7 @@ function FlightsPage() {
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [loadingFlights, setLoadingFlights] = useState(false);
   const [syncResult, setSyncResult] = useState<null | { icao: string; date: string; created: number; updated: number; skipped: number; total: number; synced_at: string; errors: Array<{ flarm: string | null; registration: string | null; message: string }>; matches: Array<any> }>(null);
   const [editing, setEditing] = useState<Flight | null>(null);
@@ -151,6 +152,7 @@ function FlightsPage() {
   // so we can animate brand-new rows and the moment a landing time appears.
   const seenIdsRef = useRef<Set<string>>(new Set());
   const inAirIdsRef = useRef<Set<string>>(new Set());
+  const syncInFlightRef = useRef(false);
   const [freshlyAdded, setFreshlyAdded] = useState<Set<string>>(new Set());
   const [freshlyLanded, setFreshlyLanded] = useState<Set<string>>(new Set());
 
@@ -216,6 +218,8 @@ function FlightsPage() {
   const syncOgn = useCallback(async (silent = false) => {
     const code = icao;
     if (!code) return;
+    if (syncInFlightRef.current) return;
+    syncInFlightRef.current = true;
     if (!silent) { setSyncing(true); setSyncResult(null); }
     try {
       const res = await fetch("/api/public/hooks/ogn-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icao: code, date }) });
@@ -229,13 +233,21 @@ function FlightsPage() {
         setSyncResult({ icao: code, date, created: 0, updated: 0, skipped: 0, total: 0, synced_at: new Date().toISOString(), errors: [{ flarm: null, registration: null, message: e.message }], matches: [] });
       }
     }
-    finally { if (!silent) setSyncing(false); }
+    finally { syncInFlightRef.current = false; if (!silent) setSyncing(false); }
   }, [icao, date, load]);
+
+  const toggleOgnSync = useCallback(() => {
+    setAutoSyncEnabled((enabled) => {
+      const next = !enabled;
+      if (next) void syncOgn(false);
+      return next;
+    });
+  }, [syncOgn]);
 
   // Silent auto-sync so landing times appear naturally. Fast cadence when the
   // tab is visible, lighter cadence in the background to save bandwidth.
   useEffect(() => {
-    if (!icao) return;
+    if (!icao || !autoSyncEnabled) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const tick = () => {
@@ -252,7 +264,7 @@ function FlightsPage() {
     };
     document.addEventListener("visibilitychange", onVis);
     return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
-  }, [icao, syncOgn]);
+  }, [autoSyncEnabled, icao, syncOgn]);
 
 
   const remove = async (id: string) => {
