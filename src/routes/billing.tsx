@@ -32,8 +32,14 @@ type Flight = FlightLike & {
 
 type Mode = "day" | "month";
 
+const ALLOWED_CACHE_KEY = "esgc.billing.allowed";
+
 function BillingPage() {
-  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [allowed, setAllowed] = useState<boolean | null>(() => {
+    if (typeof window === "undefined") return null;
+    const v = sessionStorage.getItem(ALLOWED_CACHE_KEY);
+    return v === "1" ? true : v === "0" ? false : null;
+  });
   const [mode, setMode] = useState<Mode>("day");
   const [date, setDate] = useState(todayUKDate());
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
@@ -42,9 +48,14 @@ function BillingPage() {
   const [flights, setFlights] = useState<Flight[]>([]);
 
   useEffect(() => {
+    let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
-      setAllowed(ALLOWED_EMAILS.includes((data.user?.email || "").toLowerCase()));
+      if (cancelled) return;
+      const ok = ALLOWED_EMAILS.includes((data.user?.email || "").toLowerCase());
+      setAllowed(ok);
+      try { sessionStorage.setItem(ALLOWED_CACHE_KEY, ok ? "1" : "0"); } catch {}
     });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
