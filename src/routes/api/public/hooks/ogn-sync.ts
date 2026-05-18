@@ -190,17 +190,18 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             // time once the glider lands) but never overwrite anything the user
             // already filled in. For OGN-sourced entries we also only fill gaps.
             const patch: any = { ogn_source: { ...(existing.ogn_source as object || {}), ...sourceMeta } };
-            if (takeoff && (!existing.takeoff_time || !(existing as any).manual)) patch.takeoff_time = takeoff;
-            if (landing && (!existing.landing_time || !(existing as any).manual)) patch.landing_time = landing;
-            // Backfill flarm/registration if previously missing
+            // Only fill MISSING fields — never overwrite values already on the row.
+            // This preserves user edits to both manual and OGN-sourced flights so a
+            // later sync can't clobber a corrected takeoff/landing time or launch.
+            if (takeoff && !existing.takeoff_time) patch.takeoff_time = takeoff;
+            if (landing && !existing.landing_time) patch.landing_time = landing;
             if (flarm && !existing.flarm_id) patch.flarm_id = flarm;
             if (matchedReg && !existing.glider_registration) patch.glider_registration = matchedReg;
             if (matchedId) patch.glider_id = matchedId;
-            // Backfill launch info if missing
             if (launchType && !existing.launch_type) patch.launch_type = launchType;
             if (towHeightFt && !existing.aerotow_height_ft) patch.aerotow_height_ft = towHeightFt;
-            // If nothing actually changed besides ogn_source for a manual row, skip
-            if ((existing as any).manual && Object.keys(patch).length === 1) {
+            // If nothing actually changed besides ogn_source, skip
+            if (Object.keys(patch).length === 1) {
               skipped++;
               continue;
             }

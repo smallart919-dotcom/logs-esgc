@@ -284,6 +284,18 @@ function FlightsPage() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const landNow = async (id: string) => {
+    // Stamp landing_time with the current instant (adjusted for the day's clock offset).
+    const now = new Date(Date.now() - offsetSec * 1000).toISOString();
+    // Optimistic update so the row reflects immediately.
+    setFlights((prev) => prev.map((x) => x.id === id ? { ...x, landing_time: now } : x));
+    const { error } = await supabase.from("flights").update({ landing_time: now }).eq("id", id);
+    if (error) { toast.error(error.message); load(); return; }
+    toast.success("Landing time set");
+    // Kick OGN once to also try to capture the official landing time if it arrives.
+    syncOgn(true).catch(() => undefined);
+  };
+
   const exportXlsx = async () => {
     const fmtTime = (iso: string | null) => iso ? fmtUKTime(iso, offsetSec) : "";
     const dur = (a: string | null, b: string | null) => {
@@ -485,7 +497,19 @@ function FlightsPage() {
               title={autoSyncEnabled ? `Auto-syncing ${icao} from OGN — tap to pause.` : `OGN sync paused for ${icao} — tap to resume.`}
             >
               <RefreshCw className={`size-3.5 ${syncing || loadingFlights ? "animate-spin" : ""}`} />
-              <span>OGN Sync {autoSyncEnabled ? "On" : "Off"}</span>
+              <span>OGN Live {autoSyncEnabled ? "On" : "Off"}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => syncOgn(false)}
+              disabled={syncing}
+              className="gap-1.5 whitespace-nowrap"
+              title="Run a one-off OGN sync now"
+            >
+              <RefreshCw className={`size-3.5 ${syncing ? "animate-spin" : ""}`} />
+              <span>Manual Sync</span>
             </Button>
             <div className="flex flex-wrap gap-2 ml-auto">
               <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
@@ -537,7 +561,22 @@ function FlightsPage() {
                       {f.flarm_id && <div className="text-xs font-mono text-muted-foreground">{f.flarm_id}</div>}
                     </TableCell>
                     <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time, offsetSec)}</TableCell>
-                    <TableCell className={`font-mono text-sm ${justLanded ? "landing-pop" : ""}`}>{fmtUKTime(f.landing_time, offsetSec)}</TableCell>
+                    <TableCell className={`font-mono text-sm ${justLanded ? "landing-pop" : ""}`}>
+                      {f.landing_time ? (
+                        fmtUKTime(f.landing_time, offsetSec)
+                      ) : f.takeoff_time ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 gap-1 text-xs font-normal"
+                          onClick={() => landNow(f.id)}
+                          title="Stamp landing time as now (OGN will still fill the exact time if it arrives)"
+                        >
+                          <Plane className="size-3 rotate-90" />
+                          Land now
+                        </Button>
+                      ) : ""}
+                    </TableCell>
                     <TableCell className="text-sm">{dur}</TableCell>
                     <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
                     <TableCell><PilotCell name={f.p2_name} membership={f.p2_membership} kind={f.p2_kind} /></TableCell>
