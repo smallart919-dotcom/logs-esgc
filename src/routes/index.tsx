@@ -284,6 +284,18 @@ function FlightsPage() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const landNow = async (id: string) => {
+    // Stamp landing_time with the current instant (adjusted for the day's clock offset).
+    const now = new Date(Date.now() - offsetSec * 1000).toISOString();
+    // Optimistic update so the row reflects immediately.
+    setFlights((prev) => prev.map((x) => x.id === id ? { ...x, landing_time: now } : x));
+    const { error } = await supabase.from("flights").update({ landing_time: now }).eq("id", id);
+    if (error) { toast.error(error.message); load(); return; }
+    toast.success("Landing time set");
+    // Kick OGN once to also try to capture the official landing time if it arrives.
+    syncOgn(true).catch(() => undefined);
+  };
+
   const exportXlsx = async () => {
     const fmtTime = (iso: string | null) => iso ? fmtUKTime(iso, offsetSec) : "";
     const dur = (a: string | null, b: string | null) => {
