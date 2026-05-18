@@ -485,7 +485,19 @@ function FlightsPage() {
               title={autoSyncEnabled ? `Auto-syncing ${icao} from OGN — tap to pause.` : `OGN sync paused for ${icao} — tap to resume.`}
             >
               <RefreshCw className={`size-3.5 ${syncing || loadingFlights ? "animate-spin" : ""}`} />
-              <span>OGN Sync {autoSyncEnabled ? "On" : "Off"}</span>
+              <span>OGN Live {autoSyncEnabled ? "On" : "Off"}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => syncOgn(false)}
+              disabled={syncing}
+              className="gap-1.5 whitespace-nowrap"
+              title="Run a one-off OGN sync now"
+            >
+              <RefreshCw className={`size-3.5 ${syncing ? "animate-spin" : ""}`} />
+              <span>Manual Sync</span>
             </Button>
             <div className="flex flex-wrap gap-2 ml-auto">
               <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
