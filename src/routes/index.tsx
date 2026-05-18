@@ -1079,13 +1079,13 @@ function FlightDialog({
             <Label>
               Comments {gfeChargedNeedsVoucher && (
                 <span className={hasVoucherId ? "text-muted-foreground text-xs ml-1" : "text-destructive text-xs ml-1"}>
-                  · Voucher ID required (e.g. "Voucher V-1234")
+                  · Voucher ID required (digits only, e.g. "1234")
                 </span>
               )}
             </Label>
             <Textarea
               rows={3}
-              placeholder={gfeChargedNeedsVoucher ? "Voucher ID required, e.g. Voucher V-1234" : "Add any comments about this flight…"}
+              placeholder={gfeChargedNeedsVoucher ? "Voucher ID required, e.g. 1234" : "Add any comments about this flight…"}
               value={form.notes ?? ""}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className={gfeChargedNeedsVoucher && !hasVoucherId ? "border-destructive/60 focus-visible:ring-destructive/40" : ""}
