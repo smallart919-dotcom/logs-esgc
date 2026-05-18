@@ -561,7 +561,22 @@ function FlightsPage() {
                       {f.flarm_id && <div className="text-xs font-mono text-muted-foreground">{f.flarm_id}</div>}
                     </TableCell>
                     <TableCell className="font-mono text-sm">{fmtUKTime(f.takeoff_time, offsetSec)}</TableCell>
-                    <TableCell className={`font-mono text-sm ${justLanded ? "landing-pop" : ""}`}>{fmtUKTime(f.landing_time, offsetSec)}</TableCell>
+                    <TableCell className={`font-mono text-sm ${justLanded ? "landing-pop" : ""}`}>
+                      {f.landing_time ? (
+                        fmtUKTime(f.landing_time, offsetSec)
+                      ) : f.takeoff_time ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 gap-1 text-xs font-normal"
+                          onClick={() => landNow(f.id)}
+                          title="Stamp landing time as now (OGN will still fill the exact time if it arrives)"
+                        >
+                          <Plane className="size-3 rotate-90" />
+                          Land now
+                        </Button>
+                      ) : ""}
+                    </TableCell>
                     <TableCell className="text-sm">{dur}</TableCell>
                     <TableCell><PilotCell name={f.p1_name} membership={f.p1_membership} kind={f.p1_kind} /></TableCell>
                     <TableCell><PilotCell name={f.p2_name} membership={f.p2_membership} kind={f.p2_kind} /></TableCell>
