@@ -931,15 +931,13 @@ function FlightDialog({
   const p1Kind = (form.p1_kind ?? "member") as PilotKind;
   const p2Kind = (form.p2_kind ?? "member") as PilotKind;
   const notes = (form.notes ?? "").trim();
-  // If a GFE is ticked AND charged, a voucher ID must be recorded in the comments.
-  const gfeChargedNeedsVoucher =
-    ((p1Kind === "gfe" && !!form.p1_charge) || (p2Kind === "gfe" && !!form.p2_charge));
-  const hasVoucherId = /(?:voucher|vch|gfe)[^a-z0-9]{0,3}[a-z0-9-]{3,}/i.test(notes)
-    || /\b[A-Z]{1,3}[-/ ]?\d{3,}\b/.test(notes); // e.g. "V-1234", "GFE 12345"
+  // If a GFE is ticked, a voucher ID (digits) must be recorded in the comments.
+  const gfeChargedNeedsVoucher = (p1Kind === "gfe" || p2Kind === "gfe");
+  const hasVoucherId = /\d{3,}/.test(notes); // e.g. "1234"
 
   const save = async () => {
     if (gfeChargedNeedsVoucher && !hasVoucherId) {
-      toast.error("Voucher ID required in comments for a charged GFE flight (e.g. \"Voucher V-1234\").");
+      toast.error("Voucher ID required in comments for a GFE flight (digits only, e.g. \"1234\").");
       return;
     }
     const payload: any = {
@@ -1081,13 +1079,13 @@ function FlightDialog({
             <Label>
               Comments {gfeChargedNeedsVoucher && (
                 <span className={hasVoucherId ? "text-muted-foreground text-xs ml-1" : "text-destructive text-xs ml-1"}>
-                  · Voucher ID required (e.g. "Voucher V-1234")
+                  · Voucher ID required (digits only, e.g. "1234")
                 </span>
               )}
             </Label>
             <Textarea
               rows={3}
-              placeholder={gfeChargedNeedsVoucher ? "Voucher ID required, e.g. Voucher V-1234" : "Add any comments about this flight…"}
+              placeholder={gfeChargedNeedsVoucher ? "Voucher ID required, e.g. 1234" : "Add any comments about this flight…"}
               value={form.notes ?? ""}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className={gfeChargedNeedsVoucher && !hasVoucherId ? "border-destructive/60 focus-visible:ring-destructive/40" : ""}
