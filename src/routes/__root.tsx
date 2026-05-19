@@ -219,9 +219,30 @@ function RootComponent() {
           })()}
         </div>
       </nav>
-      <main key={path} className="flex-1 container mx-auto px-4 py-6 soft-rise">
+      <main key={path} className="flex-1 container mx-auto px-4 py-6 pb-24 soft-rise">
         <Outlet />
       </main>
+      {(() => {
+        const email = (userEmail || "").toLowerCase();
+        const isOffice = email === "office@esgc.local";
+        if (!userEmail) return null;
+        const items = [
+          { to: "/", label: "Flights", icon: <ListChecks className="size-5" /> },
+          { to: "/billing", label: "Billing", icon: <Receipt className="size-5" /> },
+          { to: "/currency", label: "Currency", icon: <Activity className="size-5" /> },
+          { to: "/logbook", label: "Logbook", icon: <BookOpen className="size-5" /> },
+          { to: "/stats", label: "Stats", icon: <BarChart3 className="size-5" /> },
+          ...(isOffice
+            ? [
+                { to: "/history", label: "History", icon: <History className="size-5" /> },
+                { to: "/fleet", label: "Fleet", icon: <Plane className="size-5" /> },
+                { to: "/members", label: "Members", icon: <Users className="size-5" /> },
+                { to: "/settings", label: "Settings", icon: <SettingsIcon className="size-5" /> },
+              ]
+            : []),
+        ];
+        return <MacDock items={items} />;
+      })()}
       <Toaster />
     </div>
   );
