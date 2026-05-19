@@ -15,6 +15,8 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShapesBackground } from "@/components/shapes-background";
+import { MacDock } from "@/components/mac-dock";
 import esgcLogo from "@/assets/esgc-logo.png";
 
 /** Sailplane silhouette — long slender wings, slim fuselage, T-tail. */
