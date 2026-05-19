@@ -206,20 +206,47 @@
   100% { color: var(--color-foreground); transform: scale(1); text-shadow: none; }
 }
 @keyframes page-rise {
-  0%   { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.995); filter: blur(2px); }
+  0%   { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.99); filter: blur(4px); }
   60%  { filter: blur(0); }
   100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+
+/* Shape-landing-hero style: rotated pill rises in + then slowly floats */
+@keyframes shape-rise-in {
+  0%   { opacity: 0; transform: translateY(110px) rotate(calc(var(--shape-rotate, 0deg) - 18deg)); }
+  100% { opacity: 1; transform: translateY(0) rotate(var(--shape-rotate, 0deg)); }
+}
+@keyframes shape-float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(14px); }
+}
+
+/* Smoother new-row entrance for flight tables */
+@keyframes row-arrive {
+  0%   { opacity: 0; transform: translate3d(-14px, -4px, 0) scale(0.985); background-color: color-mix(in oklab, var(--sky) 28%, transparent); }
+  60%  { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); background-color: transparent; }
 }
 
 .glider-soar   { animation: glider-soar 26s cubic-bezier(0.45, 0, 0.55, 1) infinite; will-change: transform, opacity; }
 .glider-land      { animation: glider-land 900ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .glider-touchdown { animation: glider-touchdown 1400ms cubic-bezier(0.22, 1, 0.36, 1) both; will-change: transform, opacity; }
 .gentle-float  { animation: gentle-float 4s ease-in-out infinite; }
-.soft-rise     { animation: page-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.soft-rise     { animation: page-rise 620ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .sky-shimmer   { animation: sky-shimmer 2.2s ease-in-out infinite; }
-.row-glide-in  { animation: row-glide-in 280ms ease-out both; }
-.row-land-in   { animation: row-land-in 1200ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.row-glide-in  { animation: row-arrive 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.row-land-in   { animation: row-arrive 1100ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .landing-pop   { animation: landing-pop 1100ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+.shape-rise {
+  transform: translateY(110px) rotate(var(--shape-rotate, 0deg));
+  animation: shape-rise-in 2.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+.shape-float {
+  animation: shape-float-y 12s ease-in-out infinite;
+  will-change: transform;
+}
 
 /* Hero glider sweeps higher and slightly bobs */
 @keyframes glider-soar-hero {
