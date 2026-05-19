@@ -219,7 +219,7 @@ function RootComponent() {
           })()}
         </div>
       </nav>
-      <main key={path} className="flex-1 container mx-auto px-4 py-6 pb-24 soft-rise">
+      <main key={path} className="flex-1 container mx-auto px-4 py-6 pb-28 sm:pb-24 soft-rise" style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
         <Outlet />
       </main>
       {(() => {
