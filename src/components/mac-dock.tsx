@@ -37,7 +37,13 @@ export function MacDock({ items }: { items: DockItem[] }) {
         className="flex items-end gap-1.5 px-3 py-2 rounded-2xl border border-white/20 bg-background/60 backdrop-blur-xl shadow-[0_12px_40px_-12px_color-mix(in_oklab,var(--sky-deep)_50%,transparent)]"
       >
         {items.map((item) => (
-          <DockButton key={item.to} item={item} active={path === item.to} mouseX={mouseX} dockRef={dockRef} />
+          <DockButton
+            key={item.to}
+            item={item}
+            active={path === item.to}
+            mouseX={mouseX}
+            dockRef={dockRef}
+          />
         ))}
       </div>
     </div>
@@ -78,7 +84,9 @@ function DockButton({
         to={item.to}
         aria-label={item.label}
         className={`grid place-items-center size-10 rounded-xl transition-colors ${
-          active ? "bg-primary text-primary-foreground" : "bg-secondary/70 text-foreground hover:bg-secondary"
+          active
+            ? "bg-primary text-primary-foreground"
+            : "bg-secondary/70 text-foreground hover:bg-secondary"
         }`}
         style={{
           transform: `scale(${scale}) translateY(${(scale - 1) * -10}px)`,
@@ -90,7 +98,9 @@ function DockButton({
       >
         {item.icon}
       </Link>
-      {active && <span className="absolute -bottom-1.5 size-1 rounded-full bg-primary" />}
+      {active && (
+        <span className="absolute -bottom-1.5 size-1 rounded-full bg-primary" />
+      )}
     </div>
   );
 }
