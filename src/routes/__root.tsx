@@ -15,6 +15,8 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShapesBackground } from "@/components/shapes-background";
+import { MacDock } from "@/components/mac-dock";
 import esgcLogo from "@/assets/esgc-logo.png";
 
 /** Sailplane silhouette — long slender wings, slim fuselage, T-tail. */
@@ -133,7 +135,8 @@ function RootComponent() {
     );
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
+      <ShapesBackground key={path} />
       <header className="border-b backdrop-blur-md bg-background/80 sticky top-0 z-40 relative overflow-hidden">
         {/* Wave animation behind the logo/signout bar */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -216,9 +219,30 @@ function RootComponent() {
           })()}
         </div>
       </nav>
-      <main key={path} className="flex-1 container mx-auto px-4 py-6 soft-rise">
+      <main key={path} className="flex-1 container mx-auto px-4 py-6 pb-24 soft-rise">
         <Outlet />
       </main>
+      {(() => {
+        const email = (userEmail || "").toLowerCase();
+        const isOffice = email === "office@esgc.local";
+        if (!userEmail) return null;
+        const items = [
+          { to: "/", label: "Flights", icon: <ListChecks className="size-5" /> },
+          { to: "/billing", label: "Billing", icon: <Receipt className="size-5" /> },
+          { to: "/currency", label: "Currency", icon: <Activity className="size-5" /> },
+          { to: "/logbook", label: "Logbook", icon: <BookOpen className="size-5" /> },
+          { to: "/stats", label: "Stats", icon: <BarChart3 className="size-5" /> },
+          ...(isOffice
+            ? [
+                { to: "/history", label: "History", icon: <History className="size-5" /> },
+                { to: "/fleet", label: "Fleet", icon: <Plane className="size-5" /> },
+                { to: "/members", label: "Members", icon: <Users className="size-5" /> },
+                { to: "/settings", label: "Settings", icon: <SettingsIcon className="size-5" /> },
+              ]
+            : []),
+        ];
+        return <MacDock items={items} />;
+      })()}
       <Toaster />
     </div>
   );
