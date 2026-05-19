@@ -206,9 +206,8 @@
   100% { color: var(--color-foreground); transform: scale(1); text-shadow: none; }
 }
 @keyframes page-rise {
-  0%   { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.99); filter: blur(4px); }
-  60%  { filter: blur(0); }
-  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+  0%   { opacity: 0; transform: translate3d(0, 8px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 /* Shape-landing-hero style: rotated pill rises in + then slowly floats */
