@@ -136,7 +136,7 @@ function RootComponent() {
 
   return (
     <div className="min-h-screen flex flex-col relative">
-      <ShapesBackground key={path} />
+      <ShapesBackground />
       <header className="border-b backdrop-blur-md bg-background/80 sticky top-0 z-40 relative overflow-hidden">
         {/* Wave animation behind the logo/signout bar */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -219,7 +219,7 @@ function RootComponent() {
           })()}
         </div>
       </nav>
-      <main key={path} className="flex-1 container mx-auto px-4 py-6 pb-24 soft-rise">
+      <main key={path} className="flex-1 container mx-auto px-4 py-6 pb-28 sm:pb-24 soft-rise" style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
         <Outlet />
       </main>
       {(() => {
