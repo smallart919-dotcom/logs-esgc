@@ -25,17 +25,17 @@ export function MacDock({ items }: { items: DockItem[] }) {
 
   return (
     <div
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center px-3 max-w-[calc(100vw-1rem)]"
+      className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center px-2 max-w-[calc(100vw-0.5rem)]"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <TooltipProvider delayDuration={120}>
+      <TooltipProvider delayDuration={200}>
         <motion.div
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 220, damping: 24, delay: 0.1 }}
           className={cn(
-            "liquid-glass relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-3xl",
-            "overflow-x-auto max-w-full [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+            "liquid-glass relative flex items-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl sm:rounded-3xl",
+            "overflow-x-auto max-w-[calc(100vw-0.5rem)] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
           )}
         >
           {/* Specular highlight on top edge */}
@@ -61,7 +61,7 @@ export function MacDock({ items }: { items: DockItem[] }) {
                           exit={{ scale: 0.6, opacity: 0 }}
                           transition={{ type: "spring", stiffness: 220, damping: 18 }}
                           className={cn(
-                            "absolute inset-0 rounded-full -z-10",
+                            "absolute inset-0 rounded-full -z-10 hidden sm:block",
                             "bg-gradient-to-tr from-primary/40 via-primary/15 to-transparent",
                             "backdrop-blur-2xl shadow-md dark:shadow-primary/20",
                           )}
@@ -72,8 +72,8 @@ export function MacDock({ items }: { items: DockItem[] }) {
                       to={item.to}
                       aria-label={item.label}
                       className={cn(
-                        "relative z-10 grid place-items-center size-10 rounded-full transition-all duration-200",
-                        "hover:scale-110",
+                        "relative z-10 grid place-items-center size-9 sm:size-10 rounded-full transition-all duration-200",
+                        "sm:hover:scale-110 active:scale-95 [&_svg]:size-[18px] sm:[&_svg]:size-5",
                         active
                           ? "bg-primary/90 text-primary-foreground shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_55%,transparent)]"
                           : "text-foreground/80 hover:text-foreground",
@@ -84,12 +84,12 @@ export function MacDock({ items }: { items: DockItem[] }) {
                     {active && (
                       <motion.span
                         layoutId="dock-active-dot"
-                        className="absolute -bottom-1 size-1 rounded-full bg-primary"
+                        className="absolute -bottom-0.5 size-1 rounded-full bg-primary"
                       />
                     )}
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
+                <TooltipContent side="top" className="text-xs hidden sm:block">
                   {item.label}
                 </TooltipContent>
               </Tooltip>
