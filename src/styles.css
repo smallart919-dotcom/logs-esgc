@@ -420,3 +420,97 @@ nav.sticky {
   border-color: color-mix(in oklab, white 8%, transparent);
 }
 
+
+/* Glassy dialogs, popovers, dropdowns, sheets, command palettes */
+[data-slot="dialog-content"],
+[data-slot="popover-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="select-content"],
+[data-slot="sheet-content"],
+[data-slot="command"],
+[data-slot="hover-card-content"],
+[data-slot="menubar-content"],
+[data-slot="context-menu-content"],
+[data-slot="navigation-menu-content"] {
+  background: color-mix(in oklab, var(--popover) 70%, transparent) !important;
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid color-mix(in oklab, white 28%, transparent);
+}
+.dark [data-slot="dialog-content"],
+.dark [data-slot="popover-content"],
+.dark [data-slot="dropdown-menu-content"],
+.dark [data-slot="select-content"],
+.dark [data-slot="sheet-content"],
+.dark [data-slot="command"],
+.dark [data-slot="hover-card-content"],
+.dark [data-slot="menubar-content"],
+.dark [data-slot="context-menu-content"],
+.dark [data-slot="navigation-menu-content"] {
+  background: color-mix(in oklab, var(--popover) 55%, transparent) !important;
+  border-color: color-mix(in oklab, white 10%, transparent);
+}
+
+/* Glassy inputs / textareas / selects */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select,
+[data-slot="input"],
+[data-slot="textarea"],
+[data-slot="select-trigger"] {
+  background: color-mix(in oklab, var(--background) 60%, transparent) !important;
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
+  border-color: color-mix(in oklab, white 25%, transparent);
+}
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark textarea,
+.dark select,
+.dark [data-slot="input"],
+.dark [data-slot="textarea"],
+.dark [data-slot="select-trigger"] {
+  background: color-mix(in oklab, var(--background) 50%, transparent) !important;
+  border-color: color-mix(in oklab, white 10%, transparent);
+}
+
+/* Glassy outline & secondary & ghost buttons */
+[data-slot="button"][data-variant="outline"],
+[data-slot="button"][data-variant="secondary"] {
+  background: color-mix(in oklab, var(--background) 55%, transparent);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid color-mix(in oklab, white 28%, transparent);
+}
+.dark [data-slot="button"][data-variant="outline"],
+.dark [data-slot="button"][data-variant="secondary"] {
+  background: color-mix(in oklab, var(--background) 42%, transparent);
+  border-color: color-mix(in oklab, white 10%, transparent);
+}
+
+/* Glassy tabs list and badges */
+[data-slot="tabs-list"] {
+  background: color-mix(in oklab, var(--muted) 55%, transparent);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid color-mix(in oklab, white 25%, transparent);
+}
+[data-slot="badge"][data-variant="outline"],
+[data-slot="badge"][data-variant="secondary"] {
+  backdrop-filter: blur(6px) saturate(140%);
+  -webkit-backdrop-filter: blur(6px) saturate(140%);
+}
+
+/* Glassy table surface */
+table thead th {
+  background: color-mix(in oklab, var(--card) 70%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(170%);
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
+}
+
+/* Toaster (sonner) glass treatment */
+[data-sonner-toast] {
+  background: color-mix(in oklab, var(--popover) 70%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid color-mix(in oklab, white 28%, transparent) !important;
+}
