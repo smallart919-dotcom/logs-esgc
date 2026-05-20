@@ -1,106 +1,102 @@
+import * as React from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useRef, useState, useEffect } from "react";
-import type { ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type DockItem = {
   to: string;
   label: string;
-  icon: ReactNode;
+  icon: React.ReactNode;
 };
 
 /**
- * macOS-style dock with magnification on hover/touch.
- * Fixed to bottom of viewport; mirrors top-bar nav for fast access.
+ * Apple Liquid Glass dock — translucent, blurred, with a morphic
+ * hover bubble that grows under the active icon.
  */
 export function MacDock({ items }: { items: DockItem[] }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const [mouseX, setMouseX] = useState<number | null>(null);
-  const dockRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 50);
-    return () => clearTimeout(t);
-  }, []);
+  const [hovered, setHovered] = React.useState<number | null>(null);
 
   return (
     <div
-      className={`fixed bottom-3 left-1/2 -translate-x-1/2 z-50 transition-all duration-700 ease-out ${
-        mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-      }`}
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center px-3 max-w-[calc(100vw-1rem)]"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <div
-        ref={dockRef}
-        onMouseMove={(e) => setMouseX(e.clientX)}
-        onMouseLeave={() => setMouseX(null)}
-        className="flex items-end gap-1.5 px-3 py-2 rounded-2xl border border-white/20 bg-background/60 backdrop-blur-xl shadow-[0_12px_40px_-12px_color-mix(in_oklab,var(--sky-deep)_50%,transparent)]"
-      >
-        {items.map((item) => (
-          <DockButton
-            key={item.to}
-            item={item}
-            active={path === item.to}
-            mouseX={mouseX}
-            dockRef={dockRef}
+      <TooltipProvider delayDuration={120}>
+        <motion.div
+          initial={{ y: 30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 220, damping: 24, delay: 0.1 }}
+          className={cn(
+            "liquid-glass relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-3xl",
+            "overflow-x-auto max-w-full [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+          )}
+        >
+          {/* Specular highlight on top edge */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-3 top-0 h-px rounded-full bg-gradient-to-r from-transparent via-white/70 to-transparent dark:via-white/30"
           />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DockButton({
-  item,
-  active,
-  mouseX,
-  dockRef,
-}: {
-  item: DockItem;
-  active: boolean;
-  mouseX: number | null;
-  dockRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const ref = useRef<HTMLAnchorElement>(null);
-  let scale = 1;
-  if (mouseX !== null && ref.current && dockRef.current) {
-    const rect = ref.current.getBoundingClientRect();
-    const center = rect.left + rect.width / 2;
-    const dist = Math.abs(mouseX - center);
-    const max = 110;
-    const factor = Math.max(0, 1 - dist / max);
-    scale = 1 + factor * 0.55;
-  }
-
-  return (
-    <div className="relative flex flex-col items-center group">
-      <span
-        className={`pointer-events-none absolute -top-7 px-2 py-0.5 text-[10px] rounded-md bg-foreground text-background opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap`}
-      >
-        {item.label}
-      </span>
-      <Link
-        ref={ref}
-        to={item.to}
-        aria-label={item.label}
-        className={`grid place-items-center size-10 rounded-xl transition-colors ${
-          active
-            ? "bg-primary text-primary-foreground"
-            : "bg-secondary/70 text-foreground hover:bg-secondary"
-        }`}
-        style={{
-          transform: `scale(${scale}) translateY(${(scale - 1) * -10}px)`,
-          transition:
-            mouseX === null
-              ? "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms"
-              : "transform 90ms ease-out, background-color 200ms",
-        }}
-      >
-        {item.icon}
-      </Link>
-      {active && (
-        <span className="absolute -bottom-1.5 size-1 rounded-full bg-primary" />
-      )}
+          {items.map((item, i) => {
+            const active = path === item.to;
+            return (
+              <Tooltip key={item.to}>
+                <TooltipTrigger asChild>
+                  <div
+                    className="relative flex items-center justify-center shrink-0"
+                    onMouseEnter={() => setHovered(i)}
+                    onMouseLeave={() => setHovered(null)}
+                  >
+                    <AnimatePresence>
+                      {hovered === i && (
+                        <motion.div
+                          initial={{ scale: 0.6, opacity: 0 }}
+                          animate={{ scale: 1.35, opacity: 1 }}
+                          exit={{ scale: 0.6, opacity: 0 }}
+                          transition={{ type: "spring", stiffness: 220, damping: 18 }}
+                          className={cn(
+                            "absolute inset-0 rounded-full -z-10",
+                            "bg-gradient-to-tr from-primary/40 via-primary/15 to-transparent",
+                            "backdrop-blur-2xl shadow-md dark:shadow-primary/20",
+                          )}
+                        />
+                      )}
+                    </AnimatePresence>
+                    <Link
+                      to={item.to}
+                      aria-label={item.label}
+                      className={cn(
+                        "relative z-10 grid place-items-center size-10 rounded-full transition-all duration-200",
+                        "hover:scale-110",
+                        active
+                          ? "bg-primary/90 text-primary-foreground shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_55%,transparent)]"
+                          : "text-foreground/80 hover:text-foreground",
+                      )}
+                    >
+                      {item.icon}
+                    </Link>
+                    {active && (
+                      <motion.span
+                        layoutId="dock-active-dot"
+                        className="absolute -bottom-1 size-1 rounded-full bg-primary"
+                      />
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </motion.div>
+      </TooltipProvider>
     </div>
   );
 }
