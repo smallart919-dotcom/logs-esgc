@@ -383,3 +383,40 @@ header.sticky {
   h1 { font-size: clamp(1.35rem, 5.5vw, 1.75rem); }
 }
 
+/* ===== Apple Liquid Glass ===== */
+.liquid-glass {
+  background: color-mix(in oklab, var(--background) 55%, transparent);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid color-mix(in oklab, white 35%, transparent);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 50%, transparent) inset,
+    0 -1px 0 0 color-mix(in oklab, var(--sky-deep) 10%, transparent) inset,
+    0 10px 30px -12px color-mix(in oklab, var(--sky-deep) 35%, transparent),
+    0 24px 60px -28px color-mix(in oklab, var(--sky-deep) 45%, transparent);
+}
+.dark .liquid-glass {
+  background: color-mix(in oklab, var(--background) 45%, transparent);
+  border-color: color-mix(in oklab, white 12%, transparent);
+}
+
+/* Apply subtle liquid-glass tint to the sticky header & nav */
+header.sticky,
+nav.sticky {
+  background: color-mix(in oklab, var(--background) 65%, transparent) !important;
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+}
+
+/* Glassy cards */
+[data-slot="card"] {
+  background: color-mix(in oklab, var(--card) 78%, transparent);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  border: 1px solid color-mix(in oklab, white 30%, transparent);
+}
+.dark [data-slot="card"] {
+  background: color-mix(in oklab, var(--card) 70%, transparent);
+  border-color: color-mix(in oklab, white 8%, transparent);
+}
+
