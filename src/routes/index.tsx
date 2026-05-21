@@ -17,7 +17,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 import { toast } from "sonner";
-import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from "lucide-react";
+import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown, Mail, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ExcelJS from "exceljs";
 import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
