@@ -17,7 +17,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 import { toast } from "sonner";
-import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown } from "lucide-react";
+import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown, Mail, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ExcelJS from "exceljs";
 import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
@@ -464,12 +465,44 @@ function FlightsPage() {
 
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const filename = `flight-log-${date}.xlsx`;
+    return { blob, filename };
+  };
+
+  const downloadXlsx = async () => {
+    const { blob, filename } = await exportXlsx();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `flight-log-${date}.xlsx`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const emailXlsx = async () => {
+    const { blob, filename } = await exportXlsx();
+    const subject = `Logs ${fmtUKDate(date)}`;
+    const body = `${filename}\n\nFrom Caravan, have a good evening.`;
+    const file = new File([blob], filename, { type: blob.type });
+    // Try native share sheet (iOS Mail will pre-fill subject/body and attach the file).
+    const navAny = navigator as any;
+    if (navAny.canShare && navAny.canShare({ files: [file] })) {
+      try {
+        await navAny.share({ files: [file], title: subject, text: body });
+        return;
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+    // Fallback: download the file and open the user's mail client with prefilled subject/body.
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.message("Excel downloaded — attach it in your email", { description: "Opening your mail app…" });
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
 
@@ -512,7 +545,15 @@ function FlightsPage() {
               <span>Manual Sync</span>
             </Button>
             <div className="flex flex-wrap gap-2 ml-auto">
-              <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm"><Download className="size-4 mr-1" />Export<ChevronDown className="size-3.5 ml-1 opacity-70" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={downloadXlsx}><Download className="size-4 mr-2" />Download Excel</DropdownMenuItem>
+                  <DropdownMenuItem onClick={emailXlsx}><Mail className="size-4 mr-2" />Email to office</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
               <Button onClick={() => setBulkOpen(true)} size="sm"><Plus className="size-4 mr-1" />Bulk add</Button>
             </div>

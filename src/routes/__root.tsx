@@ -136,7 +136,7 @@ function RootComponent() {
 
   return (
     <div className="min-h-screen flex flex-col relative">
-      <ShapesBackground />
+      <ShapesBackground key={path} />
       <header className="border-b backdrop-blur-md bg-background/80 sticky top-0 z-40 relative overflow-hidden">
         {/* Wave animation behind the logo/signout bar */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
