@@ -465,12 +465,44 @@ function FlightsPage() {
 
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const filename = `flight-log-${date}.xlsx`;
+    return { blob, filename };
+  };
+
+  const downloadXlsx = async () => {
+    const { blob, filename } = await exportXlsx();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `flight-log-${date}.xlsx`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const emailXlsx = async () => {
+    const { blob, filename } = await exportXlsx();
+    const subject = `Logs ${fmtUKDate(date)}`;
+    const body = `${filename}\n\nFrom Caravan, have a good evening.`;
+    const file = new File([blob], filename, { type: blob.type });
+    // Try native share sheet (iOS Mail will pre-fill subject/body and attach the file).
+    const navAny = navigator as any;
+    if (navAny.canShare && navAny.canShare({ files: [file] })) {
+      try {
+        await navAny.share({ files: [file], title: subject, text: body });
+        return;
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+    // Fallback: download the file and open the user's mail client with prefilled subject/body.
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.message("Excel downloaded — attach it in your email", { description: "Opening your mail app…" });
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
 
