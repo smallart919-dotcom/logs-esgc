@@ -544,18 +544,18 @@ function FlightsPage() {
               <RefreshCw className={`size-3.5 ${syncing ? "animate-spin" : ""}`} />
               <span>Manual Sync</span>
             </Button>
-            <div className="flex flex-wrap gap-2 ml-auto">
+            <div className="action-row ml-auto">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm"><Download className="size-4 mr-1" />Export<ChevronDown className="size-3.5 ml-1 opacity-70" /></Button>
+                  <Button variant="outline" size="sm" className="whitespace-nowrap"><Download className="size-4 mr-1" />Export<ChevronDown className="size-3.5 ml-1 opacity-70" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={downloadXlsx}><Download className="size-4 mr-2" />Download Excel</DropdownMenuItem>
                   <DropdownMenuItem onClick={emailXlsx}><Mail className="size-4 mr-2" />Email to office</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
-              <Button onClick={() => setBulkOpen(true)} size="sm"><Plus className="size-4 mr-1" />Bulk add</Button>
+              <Button onClick={() => setAdding(true)} variant="outline" size="sm" className="whitespace-nowrap"><Plus className="size-4 mr-1" />Add</Button>
+              <Button onClick={() => setBulkOpen(true)} size="sm" className="whitespace-nowrap"><Plus className="size-4 mr-1" />Bulk add</Button>
             </div>
           </div>
         </div>
