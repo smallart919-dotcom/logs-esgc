@@ -545,7 +545,15 @@ function FlightsPage() {
               <span>Manual Sync</span>
             </Button>
             <div className="flex flex-wrap gap-2 ml-auto">
-              <Button onClick={exportXlsx} variant="outline" size="sm"><Download className="size-4 mr-1" />Export</Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm"><Download className="size-4 mr-1" />Export<ChevronDown className="size-3.5 ml-1 opacity-70" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={downloadXlsx}><Download className="size-4 mr-2" />Download Excel</DropdownMenuItem>
+                  <DropdownMenuItem onClick={emailXlsx}><Mail className="size-4 mr-2" />Email to office</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button onClick={() => setAdding(true)} variant="outline" size="sm"><Plus className="size-4 mr-1" />Add</Button>
               <Button onClick={() => setBulkOpen(true)} size="sm"><Plus className="size-4 mr-1" />Bulk add</Button>
             </div>
