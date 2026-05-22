@@ -481,30 +481,26 @@ function FlightsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const sendLogsEmailFn = useServerFn(sendLogsEmail);
   const emailXlsx = async () => {
-    const { blob, filename } = await exportXlsx();
-    const subject = `Logs ${fmtUKDate(date)}`;
-    const body = `${filename}\n\nFrom Caravan, have a good evening.`;
-    const file = new File([blob], filename, { type: blob.type });
-    // Try native share sheet (iOS Mail will pre-fill subject/body and attach the file).
-    const navAny = navigator as any;
-    if (navAny.canShare && navAny.canShare({ files: [file] })) {
-      try {
-        await navAny.share({ files: [file], title: subject, text: body });
-        return;
-      } catch (err: any) {
-        if (err?.name === "AbortError") return;
+    const t = toast.loading("Sending logs to the office…");
+    try {
+      const { blob, filename } = await exportXlsx();
+      const buf = await blob.arrayBuffer();
+      // Convert to base64 in chunks (avoid call stack overflow on large files)
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
       }
+      const base64 = btoa(bin);
+      await sendLogsEmailFn({ data: { filename, base64, dateLabel: fmtUKDate(date) } });
+      toast.success("Logs emailed to the office", { id: t });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to email logs", { id: t, description: err?.message });
     }
-    // Fallback: download the file and open the user's mail client with prefilled subject/body.
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.message("Excel downloaded — attach it in your email", { description: "Opening your mail app…" });
-    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
 
