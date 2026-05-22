@@ -496,10 +496,17 @@ function FlightsPage() {
       }
       const base64 = btoa(bin);
       await sendLogsEmailFn({ data: { filename, base64, dateLabel: fmtUKDate(date) } });
-      toast.success("Logs emailed to the office", { id: t });
+      toast.success("Logs delivered to the office", {
+        id: t,
+        description: `“Logs ${fmtUKDate(date)}” sent to office@sussexgliding.co.uk`,
+        duration: 5000,
+      });
     } catch (err: any) {
       console.error(err);
-      toast.error("Failed to email logs", { id: t, description: err?.message });
+      toast.error("Couldn't send logs", {
+        id: t,
+        description: err?.message ?? "Please try again in a moment.",
+      });
     }
   };
 
