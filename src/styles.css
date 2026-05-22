@@ -539,10 +539,76 @@ table thead th {
   -webkit-backdrop-filter: blur(14px) saturate(170%);
 }
 
-/* Toaster (sonner) glass treatment */
+/* ===== Toaster (sonner) — Apple Liquid Glass ===== */
+[data-sonner-toaster] { --width: 380px; }
+
 [data-sonner-toast] {
-  background: color-mix(in oklab, var(--popover) 70%, transparent) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid color-mix(in oklab, white 28%, transparent) !important;
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--popover) 62%, transparent) !important;
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid color-mix(in oklab, white 32%, transparent) !important;
+  border-radius: 18px !important;
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 55%, transparent) inset,
+    0 -1px 0 0 color-mix(in oklab, var(--sky-deep) 12%, transparent) inset,
+    0 18px 50px -18px color-mix(in oklab, var(--sky-deep) 45%, transparent),
+    0 32px 80px -36px color-mix(in oklab, var(--sky-deep) 55%, transparent) !important;
+  animation: toast-glass-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+[data-sonner-toast]::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 0% 0%, color-mix(in oklab, white 35%, transparent) 0%, transparent 55%),
+    radial-gradient(120% 80% at 100% 100%, color-mix(in oklab, var(--sky) 22%, transparent) 0%, transparent 60%);
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+}
+[data-sonner-toast]::after {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--primary) 80%, transparent),
+    color-mix(in oklab, var(--sky) 70%, transparent));
+  box-shadow: 0 0 16px color-mix(in oklab, var(--primary) 55%, transparent);
+}
+.dark [data-sonner-toast] {
+  background: color-mix(in oklab, var(--popover) 48%, transparent) !important;
+  border-color: color-mix(in oklab, white 12%, transparent) !important;
+}
+
+[data-sonner-toast][data-type="success"]::after {
+  background: linear-gradient(180deg, oklch(0.72 0.17 155), oklch(0.55 0.18 165));
+  box-shadow: 0 0 18px oklch(0.72 0.17 155 / 0.55);
+}
+[data-sonner-toast][data-type="error"]::after {
+  background: linear-gradient(180deg, oklch(0.7 0.22 25), oklch(0.55 0.22 18));
+  box-shadow: 0 0 18px oklch(0.7 0.22 25 / 0.55);
+}
+[data-sonner-toast][data-type="loading"]::after {
+  background: linear-gradient(180deg, var(--sky), var(--sky-deep));
+  animation: sky-shimmer 1.6s ease-in-out infinite;
+}
+
+[data-sonner-toast] [data-icon] {
+  color: var(--primary);
+  filter: drop-shadow(0 0 8px color-mix(in oklab, var(--primary) 45%, transparent));
+}
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: oklch(0.62 0.17 155);
+  filter: drop-shadow(0 0 8px oklch(0.62 0.17 155 / 0.55));
+}
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: oklch(0.62 0.22 25);
+  filter: drop-shadow(0 0 8px oklch(0.62 0.22 25 / 0.55));
+}
+
+@keyframes toast-glass-in {
+  0%   { opacity: 0; transform: translate3d(0, -10px, 0) scale(0.97); filter: blur(6px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
 }
