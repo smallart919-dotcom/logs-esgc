@@ -23,6 +23,8 @@ import ExcelJS from "exceljs";
 import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
+import { useServerFn } from "@tanstack/react-start";
+import { sendLogsEmail } from "@/lib/send-logs-email.functions";
 
 function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
