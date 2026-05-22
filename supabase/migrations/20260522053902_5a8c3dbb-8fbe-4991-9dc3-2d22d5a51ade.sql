@@ -1,0 +1,1 @@
+insert into storage.buckets (id, name, public) values ('logs-exports', 'logs-exports', false) on conflict (id) do nothing;
