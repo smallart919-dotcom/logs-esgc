@@ -1023,8 +1023,9 @@ function FlightDialog({
   };
 
   // Edit times in UK local (Europe/London) — handles BST/GMT automatically.
-  const toLocalInput = (iso: string | null | undefined) => toUKLocalInput(iso);
-  const fromLocal = (s: string) => fromUKLocalInput(s);
+  // Apply the day's clock offset so the editor matches what's shown on the log.
+  const toLocalInput = (iso: string | null | undefined) => toUKLocalInput(shiftIso(iso, offsetSec));
+  const fromLocal = (s: string) => shiftIso(fromUKLocalInput(s), -offsetSec);
 
   const renderPilot = (which: 1 | 2, label: string) => {
     const kind = ((which === 1 ? form.p1_kind : form.p2_kind) ?? "member") as PilotKind;
