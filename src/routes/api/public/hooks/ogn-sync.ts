@@ -155,28 +155,31 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
           seenInPayload.add(importKey);
 
-          // Dedupe within ±90s on takeoff (or landing if no takeoff), by flarm OR registration
+          // Dedupe within ±90s on takeoff (or landing if no takeoff), by flarm OR registration.
+          // CRITICAL: If a candidate row has NO times, only treat it as the same
+          // flight when the incoming row ALSO has no times — otherwise a single
+          // empty manual entry (or stale tombstone) would absorb every flight of
+          // that registration for the day.
           const refTime = takeoff ?? landing;
           const refMs = refTime ? +new Date(refTime) : null;
           const regKey = normKey(matchedReg);
-          const existing = refMs === null ? undefined : dayFlights.find((row) => {
+          const existing = dayFlights.find((row) => {
+            if (!sameAircraft(row, flarm, regKey)) return false;
             const rowRef = row.takeoff_time ?? row.landing_time;
-            if (!rowRef) return sameAircraft(row, flarm, regKey);
-            const dt = Math.abs(+new Date(rowRef) - refMs);
-            if (dt > TIME_WINDOW_MS) return false;
-            return sameAircraft(row, flarm, regKey);
+            if (!rowRef && refMs === null) return true;
+            if (!rowRef || refMs === null) return false;
+            return Math.abs(+new Date(rowRef) - refMs) <= TIME_WINDOW_MS;
           });
 
-          // Skip if a tombstone matches (deleted previously) — match by flarm OR registration within ±90s
-          if (!existing && refMs !== null) {
+          // Skip if a tombstone matches (deleted previously). Same rule: only
+          // match a timeless tombstone to a timeless incoming row.
+          if (!existing) {
             const tombstoned = tombstones.find((t) => {
+              if (!sameAircraft(t, flarm, regKey)) return false;
               const tRef = t.takeoff_time ?? t.landing_time;
-              if (!tRef) {
-                return sameAircraft(t, flarm, regKey);
-              }
-              const dt = Math.abs(+new Date(tRef) - refMs);
-              if (dt > TIME_WINDOW_MS) return false;
-              return sameAircraft(t, flarm, regKey);
+              if (!tRef && refMs === null) return true;
+              if (!tRef || refMs === null) return false;
+              return Math.abs(+new Date(tRef) - refMs) <= TIME_WINDOW_MS;
             });
             if (tombstoned) {
               skipped++;
