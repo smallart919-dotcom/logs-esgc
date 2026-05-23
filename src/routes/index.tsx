@@ -932,11 +932,11 @@ function PilotCell({ name, membership, kind }: { name: string | null; membership
 }
 
 function FlightDialog({
-  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved,
+  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, offsetSec = 0,
 }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   flight: Flight | null; manual: boolean; date: string;
-  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void;
+  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void; offsetSec?: number;
 }) {
   const [form, setForm] = useState<Partial<Flight>>({});
   const [gliderType, setGliderType] = useState("");
