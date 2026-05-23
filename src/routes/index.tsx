@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown, Mail, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ExcelJS from "exceljs";
-import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate } from "@/lib/uktime";
+import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate, shiftIso } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 import { useServerFn } from "@tanstack/react-start";
@@ -662,6 +662,7 @@ function FlightsPage() {
         date={date}
         gliders={gliders}
         members={members}
+        offsetSec={offsetSec}
         previousInitials={Array.from(new Set(flights.map((f) => (f.logged_by || "").trim()).filter(Boolean))).sort()}
         onSaved={async (savedDate) => {
           setEditing(null);
@@ -932,11 +933,11 @@ function PilotCell({ name, membership, kind }: { name: string | null; membership
 }
 
 function FlightDialog({
-  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved,
+  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, offsetSec = 0,
 }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   flight: Flight | null; manual: boolean; date: string;
-  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void;
+  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void; offsetSec?: number;
 }) {
   const [form, setForm] = useState<Partial<Flight>>({});
   const [gliderType, setGliderType] = useState("");
@@ -1023,8 +1024,9 @@ function FlightDialog({
   };
 
   // Edit times in UK local (Europe/London) — handles BST/GMT automatically.
-  const toLocalInput = (iso: string | null | undefined) => toUKLocalInput(iso);
-  const fromLocal = (s: string) => fromUKLocalInput(s);
+  // Apply the day's clock offset so the editor matches what's shown on the log.
+  const toLocalInput = (iso: string | null | undefined) => toUKLocalInput(shiftIso(iso, offsetSec));
+  const fromLocal = (s: string) => shiftIso(fromUKLocalInput(s), -offsetSec);
 
   const renderPilot = (which: 1 | 2, label: string) => {
     const kind = ((which === 1 ? form.p1_kind : form.p2_kind) ?? "member") as PilotKind;
