@@ -662,6 +662,7 @@ function FlightsPage() {
         date={date}
         gliders={gliders}
         members={members}
+        offsetSec={offsetSec}
         previousInitials={Array.from(new Set(flights.map((f) => (f.logged_by || "").trim()).filter(Boolean))).sort()}
         onSaved={async (savedDate) => {
           setEditing(null);
