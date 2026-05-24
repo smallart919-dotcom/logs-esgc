@@ -563,6 +563,23 @@ function FlightsPage() {
               <RefreshCw className={`size-3.5 ${syncing ? "animate-spin" : ""}`} />
               <span>Manual Sync</span>
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const today = todayStr();
+                if (date !== today) setDate(today);
+                // syncOgn reads `date` from state — defer one tick if we just changed it.
+                setTimeout(() => syncOgn(false), date !== today ? 50 : 0);
+              }}
+              disabled={syncing}
+              className="gap-1.5 whitespace-nowrap"
+              title="Re-import today's flights from OGN (no duplicates)"
+            >
+              <RefreshCw className={`size-3.5 ${syncing ? "animate-spin" : ""}`} />
+              <span>Resync today</span>
+            </Button>
             <div className="action-row ml-auto">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -570,7 +587,13 @@ function FlightsPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={downloadXlsx}><Download className="size-4 mr-2" />Download Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={emailXlsx}><Mail className="size-4 mr-2" />Email to office</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={emailXlsx}
+                    disabled={!emailEnabled}
+                    title={emailEnabled ? undefined : "Disabled in Settings"}
+                  >
+                    <Mail className="size-4 mr-2" />Email to office {emailEnabled ? "" : "(off)"}
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button onClick={() => setAdding(true)} variant="outline" size="sm" className="whitespace-nowrap"><Plus className="size-4 mr-1" />Add</Button>
