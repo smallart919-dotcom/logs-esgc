@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Settings as SettingsIcon } from "lucide-react";
 import { fmtOffset } from "@/lib/clock-offset";
 import { fmtUKDate, todayUKDate } from "@/lib/uktime";
+import { EmailSettingsCard } from "@/components/email-settings-card";
 
 export const Route = createFileRoute("/settings")({
   beforeLoad: async () => {
