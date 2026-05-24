@@ -200,6 +200,8 @@ function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <EmailSettingsCard />
     </div>
   );
 }
