@@ -80,20 +80,18 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     const subject = fillTokens(subjectTpl, tokens);
     const text = fillTokens(bodyTpl, tokens);
 
-    // Build HTML by escaping then linkifying {link} occurrences
+    // Build HTML: escape template first (preserves {tokens}), then fill with HTML values.
     const esc = (s: string) =>
       s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const linkAnchor = `<a href="${esc(link)}">${esc(data.filename)}</a>`;
     const htmlTokens: Record<string, string> = {
-      ...tokens,
-      link: linkAnchor,
+      date: esc(data.dateLabel),
+      filename: esc(data.filename),
       document: linkAnchor,
+      link: linkAnchor,
+      time: esc(nowUK),
     };
-    const htmlBody = fillTokens(esc(bodyTpl), htmlTokens)
-      // Re-inject HTML for the tokens we replaced after escaping
-      .replace(/\{link\}/g, linkAnchor)
-      .replace(/\{document\}/g, linkAnchor)
-      .replace(/\n/g, "<br/>");
+    const htmlBody = fillTokens(esc(bodyTpl), htmlTokens).replace(/\n/g, "<br/>");
     const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.55;color:#111">${htmlBody}</div>`;
 
     const res = await sendLovableEmail(
