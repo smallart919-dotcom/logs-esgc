@@ -139,6 +139,19 @@ function FlightsPage() {
       setIsCaravan(email === "caravan@esgc.local");
     });
   }, []);
+
+  // Load whether "Send to office" is enabled, and react to office updates in realtime.
+  useEffect(() => {
+    let active = true;
+    const load = () => supabase
+      .from("email_settings").select("enabled").eq("id", 1).maybeSingle()
+      .then(({ data }) => { if (active) setEmailEnabled(data?.enabled ?? true); });
+    load();
+    const ch = supabase.channel("email-settings-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "email_settings" }, load)
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(ch); };
+  }, []);
   const { offsetSec } = useDayOffset(date);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [gliders, setGliders] = useState<Glider[]>([]);
