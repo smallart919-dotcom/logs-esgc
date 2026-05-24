@@ -51,23 +51,25 @@ function TokenChip({ token, label, icon }: { token: string; label: string; icon:
 }
 
 function useDroppable(
-  ref: React.RefObject<HTMLInputElement | HTMLTextAreaElement>,
+  ref: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>,
   onInsert: (text: string) => void,
 ) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const onOver = (e: DragEvent) => {
-      if (!e.dataTransfer?.types.includes("text/plain")) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
+    const onOver = (e: Event) => {
+      const ev = e as DragEvent;
+      if (!ev.dataTransfer?.types.includes("text/plain")) return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = "copy";
       el.dataset.dropActive = "true";
     };
     const onLeave = () => { el.dataset.dropActive = "false"; };
-    const onDrop = (e: DragEvent) => {
-      const t = e.dataTransfer?.getData("text/token") || e.dataTransfer?.getData("text/plain");
+    const onDrop = (e: Event) => {
+      const ev = e as DragEvent;
+      const t = ev.dataTransfer?.getData("text/token") || ev.dataTransfer?.getData("text/plain");
       if (!t) return;
-      e.preventDefault();
+      ev.preventDefault();
       el.dataset.dropActive = "false";
       onInsert(t);
     };
