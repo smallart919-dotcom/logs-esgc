@@ -122,6 +122,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_settings: {
+        Row: {
+          body_template: string
+          enabled: boolean
+          id: number
+          subject_template: string
+          to_email: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body_template?: string
+          enabled?: boolean
+          id?: number
+          subject_template?: string
+          to_email?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body_template?: string
+          enabled?: boolean
+          id?: number
+          subject_template?: string
+          to_email?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       fleet_gliders: {
         Row: {
           callsign: string | null

@@ -139,6 +139,19 @@ function FlightsPage() {
       setIsCaravan(email === "caravan@esgc.local");
     });
   }, []);
+
+  // Load whether "Send to office" is enabled, and react to office updates in realtime.
+  useEffect(() => {
+    let active = true;
+    const load = () => supabase
+      .from("email_settings").select("enabled").eq("id", 1).maybeSingle()
+      .then(({ data }) => { if (active) setEmailEnabled(data?.enabled ?? true); });
+    load();
+    const ch = supabase.channel("email-settings-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "email_settings" }, load)
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(ch); };
+  }, []);
   const { offsetSec } = useDayOffset(date);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [gliders, setGliders] = useState<Glider[]>([]);
@@ -146,6 +159,7 @@ function FlightsPage() {
   const [syncing, setSyncing] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [loadingFlights, setLoadingFlights] = useState(false);
+  const [emailEnabled, setEmailEnabled] = useState(true);
   const [syncResult, setSyncResult] = useState<null | { icao: string; date: string; created: number; updated: number; skipped: number; total: number; synced_at: string; errors: Array<{ flarm: string | null; registration: string | null; message: string }>; matches: Array<any> }>(null);
   const [editing, setEditing] = useState<Flight | null>(null);
   const [adding, setAdding] = useState(false);
@@ -549,6 +563,23 @@ function FlightsPage() {
               <RefreshCw className={`size-3.5 ${syncing ? "animate-spin" : ""}`} />
               <span>Manual Sync</span>
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const today = todayStr();
+                if (date !== today) setDate(today);
+                // syncOgn reads `date` from state — defer one tick if we just changed it.
+                setTimeout(() => syncOgn(false), date !== today ? 50 : 0);
+              }}
+              disabled={syncing}
+              className="gap-1.5 whitespace-nowrap"
+              title="Re-import today's flights from OGN (no duplicates)"
+            >
+              <RefreshCw className={`size-3.5 ${syncing ? "animate-spin" : ""}`} />
+              <span>Resync today</span>
+            </Button>
             <div className="action-row ml-auto">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -556,7 +587,13 @@ function FlightsPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={downloadXlsx}><Download className="size-4 mr-2" />Download Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={emailXlsx}><Mail className="size-4 mr-2" />Email to office</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={emailXlsx}
+                    disabled={!emailEnabled}
+                    title={emailEnabled ? undefined : "Disabled in Settings"}
+                  >
+                    <Mail className="size-4 mr-2" />Email to office {emailEnabled ? "" : "(off)"}
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button onClick={() => setAdding(true)} variant="outline" size="sm" className="whitespace-nowrap"><Plus className="size-4 mr-1" />Add</Button>
