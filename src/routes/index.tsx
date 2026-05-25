@@ -1098,8 +1098,8 @@ function FlightDialog({
     const name = (which === 1 ? form.p1_name : form.p2_name) ?? "";
     const mem = (which === 1 ? form.p1_membership : form.p2_membership) ?? "";
     const setKind = (k: PilotKind) => setForm((f) => ({ ...f, [`p${which}_kind`]: k }));
-    const preferredNames = which === 1 ? perGlider.p1Names : perGlider.p2Names;
-    const preferredMems = which === 1 ? perGlider.p1Mems : perGlider.p2Mems;
+    const preferredNames = which === 1 ? perGlider.p1Names : [];
+    const preferredMems = which === 1 ? perGlider.p1Mems : [];
     return (
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
