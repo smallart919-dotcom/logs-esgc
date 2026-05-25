@@ -94,18 +94,39 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     const htmlBody = fillTokens(esc(bodyTpl), htmlTokens).replace(/\n/g, "<br/>");
     const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.55;color:#111">${htmlBody}</div>`;
 
-    const res = await sendLovableEmail(
-      {
-        to,
-        from: FROM,
-        sender_domain: SENDER_DOMAIN,
-        reply_to: REPLY_TO,
-        subject,
-        text,
-        html,
-      },
-      { apiKey },
-    );
+    const CC = "accounts@sussexgliding.co.uk";
+    const idemBase = `logs-${new Date().toISOString().slice(0, 10)}-${crypto.randomUUID()}`;
 
-    return { success: res.success, messageId: res.message_id, to };
+    const send = (recipient: string, suffix: string) =>
+      sendLovableEmail(
+        {
+          to: recipient,
+          from: FROM,
+          sender_domain: SENDER_DOMAIN,
+          reply_to: REPLY_TO,
+          subject,
+          text,
+          html,
+          purpose: "transactional",
+          idempotency_key: `${idemBase}-${suffix}`,
+        },
+        { apiKey },
+      );
+
+    const [primary, copy] = await Promise.allSettled([send(to, "to"), send(CC, "cc")]);
+
+    if (primary.status === "rejected") {
+      const msg = primary.reason instanceof Error ? primary.reason.message : String(primary.reason);
+      throw new Error(`Send failed: ${msg}`);
+    }
+    if (copy.status === "rejected") {
+      console.warn("CC to accounts@ failed:", copy.reason);
+    }
+
+    return {
+      success: primary.value.success,
+      messageId: primary.value.message_id,
+      to,
+      cc: copy.status === "fulfilled" ? CC : null,
+    };
   });
