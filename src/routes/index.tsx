@@ -1067,11 +1067,39 @@ function FlightDialog({
   const toLocalInput = (iso: string | null | undefined) => toUKLocalInput(shiftIso(iso, offsetSec));
   const fromLocal = (s: string) => shiftIso(fromUKLocalInput(s), -offsetSec);
 
+  const currentReg = (form.glider_registration || "").toUpperCase().trim();
+  const perGlider = useMemo(() => {
+    const empty = { p1Names: [] as string[], p1Mems: [] as string[], p2Names: [] as string[], p2Mems: [] as string[] };
+    if (!currentReg) return empty;
+    const seen = { p1n: new Set<string>(), p1m: new Set<string>(), p2n: new Set<string>(), p2m: new Set<string>() };
+    const out = { p1Names: [] as string[], p1Mems: [] as string[], p2Names: [] as string[], p2Mems: [] as string[] };
+    const ordered = [...dayFlights].sort((a, b) => {
+      const ta = a.takeoff_time ? +new Date(a.takeoff_time) : 0;
+      const tb = b.takeoff_time ? +new Date(b.takeoff_time) : 0;
+      return tb - ta;
+    });
+    for (const f of ordered) {
+      if ((f.glider_registration || "").toUpperCase().trim() !== currentReg) continue;
+      if (flight && f.id === flight.id) continue;
+      const add = (set: Set<string>, list: string[], v: string | null | undefined) => {
+        const t = (v || "").trim(); if (!t || set.has(t.toLowerCase())) return;
+        set.add(t.toLowerCase()); list.push(t);
+      };
+      add(seen.p1n, out.p1Names, f.p1_name);
+      add(seen.p1m, out.p1Mems, f.p1_membership);
+      add(seen.p2n, out.p2Names, f.p2_name);
+      add(seen.p2m, out.p2Mems, f.p2_membership);
+    }
+    return out;
+  }, [dayFlights, currentReg, flight]);
+
   const renderPilot = (which: 1 | 2, label: string) => {
     const kind = ((which === 1 ? form.p1_kind : form.p2_kind) ?? "member") as PilotKind;
     const name = (which === 1 ? form.p1_name : form.p2_name) ?? "";
     const mem = (which === 1 ? form.p1_membership : form.p2_membership) ?? "";
     const setKind = (k: PilotKind) => setForm((f) => ({ ...f, [`p${which}_kind`]: k }));
+    const preferredNames = which === 1 ? perGlider.p1Names : perGlider.p2Names;
+    const preferredMems = which === 1 ? perGlider.p1Mems : perGlider.p2Mems;
     return (
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
@@ -1084,11 +1112,21 @@ function FlightDialog({
         </div>
         {kind !== "gfe" && (
           <PilotPicker label="Name" members={members} value={name}
+            preferredNames={preferredNames}
             onPick={(m) => setPilot(which, m.full_name, m.membership_number)}
             onText={(t) => setForm({ ...form, [`p${which}_name`]: t })} />
         )}
         {kind === "member" && (
-          <div><Label>Membership #</Label><Input value={mem} onChange={(e) => setForm({ ...form, [`p${which}_membership`]: e.target.value })} /></div>
+          <div>
+            <Label>Membership #</Label>
+            <MembershipPicker
+              members={members}
+              value={mem}
+              preferredMems={preferredMems}
+              onPick={(m) => setPilot(which, m.full_name, m.membership_number)}
+              onText={(t) => setForm({ ...form, [`p${which}_membership`]: t })}
+            />
+          </div>
         )}
       </div>
     );
