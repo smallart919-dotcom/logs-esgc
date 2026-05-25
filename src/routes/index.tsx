@@ -700,6 +700,7 @@ function FlightsPage() {
         gliders={gliders}
         members={members}
         offsetSec={offsetSec}
+        dayFlights={flights}
         previousInitials={Array.from(new Set(flights.map((f) => (f.logged_by || "").trim()).filter(Boolean))).sort()}
         onSaved={async (savedDate) => {
           setEditing(null);
@@ -970,11 +971,12 @@ function PilotCell({ name, membership, kind }: { name: string | null; membership
 }
 
 function FlightDialog({
-  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, offsetSec = 0,
+  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, offsetSec = 0, dayFlights = [],
 }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   flight: Flight | null; manual: boolean; date: string;
   gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void; offsetSec?: number;
+  dayFlights?: Flight[];
 }) {
   const [form, setForm] = useState<Partial<Flight>>({});
   const [gliderType, setGliderType] = useState("");
@@ -1065,11 +1067,39 @@ function FlightDialog({
   const toLocalInput = (iso: string | null | undefined) => toUKLocalInput(shiftIso(iso, offsetSec));
   const fromLocal = (s: string) => shiftIso(fromUKLocalInput(s), -offsetSec);
 
+  const currentReg = (form.glider_registration || "").toUpperCase().trim();
+  const perGlider = useMemo(() => {
+    const empty = { p1Names: [] as string[], p1Mems: [] as string[], p2Names: [] as string[], p2Mems: [] as string[] };
+    if (!currentReg) return empty;
+    const seen = { p1n: new Set<string>(), p1m: new Set<string>(), p2n: new Set<string>(), p2m: new Set<string>() };
+    const out = { p1Names: [] as string[], p1Mems: [] as string[], p2Names: [] as string[], p2Mems: [] as string[] };
+    const ordered = [...dayFlights].sort((a, b) => {
+      const ta = a.takeoff_time ? +new Date(a.takeoff_time) : 0;
+      const tb = b.takeoff_time ? +new Date(b.takeoff_time) : 0;
+      return tb - ta;
+    });
+    for (const f of ordered) {
+      if ((f.glider_registration || "").toUpperCase().trim() !== currentReg) continue;
+      if (flight && f.id === flight.id) continue;
+      const add = (set: Set<string>, list: string[], v: string | null | undefined) => {
+        const t = (v || "").trim(); if (!t || set.has(t.toLowerCase())) return;
+        set.add(t.toLowerCase()); list.push(t);
+      };
+      add(seen.p1n, out.p1Names, f.p1_name);
+      add(seen.p1m, out.p1Mems, f.p1_membership);
+      add(seen.p2n, out.p2Names, f.p2_name);
+      add(seen.p2m, out.p2Mems, f.p2_membership);
+    }
+    return out;
+  }, [dayFlights, currentReg, flight]);
+
   const renderPilot = (which: 1 | 2, label: string) => {
     const kind = ((which === 1 ? form.p1_kind : form.p2_kind) ?? "member") as PilotKind;
     const name = (which === 1 ? form.p1_name : form.p2_name) ?? "";
     const mem = (which === 1 ? form.p1_membership : form.p2_membership) ?? "";
     const setKind = (k: PilotKind) => setForm((f) => ({ ...f, [`p${which}_kind`]: k }));
+    const preferredNames = which === 1 ? perGlider.p1Names : perGlider.p2Names;
+    const preferredMems = which === 1 ? perGlider.p1Mems : perGlider.p2Mems;
     return (
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
@@ -1082,11 +1112,21 @@ function FlightDialog({
         </div>
         {kind !== "gfe" && (
           <PilotPicker label="Name" members={members} value={name}
+            preferredNames={preferredNames}
             onPick={(m) => setPilot(which, m.full_name, m.membership_number)}
             onText={(t) => setForm({ ...form, [`p${which}_name`]: t })} />
         )}
         {kind === "member" && (
-          <div><Label>Membership #</Label><Input value={mem} onChange={(e) => setForm({ ...form, [`p${which}_membership`]: e.target.value })} /></div>
+          <div>
+            <Label>Membership #</Label>
+            <MembershipPicker
+              members={members}
+              value={mem}
+              preferredMems={preferredMems}
+              onPick={(m) => setPilot(which, m.full_name, m.membership_number)}
+              onText={(t) => setForm({ ...form, [`p${which}_membership`]: t })}
+            />
+          </div>
         )}
       </div>
     );
@@ -1269,17 +1309,26 @@ function GliderPicker({ gliders, registration, onSelect, onChangeText, onCreated
   );
 }
 
-function PilotPicker({ label, members, value, onPick, onText }: {
+function PilotPicker({ label, members, value, onPick, onText, preferredNames = [] }: {
   label: string; members: Member[]; value: string;
   onPick: (m: Member) => void; onText: (t: string) => void;
+  preferredNames?: string[];
 }) {
   const [focused, setFocused] = useState(false);
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const filtered = useMemo(() => {
     const q = value.trim().toLowerCase();
-    if (!q) return [];
-    return members.filter((m) => m.full_name.toLowerCase().includes(q)).slice(0, 6);
-  }, [members, value]);
+    const prefSet = new Set(preferredNames.map((n) => norm(n)));
+    const pool = q ? members.filter((m) => m.full_name.toLowerCase().includes(q)) : members;
+    const sorted = [...pool].sort((a, b) => {
+      const ap = prefSet.has(norm(a.full_name)) ? 0 : 1;
+      const bp = prefSet.has(norm(b.full_name)) ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+      return a.full_name.localeCompare(b.full_name);
+    });
+    if (!q && preferredNames.length === 0) return [];
+    return sorted.slice(0, 8);
+  }, [members, value, preferredNames]);
   const showList = focused && filtered.length > 0;
   const handleText = (t: string) => {
     onText(t);
@@ -1291,24 +1340,92 @@ function PilotPicker({ label, members, value, onPick, onText }: {
       <Label>{label}</Label>
       <Input
         value={value}
-        placeholder="Type a name…"
+        placeholder={preferredNames.length ? `Type a name… (P1 on this glider: ${preferredNames[0]})` : "Type a name…"}
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 150)}
         onChange={(e) => handleText(e.target.value)}
       />
       {showList && (
         <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
-          {filtered.map((m) => (
-            <button
-              type="button"
-              key={m.id}
-              className="w-full text-left px-3 py-2 hover:bg-accent"
-              onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
-            >
-              <div className="text-sm">{m.full_name}</div>
-              <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
-            </button>
-          ))}
+          {filtered.map((m) => {
+            const isPref = preferredNames.some((n) => norm(n) === norm(m.full_name));
+            return (
+              <button
+                type="button"
+                key={m.id}
+                className="w-full text-left px-3 py-2 hover:bg-accent flex items-center justify-between gap-2"
+                onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
+              >
+                <div>
+                  <div className="text-sm">{m.full_name}</div>
+                  <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
+                </div>
+                {isPref && <Badge variant="secondary" className="text-[10px]">on glider</Badge>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MembershipPicker({ members, value, onPick, onText, preferredMems = [] }: {
+  members: Member[]; value: string;
+  onPick: (m: Member) => void; onText: (t: string) => void;
+  preferredMems?: string[];
+}) {
+  const [focused, setFocused] = useState(false);
+  const norm = (s: string) => s.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    const prefSet = new Set(preferredMems.map(norm));
+    const pool = q
+      ? members.filter((m) => m.membership_number.toLowerCase().includes(q) || m.full_name.toLowerCase().includes(q))
+      : members;
+    const sorted = [...pool].sort((a, b) => {
+      const ap = prefSet.has(norm(a.membership_number)) ? 0 : 1;
+      const bp = prefSet.has(norm(b.membership_number)) ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+      return a.membership_number.localeCompare(b.membership_number);
+    });
+    if (!q && preferredMems.length === 0) return [];
+    return sorted.slice(0, 8);
+  }, [members, value, preferredMems]);
+  const showList = focused && filtered.length > 0;
+  const handleText = (t: string) => {
+    onText(t);
+    const exact = members.find((m) => norm(m.membership_number) === norm(t));
+    if (exact) onPick(exact);
+  };
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        placeholder={preferredMems.length ? `# (last: ${preferredMems[0]})` : "Membership #"}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onChange={(e) => handleText(e.target.value)}
+      />
+      {showList && (
+        <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
+          {filtered.map((m) => {
+            const isPref = preferredMems.some((n) => norm(n) === norm(m.membership_number));
+            return (
+              <button
+                type="button"
+                key={m.id}
+                className="w-full text-left px-3 py-2 hover:bg-accent flex items-center justify-between gap-2"
+                onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
+              >
+                <div>
+                  <div className="text-sm font-mono">#{m.membership_number}</div>
+                  <div className="text-xs text-muted-foreground">{m.full_name}</div>
+                </div>
+                {isPref && <Badge variant="secondary" className="text-[10px]">on glider</Badge>}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
