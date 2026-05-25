@@ -1347,23 +1347,17 @@ function PilotPicker({ label, members, value, onPick, onText, preferredNames = [
       />
       {showList && (
         <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
-          {filtered.map((m) => {
-            const isPref = preferredNames.some((n) => norm(n) === norm(m.full_name));
-            return (
-              <button
-                type="button"
-                key={m.id}
-                className="w-full text-left px-3 py-2 hover:bg-accent flex items-center justify-between gap-2"
-                onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
-              >
-                <div>
-                  <div className="text-sm">{m.full_name}</div>
-                  <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
-                </div>
-                {isPref && <Badge variant="secondary" className="text-[10px]">on glider</Badge>}
-              </button>
-            );
-          })}
+          {filtered.map((m) => (
+            <button
+              type="button"
+              key={m.id}
+              className="w-full text-left px-3 py-2 hover:bg-accent"
+              onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
+            >
+              <div className="text-sm">{m.full_name}</div>
+              <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
+            </button>
+          ))}
         </div>
       )}
     </div>
