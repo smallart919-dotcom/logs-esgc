@@ -1098,8 +1098,8 @@ function FlightDialog({
     const name = (which === 1 ? form.p1_name : form.p2_name) ?? "";
     const mem = (which === 1 ? form.p1_membership : form.p2_membership) ?? "";
     const setKind = (k: PilotKind) => setForm((f) => ({ ...f, [`p${which}_kind`]: k }));
-    const preferredNames = which === 1 ? perGlider.p1Names : perGlider.p2Names;
-    const preferredMems = which === 1 ? perGlider.p1Mems : perGlider.p2Mems;
+    const preferredNames = which === 1 ? perGlider.p1Names : [];
+    const preferredMems = which === 1 ? perGlider.p1Mems : [];
     return (
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
@@ -1347,23 +1347,17 @@ function PilotPicker({ label, members, value, onPick, onText, preferredNames = [
       />
       {showList && (
         <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
-          {filtered.map((m) => {
-            const isPref = preferredNames.some((n) => norm(n) === norm(m.full_name));
-            return (
-              <button
-                type="button"
-                key={m.id}
-                className="w-full text-left px-3 py-2 hover:bg-accent flex items-center justify-between gap-2"
-                onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
-              >
-                <div>
-                  <div className="text-sm">{m.full_name}</div>
-                  <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
-                </div>
-                {isPref && <Badge variant="secondary" className="text-[10px]">on glider</Badge>}
-              </button>
-            );
-          })}
+          {filtered.map((m) => (
+            <button
+              type="button"
+              key={m.id}
+              className="w-full text-left px-3 py-2 hover:bg-accent"
+              onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
+            >
+              <div className="text-sm">{m.full_name}</div>
+              <div className="text-xs text-muted-foreground">#{m.membership_number}</div>
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -1409,23 +1403,17 @@ function MembershipPicker({ members, value, onPick, onText, preferredMems = [] }
       />
       {showList && (
         <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover shadow-md">
-          {filtered.map((m) => {
-            const isPref = preferredMems.some((n) => norm(n) === norm(m.membership_number));
-            return (
-              <button
-                type="button"
-                key={m.id}
-                className="w-full text-left px-3 py-2 hover:bg-accent flex items-center justify-between gap-2"
-                onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
-              >
-                <div>
-                  <div className="text-sm font-mono">#{m.membership_number}</div>
-                  <div className="text-xs text-muted-foreground">{m.full_name}</div>
-                </div>
-                {isPref && <Badge variant="secondary" className="text-[10px]">on glider</Badge>}
-              </button>
-            );
-          })}
+          {filtered.map((m) => (
+            <button
+              type="button"
+              key={m.id}
+              className="w-full text-left px-3 py-2 hover:bg-accent"
+              onMouseDown={(e) => { e.preventDefault(); onPick(m); setFocused(false); }}
+            >
+              <div className="text-sm font-mono">#{m.membership_number}</div>
+              <div className="text-xs text-muted-foreground">{m.full_name}</div>
+            </button>
+          ))}
         </div>
       )}
     </div>
