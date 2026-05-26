@@ -58,6 +58,7 @@ function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => vo
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
+  head: () => ({ meta: [{ title: "Daily Flight Log — ESGC Logs" }, { name: "description", content: "Daily flight log with OGN integration." }] }),
   component: FlightsPage,
   errorComponent: FlightsErrorComponent,
 });
@@ -147,7 +148,7 @@ function FlightsPage() {
       .from("email_settings").select("enabled").eq("id", 1).maybeSingle()
       .then(({ data }) => { if (active) setEmailEnabled(data?.enabled ?? true); });
     load();
-    const ch = supabase.channel("email-settings-rt")
+    const ch = supabase.channel(`email-settings-rt-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "email_settings" }, load)
       .subscribe();
     return () => { active = false; supabase.removeChannel(ch); };
@@ -224,7 +225,7 @@ function FlightsPage() {
 
   // Realtime updates for the day
   useEffect(() => {
-    const ch = supabase.channel("flights-rt").on("postgres_changes",
+    const ch = supabase.channel(`flights-rt-${Math.random().toString(36).slice(2)}`).on("postgres_changes",
       { event: "*", schema: "public", table: "flights" }, () => { load(true).catch(() => undefined); }
     ).subscribe();
     return () => { supabase.removeChannel(ch); };

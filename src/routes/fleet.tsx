@@ -12,6 +12,7 @@ import { Plus, Trash2, Plane } from "lucide-react";
 
 export const Route = createFileRoute("/fleet")({
   beforeLoad: requireAuth,
+  head: () => ({ meta: [{ title: "Fleet — ESGC Logs" }, { name: "description", content: "Manage club gliders and FLARM IDs." }] }),
   component: FleetPage,
 });
 

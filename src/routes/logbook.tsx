@@ -15,6 +15,7 @@ import { dateToUKShortLabel, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/logbook")({
   beforeLoad: requireAuth,
+  head: () => ({ meta: [{ title: "Logbook — ESGC Logs" }, { name: "description", content: "Pilot logbook with totals and filters." }] }),
   component: LogbookPage,
 });
 
@@ -195,6 +196,26 @@ function LogbookPage() {
 
       {member && (
         <>
+          <Card className="overflow-hidden">
+            <CardContent className="p-5 sm:p-6 flex flex-wrap items-end gap-x-8 gap-y-4">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">Logbook total</div>
+                <div className="text-4xl sm:text-5xl font-bold tabular-nums leading-none mt-1">
+                  {fmtHM(totals.mins)}
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+                <span><b className="text-foreground tabular-nums">{totals.count}</b> flights</span>
+                <span>·</span>
+                <span><b className="text-foreground tabular-nums">{totals.p1}</b> P1 / <b className="text-foreground tabular-nums">{totals.p2}</b> P2</span>
+                <span>·</span>
+                <span><b className="text-foreground tabular-nums">{totals.thisYear}</b> this year</span>
+                <span>·</span>
+                <span><b className="text-foreground tabular-nums">{totals.last30}</b> last 30d</span>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
             <StatCard label="Flights" value={String(totals.count)} />
             <StatCard label="Total time" value={fmtHM(totals.mins)} />
