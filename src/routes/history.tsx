@@ -11,6 +11,7 @@ import { dateToUKShortLabel, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/history")({
   beforeLoad: requireAuth,
+  head: () => ({ meta: [{ title: "History — ESGC Logs" }, { name: "description", content: "Historical daily flight logs." }] }),
   component: HistoryPage,
 });
 

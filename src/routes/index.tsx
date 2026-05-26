@@ -58,6 +58,7 @@ function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => vo
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
+  head: () => ({ meta: [{ title: "Daily Flight Log — ESGC Logs" }, { name: "description", content: "Daily flight log with OGN integration." }] }),
   component: FlightsPage,
   errorComponent: FlightsErrorComponent,
 });
