@@ -17,6 +17,7 @@ import {
 
 export const Route = createFileRoute("/stats")({
   beforeLoad: requireAuth,
+  head: () => ({ meta: [{ title: "Statistics — ESGC Logs" }, { name: "description", content: "Club-wide flight statistics and trends." }] }),
   component: StatsPage,
 });
 
