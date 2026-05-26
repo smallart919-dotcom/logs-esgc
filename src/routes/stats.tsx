@@ -181,7 +181,7 @@ function StatsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="chart-pop">
           <CardHeader><CardTitle>Flights per day</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -198,7 +198,7 @@ function StatsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="chart-pop">
           <CardHeader><CardTitle>Hours per month</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -213,7 +213,7 @@ function StatsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="chart-pop">
           <CardHeader><CardTitle>Launch type</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -228,7 +228,7 @@ function StatsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="chart-pop">
           <CardHeader><CardTitle>Glider utilisation</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
