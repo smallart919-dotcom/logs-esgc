@@ -8,9 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Briefcase, Caravan, ArrowLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import esgcLogo from "@/assets/esgc-logo.png";
 
-export const Route = createFileRoute("/auth")({ component: AuthPage });
+export const Route = createFileRoute("/auth")({
+  head: () => ({ meta: [{ title: "Sign in — ESGC Logs" }] }),
+  component: AuthPage,
+});
 
 type Quick = {
   id: "office" | "caravan";
