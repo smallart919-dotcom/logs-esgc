@@ -25,7 +25,7 @@ type Quick = {
 };
 const QUICK: Quick[] = [
   { id: "office", label: "Office", email: "office@esgc.local", icon: Briefcase, desc: "Past logs & billing" },
-  { id: "caravan", label: "Caravan", email: "caravan@esgc.local", icon: Caravan, desc: "Daily flight log & billing" },
+  { id: "caravan", label: "Caravan", email: "caravan@esgc.local", icon: Caravan, desc: "Field operations — log keeper & flight recording" },
 ];
 
 function AuthPage() {

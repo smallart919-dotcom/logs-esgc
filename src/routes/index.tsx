@@ -622,7 +622,9 @@ function FlightsPage() {
             <TableHeader><TableRow>
               <TableHead>Glider</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
               <TableHead>Dur</TableHead><TableHead>P1</TableHead><TableHead>P2</TableHead>
-              <TableHead>Launch</TableHead><TableHead>LB</TableHead><TableHead>Source</TableHead><TableHead></TableHead>
+              <TableHead>Launch</TableHead>
+              <TableHead title="Log keeper initials — the person who entered this flight (not the duty instructor)" aria-label="Log keeper initials">LB</TableHead>
+              <TableHead>Source</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).slice().sort((a, b) => {
@@ -1218,12 +1220,15 @@ function FlightDialog({
             />
           </div>
           <div>
-            <Label>Logged By (initials)</Label>
+            <Label>Logged By (log keeper initials)</Label>
             <InitialsPicker
               value={form.logged_by ?? ""}
               options={previousInitials}
               onChange={(v) => setForm({ ...form, logged_by: v.toUpperCase() })}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Initials of the person entering this flight — not necessarily the duty instructor.
+            </p>
           </div>
         </div>
         <DialogFooter>

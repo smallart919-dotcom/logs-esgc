@@ -47,6 +47,19 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         if (!icao) {
           return Response.json({ error: "Missing airfield ICAO. Set it in Settings." }, { status: 400 });
         }
+        // Validate ICAO format — accept 4 uppercase letters, optionally prefixed with "UK".
+        if (!/^(UK)?[A-Z]{4}$/.test(icao)) {
+          return Response.json({ error: "Invalid ICAO code format. Expected 4 letters (optionally prefixed with UK)." }, { status: 400 });
+        }
+        // Validate date is sane and within ±30 days of today.
+        const dateParsed = new Date(`${date}T12:00:00Z`);
+        if (Number.isNaN(dateParsed.getTime())) {
+          return Response.json({ error: "Invalid date." }, { status: 400 });
+        }
+        const diffDays = Math.abs((Date.now() - dateParsed.getTime()) / 86400000);
+        if (diffDays > 30) {
+          return Response.json({ error: "Date out of acceptable range (±30 days)." }, { status: 400 });
+        }
 
         // Fetch fleet to know which FLARM IDs belong to the club
         const { data: fleet, error: fleetErr } = await supabaseAdmin
