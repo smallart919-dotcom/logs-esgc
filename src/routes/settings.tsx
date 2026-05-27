@@ -21,7 +21,6 @@ export const Route = createFileRoute("/settings")({
       throw redirect({ to: "/" });
     }
   },
-  head: () => ({ meta: [{ title: "Settings — ESGC Logs" }] }),
   component: SettingsPage,
 });
 

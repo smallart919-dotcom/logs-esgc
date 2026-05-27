@@ -58,7 +58,6 @@ function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => vo
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Daily Flight Log — ESGC Logs" }, { name: "description", content: "Daily flight log with OGN integration." }] }),
   component: FlightsPage,
   errorComponent: FlightsErrorComponent,
 });
@@ -148,7 +147,7 @@ function FlightsPage() {
       .from("email_settings").select("enabled").eq("id", 1).maybeSingle()
       .then(({ data }) => { if (active) setEmailEnabled(data?.enabled ?? true); });
     load();
-    const ch = supabase.channel(`email-settings-rt-${Math.random().toString(36).slice(2)}`)
+    const ch = supabase.channel("email-settings-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "email_settings" }, load)
       .subscribe();
     return () => { active = false; supabase.removeChannel(ch); };
@@ -225,7 +224,7 @@ function FlightsPage() {
 
   // Realtime updates for the day
   useEffect(() => {
-    const ch = supabase.channel(`flights-rt-${Math.random().toString(36).slice(2)}`).on("postgres_changes",
+    const ch = supabase.channel("flights-rt").on("postgres_changes",
       { event: "*", schema: "public", table: "flights" }, () => { load(true).catch(() => undefined); }
     ).subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -622,9 +621,7 @@ function FlightsPage() {
             <TableHeader><TableRow>
               <TableHead>Glider</TableHead><TableHead>Takeoff</TableHead><TableHead>Landing</TableHead>
               <TableHead>Dur</TableHead><TableHead>P1</TableHead><TableHead>P2</TableHead>
-              <TableHead>Launch</TableHead>
-              <TableHead title="Log keeper initials — the person who entered this flight (not the duty instructor)" aria-label="Log keeper initials">LB</TableHead>
-              <TableHead>Source</TableHead><TableHead></TableHead>
+              <TableHead>Launch</TableHead><TableHead>LB</TableHead><TableHead>Source</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {flights.filter((f) => { const r = (f.glider_registration || "").toUpperCase().trim(); return r !== "G-ESGC" && r !== "G-KIAU"; }).slice().sort((a, b) => {
@@ -1220,15 +1217,12 @@ function FlightDialog({
             />
           </div>
           <div>
-            <Label>Logged By (log keeper initials)</Label>
+            <Label>Logged By (initials)</Label>
             <InitialsPicker
               value={form.logged_by ?? ""}
               options={previousInitials}
               onChange={(v) => setForm({ ...form, logged_by: v.toUpperCase() })}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Initials of the person entering this flight — not necessarily the duty instructor.
-            </p>
           </div>
         </div>
         <DialogFooter>

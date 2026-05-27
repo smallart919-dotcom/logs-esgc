@@ -17,8 +17,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { ShapesBackground } from "@/components/shapes-background";
 import { MacDock } from "@/components/mac-dock";
-import { AirborneBadge } from "@/components/airborne-badge";
-import { ThemeToggle } from "@/components/theme-toggle";
 import esgcLogo from "@/assets/esgc-logo.png";
 
 /** Sailplane silhouette — long slender wings, slim fuselage, T-tail. */
@@ -106,13 +104,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
-        {/* Apply the saved theme before first paint to avoid a flash of light. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "try{var t=localStorage.getItem('esgc.theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');}catch(e){}",
-          }}
-        />
       </head>
       <body>
         {children}
@@ -180,10 +171,8 @@ function RootComponent() {
               className="size-8 object-contain transition-transform duration-500 group-hover:rotate-[-6deg] group-hover:scale-105"
             />
             <span className="hidden sm:inline">ESGC Logs</span>
-            <AirborneBadge />
           </Link>
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <ThemeToggle />
+          <div className="flex items-center gap-2 shrink-0">
             {userEmail ? (
               <Button
                 variant="ghost"

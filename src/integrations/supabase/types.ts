@@ -237,7 +237,6 @@ export type Database = {
           p2_membership: string | null
           p2_name: string | null
           takeoff_time: string | null
-          under_21: boolean | null
           updated_at: string
         }
         Insert: {
@@ -264,7 +263,6 @@ export type Database = {
           p2_membership?: string | null
           p2_name?: string | null
           takeoff_time?: string | null
-          under_21?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -291,7 +289,6 @@ export type Database = {
           p2_membership?: string | null
           p2_name?: string | null
           takeoff_time?: string | null
-          under_21?: boolean | null
           updated_at?: string
         }
         Relationships: [

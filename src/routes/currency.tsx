@@ -15,7 +15,6 @@ import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/currency")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Currency — ESGC Logs" }, { name: "description", content: "Pilot launch currency tracking against BGA recommendations." }] }),
   component: CurrencyPage,
 });
 
@@ -165,44 +164,13 @@ function CurrencyPage() {
     return `${fmtUKDate(d)} · ${days === 0 ? "today" : `${days}d`}`;
   };
 
-  const currencyCell = (d: string | null) => {
-    if (!d) {
-      return (
-        <div className="space-y-1 min-w-[120px]">
-          <Badge variant="destructive">never</Badge>
-          <div className="h-1.5 rounded-full bg-destructive/30 overflow-hidden">
-            <div className="h-full w-full bg-destructive" />
-          </div>
-        </div>
-      );
-    }
+  const currencyBadge = (d: string | null) => {
+    if (!d) return <Badge variant="destructive">never</Badge>;
     const days = differenceInDays(new Date(`${todayUKDate()}T12:00:00Z`), new Date(`${d}T12:00:00Z`));
-    const pct = Math.min(100, Math.round((days / AMBER_DAYS) * 100));
-    const tone = days <= GREEN_DAYS ? "emerald" : days <= AMBER_DAYS ? "amber" : "red";
-    const bar =
-      tone === "emerald" ? "bg-emerald-500"
-      : tone === "amber" ? "bg-amber-500"
-      : "bg-destructive";
-    const badge =
-      tone === "emerald" ? <Badge className="bg-emerald-600 hover:bg-emerald-600">current · {days}d</Badge>
-      : tone === "amber" ? <Badge className="bg-amber-500 hover:bg-amber-500">watch · {days}d</Badge>
-      : <Badge variant="destructive">lapsed · {days}d</Badge>;
-    return (
-      <div className="space-y-1 min-w-[140px]">
-        {badge}
-        <div
-          className="h-1.5 rounded-full bg-muted overflow-hidden"
-          title={`${days} of ${AMBER_DAYS} days (lapse threshold)`}
-        >
-          <div
-            className={`h-full ${bar} transition-[width] duration-700 ease-out`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-    );
+    if (days <= GREEN_DAYS) return <Badge className="bg-emerald-600 hover:bg-emerald-600">current</Badge>;
+    if (days <= AMBER_DAYS) return <Badge className="bg-amber-500 hover:bg-amber-500">watch</Badge>;
+    return <Badge variant="destructive">lapsed</Badge>;
   };
-  const currencyBadge = currencyCell;
 
   const startEdit = (e: Entry) => {
     if (!e.memberId) {

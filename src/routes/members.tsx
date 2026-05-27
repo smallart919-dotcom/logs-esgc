@@ -13,7 +13,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/members")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Members — ESGC Logs" }, { name: "description", content: "Club member directory." }] }),
   component: MembersPage,
 });
 

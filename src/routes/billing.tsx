@@ -14,11 +14,9 @@ import { format } from "date-fns";
 import { computeFlightCharge, fmtGBP, type FlightLike } from "@/lib/pricing";
 import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 import { useCountUp } from "@/lib/count-up";
-import { PageSkeleton } from "@/components/page-skeleton";
 
 export const Route = createFileRoute("/billing")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Billing — ESGC Logs" }, { name: "description", content: "Per-member billing from the daily flight log." }] }),
   component: BillingPage,
 });
 
@@ -34,12 +32,14 @@ type Flight = FlightLike & {
 
 type Mode = "day" | "month";
 
-// Kept for backwards-compat (old sessions); not used for state anymore.
 const ALLOWED_CACHE_KEY = "esgc.billing.allowed";
-void ALLOWED_CACHE_KEY;
 
 function BillingPage() {
-  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [allowed, setAllowed] = useState<boolean | null>(() => {
+    if (typeof window === "undefined") return null;
+    const v = sessionStorage.getItem(ALLOWED_CACHE_KEY);
+    return v === "1" ? true : v === "0" ? false : null;
+  });
   const [mode, setMode] = useState<Mode>("day");
   const [date, setDate] = useState(todayUKDate());
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
@@ -47,19 +47,15 @@ function BillingPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [flights, setFlights] = useState<Flight[]>([]);
 
-  // Re-check on mount AND whenever the auth session changes — relying on a
-  // sessionStorage cache leaves the allowed state stale across logins.
   useEffect(() => {
     let cancelled = false;
-    const check = async () => {
-      const { data } = await supabase.auth.getUser();
+    supabase.auth.getUser().then(({ data }) => {
       if (cancelled) return;
       const ok = ALLOWED_EMAILS.includes((data.user?.email || "").toLowerCase());
       setAllowed(ok);
-    };
-    check();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => { check(); });
-    return () => { cancelled = true; sub.subscription.unsubscribe(); };
+      try { sessionStorage.setItem(ALLOWED_CACHE_KEY, ok ? "1" : "0"); } catch {}
+    });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -185,7 +181,7 @@ function BillingPage() {
   }
 
 
-  if (allowed === null) return <PageSkeleton />;
+  if (allowed === null) return <div className="text-muted-foreground">Loading…</div>;
   if (!allowed) return (
     <div className="max-w-md mx-auto text-center py-20">
       <h1 className="text-2xl font-bold">Restricted</h1>

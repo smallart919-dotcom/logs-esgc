@@ -17,7 +17,6 @@ import {
 
 export const Route = createFileRoute("/stats")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Statistics — ESGC Logs" }, { name: "description", content: "Club-wide flight statistics and trends." }] }),
   component: StatsPage,
 });
 
@@ -181,7 +180,7 @@ function StatsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="chart-pop">
+        <Card>
           <CardHeader><CardTitle>Flights per day</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -198,7 +197,7 @@ function StatsPage() {
           </CardContent>
         </Card>
 
-        <Card className="chart-pop">
+        <Card>
           <CardHeader><CardTitle>Hours per month</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -213,7 +212,7 @@ function StatsPage() {
           </CardContent>
         </Card>
 
-        <Card className="chart-pop">
+        <Card>
           <CardHeader><CardTitle>Launch type</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -228,7 +227,7 @@ function StatsPage() {
           </CardContent>
         </Card>
 
-        <Card className="chart-pop">
+        <Card>
           <CardHeader><CardTitle>Glider utilisation</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
