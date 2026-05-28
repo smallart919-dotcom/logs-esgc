@@ -220,6 +220,7 @@ function RootComponent() {
                 {isOffice && (
                   <>
                     <NavLink to="/history" icon={<History className="size-4" />} label="History" compact />
+                    <NavLink to="/audit" icon={<History className="size-4" />} label="Audit" compact />
                     <NavLink to="/fleet" icon={<Plane className="size-4" />} label="Fleet" compact />
                     <NavLink to="/members" icon={<Users className="size-4" />} label="Members" compact />
                     <NavLink to="/settings" icon={<SettingsIcon className="size-4" />} label="Settings" compact />
