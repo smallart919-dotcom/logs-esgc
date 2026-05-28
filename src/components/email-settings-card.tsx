@@ -116,7 +116,23 @@ function previewTemplate(tpl: string) {
   });
 }
 
-const DEFAULT_FROM = "Jacob Abundy <caravan@notify.spaghettigalleries.uk>";
+const SENDER_DOMAIN = "notify.spaghettigalleries.uk";
+const DEFAULT_FROM = `Jacob Abundy <caravan@${SENDER_DOMAIN}>`;
+
+// Parse "Name <user@domain>" or "user@domain" into { name, local }
+function parseFrom(raw: string): { name: string; local: string } {
+  const m = raw.match(/^\s*(.*?)\s*<\s*([^@\s]+)@([^>\s]+)\s*>\s*$/);
+  if (m) return { name: m[1] ?? "", local: m[2] ?? "" };
+  const m2 = raw.match(/^\s*([^@\s]+)@([^\s]+)\s*$/);
+  if (m2) return { name: "", local: m2[1] ?? "" };
+  return { name: raw.trim(), local: "" };
+}
+function buildFrom(name: string, local: string): string {
+  const n = name.trim();
+  const l = local.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
+  if (!l) return "";
+  return n ? `${n} <${l}@${SENDER_DOMAIN}>` : `${l}@${SENDER_DOMAIN}`;
+}
 
 export function EmailSettingsCard() {
   const [loaded, setLoaded] = useState(false);
