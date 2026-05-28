@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import ExcelJS from "exceljs";
+// Type-only import — the real exceljs module is loaded dynamically inside
+// buildXlsx() so a future Node-only regression in the package can't crash
+// module-init for the entire Cloudflare Worker bundle.
+import type ExcelJSNs from "exceljs";
 import { sendLovableEmail } from "@lovable.dev/email-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
