@@ -14,6 +14,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend, LineChart, Line,
 } from "recharts";
+import { computeFlightCharge, fmtGBP } from "@/lib/pricing";
 
 export const Route = createFileRoute("/stats")({
   beforeLoad: requireAuth,
@@ -28,9 +29,14 @@ type Flight = {
   launch_type: "aerotow" | "winch" | null;
   takeoff_time: string | null;
   landing_time: string | null;
+  aerotow_height_ft: number | null;
+  under_21: boolean | null;
   p1_name: string | null; p1_membership: string | null; p1_charge: boolean | null;
   p2_name: string | null; p2_membership: string | null; p2_charge: boolean | null;
 };
+
+type Gfe = { flight_date: string };
+type DutyLog = { flight_date: string; duty_instructor: string | null };
 
 const COLORS = ["hsl(220 80% 55%)", "hsl(35 90% 55%)", "hsl(160 60% 45%)", "hsl(280 60% 55%)", "hsl(0 70% 55%)"];
 
@@ -45,38 +51,83 @@ function StatsPage() {
   const [fromDate, setFromDate] = useState(defaultFrom);
   const [toDate, setToDate] = useState(today);
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [gfes, setGfes] = useState<Gfe[]>([]);
+  const [dutyLogs, setDutyLogs] = useState<DutyLog[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase.from("flights")
-        .select("id, flight_date, glider_registration, launch_type, takeoff_time, landing_time, p1_name, p1_membership, p1_charge, p2_name, p2_membership, p2_charge")
-        .gte("flight_date", fromDate).lte("flight_date", toDate)
-        .neq("glider_registration", "G-ESGC")
-        .order("flight_date", { ascending: true })
-        .limit(20000);
-      setFlights((data as Flight[]) ?? []);
+      const [{ data: f }, { data: g }, { data: d }] = await Promise.all([
+        supabase.from("flights")
+          .select("id, flight_date, glider_registration, launch_type, takeoff_time, landing_time, aerotow_height_ft, under_21, p1_name, p1_membership, p1_charge, p2_name, p2_membership, p2_charge")
+          .gte("flight_date", fromDate).lte("flight_date", toDate)
+          .neq("glider_registration", "G-ESGC")
+          .order("flight_date", { ascending: true })
+          .limit(20000),
+        supabase.from("daily_gfes")
+          .select("flight_date")
+          .gte("flight_date", fromDate).lte("flight_date", toDate)
+          .limit(20000),
+        supabase.from("daily_logs")
+          .select("flight_date, duty_instructor")
+          .gte("flight_date", fromDate).lte("flight_date", toDate)
+          .limit(20000),
+      ]);
+      setFlights((f as Flight[]) ?? []);
+      setGfes((g as Gfe[]) ?? []);
+      setDutyLogs((d as DutyLog[]) ?? []);
       setLoading(false);
     })();
   }, [fromDate, toDate]);
 
+  const revenueByFlight = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const f of flights) {
+      const charge = computeFlightCharge(f as any, !!f.under_21);
+      map.set(f.id, charge.total || 0);
+    }
+    return map;
+  }, [flights]);
+
   const totals = useMemo(() => {
-    let mins = 0, aerotow = 0, winch = 0;
+    let mins = 0, aerotow = 0, winch = 0, revenue = 0;
     for (const f of flights) {
       mins += durationMin(f);
       if (f.launch_type === "aerotow") aerotow++;
       else if (f.launch_type === "winch") winch++;
+      revenue += revenueByFlight.get(f.id) || 0;
     }
-    return { count: flights.length, mins, aerotow, winch };
-  }, [flights]);
+    return { count: flights.length, mins, aerotow, winch, revenue, gfes: gfes.length };
+  }, [flights, gfes, revenueByFlight]);
+
+  const instructorHours = useMemo(() => {
+    // Sum flight hours on days where a duty instructor is set, grouped by instructor name.
+    const dutyByDay = new Map<string, string>();
+    for (const d of dutyLogs) {
+      if (d.duty_instructor && d.duty_instructor.trim()) dutyByDay.set(d.flight_date, d.duty_instructor.trim());
+    }
+    const map = new Map<string, { name: string; mins: number; days: Set<string> }>();
+    for (const f of flights) {
+      const instr = dutyByDay.get(f.flight_date);
+      if (!instr) continue;
+      const key = instr.toUpperCase();
+      const row = map.get(key) ?? { name: instr, mins: 0, days: new Set<string>() };
+      row.mins += durationMin(f);
+      row.days.add(f.flight_date);
+      map.set(key, row);
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.mins - a.mins)
+      .map((r) => ({ name: r.name, hours: +(r.mins / 60).toFixed(1), days: r.days.size }));
+  }, [flights, dutyLogs]);
 
   const dailyData = useMemo(() => {
     const days = eachDayOfInterval({ start: new Date(`${fromDate}T12:00:00Z`), end: new Date(`${toDate}T12:00:00Z`) });
-    const byDay = new Map<string, { date: string; flights: number; aerotow: number; winch: number; hours: number }>();
+    const byDay = new Map<string, { date: string; key: string; flights: number; aerotow: number; winch: number; hours: number; revenue: number; gfes: number }>();
     for (const d of days) {
       const k = format(d, "yyyy-MM-dd");
-      byDay.set(k, { date: fmtUKDate(k), flights: 0, aerotow: 0, winch: 0, hours: 0 });
+      byDay.set(k, { date: fmtUKDate(k), key: k, flights: 0, aerotow: 0, winch: 0, hours: 0, revenue: 0, gfes: 0 });
     }
     for (const f of flights) {
       const row = byDay.get(f.flight_date);
@@ -85,24 +136,37 @@ function StatsPage() {
       if (f.launch_type === "aerotow") row.aerotow++;
       if (f.launch_type === "winch") row.winch++;
       row.hours += durationMin(f) / 60;
+      row.revenue += revenueByFlight.get(f.id) || 0;
     }
-    return Array.from(byDay.values()).map((r) => ({ ...r, hours: +r.hours.toFixed(1) }));
-  }, [flights, fromDate, toDate]);
+    for (const g of gfes) {
+      const row = byDay.get(g.flight_date);
+      if (row) row.gfes++;
+    }
+    return Array.from(byDay.values()).map((r) => ({ ...r, hours: +r.hours.toFixed(1), revenue: +r.revenue.toFixed(2) }));
+  }, [flights, gfes, revenueByFlight, fromDate, toDate]);
 
   const monthlyData = useMemo(() => {
-    const byMonth = new Map<string, { month: string; flights: number; hours: number }>();
+    const byMonth = new Map<string, { month: string; flights: number; hours: number; revenue: number; gfes: number }>();
     for (const f of flights) {
       const k = format(startOfMonth(new Date(f.flight_date + "T12:00:00Z")), "yyyy-MM");
       const label = format(startOfMonth(new Date(f.flight_date + "T12:00:00Z")), "MM-yyyy");
-      const row = byMonth.get(k) ?? { month: label, flights: 0, hours: 0 };
+      const row = byMonth.get(k) ?? { month: label, flights: 0, hours: 0, revenue: 0, gfes: 0 };
       row.flights++;
       row.hours += durationMin(f) / 60;
+      row.revenue += revenueByFlight.get(f.id) || 0;
+      byMonth.set(k, row);
+    }
+    for (const g of gfes) {
+      const k = format(startOfMonth(new Date(g.flight_date + "T12:00:00Z")), "yyyy-MM");
+      const label = format(startOfMonth(new Date(g.flight_date + "T12:00:00Z")), "MM-yyyy");
+      const row = byMonth.get(k) ?? { month: label, flights: 0, hours: 0, revenue: 0, gfes: 0 };
+      row.gfes++;
       byMonth.set(k, row);
     }
     return Array.from(byMonth.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([, v]) => ({ ...v, hours: +v.hours.toFixed(1) }));
-  }, [flights]);
+      .map(([, v]) => ({ ...v, hours: +v.hours.toFixed(1), revenue: +v.revenue.toFixed(2) }));
+  }, [flights, gfes, revenueByFlight]);
 
   const launchPie = useMemo(() => {
     const data = [
@@ -173,11 +237,13 @@ function StatsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Flights" value={totals.count} />
         <StatCard label="Hours" value={totals.mins / 60} decimals={1} />
         <StatCard label="Aerotow" value={totals.aerotow} />
         <StatCard label="Winch" value={totals.winch} />
+        <StatCard label="GFEs" value={totals.gfes} />
+        <StatCard label="Revenue (£)" value={totals.revenue} decimals={0} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -245,6 +311,67 @@ function StatsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="chart-pop">
+          <CardHeader><CardTitle>Revenue per month</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `£${v}`} />
+                <Tooltip formatter={(v: any) => fmtGBP(Number(v))} />
+                <Bar dataKey="revenue" fill={COLORS[3]} name="Revenue" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="chart-pop">
+          <CardHeader><CardTitle>GFEs per day</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyData}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="gfes" fill={COLORS[4]} name="GFEs" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>Instructor hours (duty days)</CardTitle></CardHeader>
+        <CardContent className="overflow-x-auto p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">#</TableHead>
+                <TableHead>Instructor</TableHead>
+                <TableHead className="text-right">Duty days</TableHead>
+                <TableHead className="text-right">Flying hours on duty</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {instructorHours.map((p, i) => (
+                <TableRow key={p.name + i}>
+                  <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell className="text-right font-mono">{p.days}</TableCell>
+                  <TableCell className="text-right font-mono">{p.hours.toFixed(1)}</TableCell>
+                </TableRow>
+              ))}
+              {instructorHours.length === 0 && (
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">{loading ? "Loading…" : "No duty instructor entries in range."}</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle>Top pilots</CardTitle></CardHeader>
