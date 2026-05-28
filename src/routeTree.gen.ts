@@ -20,6 +20,7 @@ import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/hooks/ogn-sync'
+import { Route as ApiPublicHooksCngSyncRouteImport } from './routes/api/public/hooks/cng-sync'
 
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
@@ -76,6 +77,11 @@ const ApiPublicHooksOgnSyncRoute = ApiPublicHooksOgnSyncRouteImport.update({
   path: '/api/public/hooks/ogn-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksCngSyncRoute = ApiPublicHooksCngSyncRouteImport.update({
+  id: '/api/public/hooks/cng-sync',
+  path: '/api/public/hooks/cng-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
 export interface FileRoutesByTo {
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
 export interface FileRoutesById {
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
 export interface FileRouteTypes {
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
+    | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
+    | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
   id:
     | '__root__'
@@ -156,6 +167,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
+    | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
   fileRoutesById: FileRoutesById
 }
@@ -170,6 +182,7 @@ export interface RootRouteChildren {
   MembersRoute: typeof MembersRoute
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
+  ApiPublicHooksCngSyncRoute: typeof ApiPublicHooksCngSyncRoute
   ApiPublicHooksOgnSyncRoute: typeof ApiPublicHooksOgnSyncRoute
 }
 
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksOgnSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/cng-sync': {
+      id: '/api/public/hooks/cng-sync'
+      path: '/api/public/hooks/cng-sync'
+      fullPath: '/api/public/hooks/cng-sync'
+      preLoaderRoute: typeof ApiPublicHooksCngSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -266,8 +286,18 @@ const rootRouteChildren: RootRouteChildren = {
   MembersRoute: MembersRoute,
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
+  ApiPublicHooksCngSyncRoute: ApiPublicHooksCngSyncRoute,
   ApiPublicHooksOgnSyncRoute: ApiPublicHooksOgnSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
