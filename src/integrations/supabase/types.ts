@@ -92,8 +92,76 @@ export type Database = {
         }
         Relationships: []
       }
+      cng_settings: {
+        Row: {
+          enabled: boolean
+          id: number
+          last_sync_at: string | null
+          last_sync_error: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          id?: number
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          id?: number
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      daily_gfes: {
+        Row: {
+          created_at: string
+          flight_date: string
+          gfe_type: string | null
+          id: string
+          passenger_name: string | null
+          position: number
+          raw_text: string
+          ref: string | null
+          source: string
+          time_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          flight_date: string
+          gfe_type?: string | null
+          id?: string
+          passenger_name?: string | null
+          position: number
+          raw_text: string
+          ref?: string | null
+          source?: string
+          time_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          flight_date?: string
+          gfe_type?: string | null
+          id?: string
+          passenger_name?: string | null
+          position?: number
+          raw_text?: string
+          ref?: string | null
+          source?: string
+          time_text?: string | null
+        }
+        Relationships: []
+      }
       daily_logs: {
         Row: {
+          cng_raw: Json | null
+          cng_synced_at: string | null
           created_at: string
           created_by: string | null
           duty_instructor: string | null
@@ -103,6 +171,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cng_raw?: Json | null
+          cng_synced_at?: string | null
           created_at?: string
           created_by?: string | null
           duty_instructor?: string | null
@@ -112,6 +182,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cng_raw?: Json | null
+          cng_synced_at?: string | null
           created_at?: string
           created_by?: string | null
           duty_instructor?: string | null
