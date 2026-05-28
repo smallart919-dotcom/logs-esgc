@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Plane } from "lucide-react";
+import { RefreshCw, Plane, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { cngSyncNow } from "@/lib/cng-sync.functions";
@@ -16,6 +16,8 @@ type GfeRow = {
   passenger_name: string | null;
   gfe_type: string | null;
   ref: string | null;
+  phone: string | null;
+  notes: string | null;
   raw_text: string;
   source: string;
 };
