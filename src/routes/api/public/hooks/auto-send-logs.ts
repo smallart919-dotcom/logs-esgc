@@ -225,7 +225,7 @@ async function getOffsetSec(flightDate: string): Promise<number> {
 const REPLY_TO = "jacobabundy@icloud.com";
 const DEFAULT_SUBJECT = "Logs {date}";
 const DEFAULT_BODY = "Please find today's logs attached via the link below:\n\n{link}\n\nFrom Caravan, have a good evening.";
-const CC = "accounts@sussexgliding.co.uk";
+const DEFAULT_CC = "accounts@sussexgliding.co.uk";
 
 function fillTokens(tpl: string, tokens: Record<string, string>) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => tokens[k] ?? `{${k}}`);
