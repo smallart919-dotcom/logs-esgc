@@ -167,11 +167,14 @@ export function EmailSettingsCard() {
   const save = async () => {
     const to = state.to_email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { toast.error("Enter a valid email"); return; }
+    const cc = state.cc_email.trim();
+    if (cc && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cc)) { toast.error("CC must be a valid email or empty"); return; }
     setSaving(true);
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("email_settings").update({
       enabled: state.enabled,
       to_email: to,
+      cc_email: cc,
       from_email: normalizeSender(state.from_email),
       subject_template: state.subject_template,
       body_template: state.body_template,
