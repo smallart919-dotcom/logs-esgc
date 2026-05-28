@@ -88,26 +88,28 @@ export function GfeCard({ date }: { date: string }) {
           <p className="text-sm text-muted-foreground">No GFEs booked for this day.</p>
         ) : (
           <ul className="divide-y divide-border/60 -my-2">
-            {rows.map((r) => (
-              <li key={r.id} className="flex items-start gap-3 py-2 text-sm">
-                <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 tabular-nums">
-                  {r.time_text ?? "—"}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium break-words">
-                    {r.passenger_name ?? r.raw_text}
-                  </div>
-                  {(r.gfe_type || r.ref) && (
-                    <div className="text-xs text-muted-foreground break-words">
-                      {[r.gfe_type, r.ref].filter(Boolean).join(" · ")}
+            {rows.map((r) => {
+              const hasName = !!r.passenger_name?.trim();
+              const meta = [r.gfe_type, r.ref].filter(Boolean).join(" · ");
+              return (
+                <li key={r.id} className="flex items-start gap-3 py-2 text-sm">
+                  <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 tabular-nums">
+                    {r.time_text?.trim() || "—"}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className={`font-medium break-words ${hasName ? "" : "italic text-muted-foreground"}`}>
+                      {hasName ? r.passenger_name : (r.raw_text?.trim() || "No details")}
                     </div>
+                    <div className="text-xs text-muted-foreground break-words">
+                      {meta || <span className="opacity-60">—</span>}
+                    </div>
+                  </div>
+                  {r.source === "cng-tmg" && (
+                    <Badge variant="secondary" className="shrink-0">TMG</Badge>
                   )}
-                </div>
-                {r.source === "cng-tmg" && (
-                  <Badge variant="secondary" className="shrink-0">TMG</Badge>
-                )}
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </CardContent>
