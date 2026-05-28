@@ -93,6 +93,7 @@ export function GfeCard({ date }: { date: string }) {
             {rows.map((r) => {
               const hasName = !!r.passenger_name?.trim();
               const meta = [r.gfe_type, r.ref].filter(Boolean).join(" · ");
+              const telHref = r.phone ? `tel:${r.phone.replace(/[^\d+]/g, "")}` : null;
               return (
                 <li key={r.id} className="flex items-start gap-3 py-2 text-sm">
                   <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 tabular-nums">
@@ -105,10 +106,27 @@ export function GfeCard({ date }: { date: string }) {
                     <div className="text-xs text-muted-foreground break-words">
                       {meta || <span className="opacity-60">—</span>}
                     </div>
+                    {r.notes && (
+                      <div className="text-xs text-muted-foreground/90 italic break-words mt-0.5">
+                        {r.notes}
+                      </div>
+                    )}
                   </div>
-                  {r.source === "cng-tmg" && (
-                    <Badge variant="secondary" className="shrink-0">TMG</Badge>
-                  )}
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {r.source === "cng-tmg" && (
+                      <Badge variant="secondary">TMG</Badge>
+                    )}
+                    {telHref ? (
+                      <Button asChild size="sm" variant="outline" className="h-7 px-2 gap-1">
+                        <a href={telHref} aria-label={`Call ${r.passenger_name ?? "passenger"}`}>
+                          <Phone className="size-3" />
+                          <span className="tabular-nums text-xs">{r.phone}</span>
+                        </a>
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/60">no phone</span>
+                    )}
+                  </div>
                 </li>
               );
             })}
