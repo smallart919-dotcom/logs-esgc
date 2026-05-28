@@ -2,9 +2,17 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { todayUKDate } from "@/lib/uktime";
 import { fetchCngDay } from "@/lib/cng-sync.server";
 
-export type CngSyncResult =
-  | { ok: true; date: string; duty_instructor: string | null; duty_pilot: string | null; gfes_inserted: number; fetched_at: string }
-  | { ok?: false; skipped?: boolean; reason?: string; error?: string };
+export type CngSyncResult = {
+  ok?: boolean;
+  date?: string;
+  duty_instructor?: string | null;
+  duty_pilot?: string | null;
+  gfes_inserted?: number;
+  fetched_at?: string;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+};
 
 export async function runCngSync(input: { date?: string } = {}): Promise<CngSyncResult> {
   const today = todayUKDate();
