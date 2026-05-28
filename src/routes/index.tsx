@@ -547,7 +547,7 @@ function FlightsPage() {
               size="sm"
               onClick={toggleOgnSync}
               className="gap-1.5 whitespace-nowrap"
-              title={autoSyncEnabled ? `Auto-syncing ${icao} from OGN — tap to pause.` : `OGN sync paused for ${icao} — tap to resume.`}
+              title={autoSyncEnabled ? "Auto-syncing UKRIN from OGN — tap to pause." : "OGN sync paused for UKRIN — tap to resume."}
             >
               <RefreshCw className={`size-3.5 ${syncing || loadingFlights ? "animate-spin" : ""}`} />
               <span>OGN Live {autoSyncEnabled ? "On" : "Off"}</span>
