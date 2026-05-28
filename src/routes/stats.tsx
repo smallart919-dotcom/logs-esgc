@@ -237,11 +237,13 @@ function StatsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Flights" value={totals.count} />
         <StatCard label="Hours" value={totals.mins / 60} decimals={1} />
         <StatCard label="Aerotow" value={totals.aerotow} />
         <StatCard label="Winch" value={totals.winch} />
+        <StatCard label="GFEs" value={totals.gfes} />
+        <StatCard label="Revenue (£)" value={totals.revenue} decimals={0} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
