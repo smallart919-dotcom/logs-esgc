@@ -531,6 +531,57 @@ function FlightsPage() {
     }
   };
 
+  const uploadForShareFn = useServerFn(uploadLogsForShare);
+  const shareWhatsApp = async () => {
+    const t = toast.loading("Preparing logs for WhatsApp…");
+    try {
+      const { blob, filename } = await exportXlsx();
+      const buf = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      const base64 = btoa(bin);
+      const { url } = await uploadForShareFn({ data: { filename, base64 } });
+
+      const message =
+        `Sussex Gliding — Logs ${fmtUKDate(date)}\n\n` +
+        `Download (valid 30 days):\n${url}\n\n` +
+        `From Caravan.`;
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+      // Try to copy link too so the user has a fallback if WA strips it.
+      try {
+        await navigator.clipboard?.writeText(url);
+      } catch {
+        /* clipboard may be unavailable — non-fatal */
+      }
+
+      // Open WhatsApp. Use a real anchor click so mobile Safari opens the app.
+      const a = document.createElement("a");
+      a.href = waUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      toast.success("WhatsApp opened — pick the club group", {
+        id: t,
+        description: "The download link is also copied to your clipboard.",
+        duration: 6000,
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Couldn't prepare WhatsApp share", {
+        id: t,
+        description: err?.message ?? "Please try again in a moment.",
+      });
+    }
+  };
+
 
 
   return (
