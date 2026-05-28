@@ -14,6 +14,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as MembersRouteImport } from './routes/members'
 import { Route as LogbookRouteImport } from './routes/logbook'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as FleetRouteImport } from './routes/fleet'
 import { Route as CurrencyRouteImport } from './routes/currency'
 import { Route as BillingRouteImport } from './routes/billing'
@@ -47,6 +48,11 @@ const LogbookRoute = LogbookRouteImport.update({
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FleetRoute = FleetRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/billing': typeof BillingRoute
   '/currency': typeof CurrencyRoute
   '/fleet': typeof FleetRoute
+  '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/logbook': typeof LogbookRoute
   '/members': typeof MembersRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/billing': typeof BillingRoute
   '/currency': typeof CurrencyRoute
   '/fleet': typeof FleetRoute
+  '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/logbook': typeof LogbookRoute
   '/members': typeof MembersRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/billing': typeof BillingRoute
   '/currency': typeof CurrencyRoute
   '/fleet': typeof FleetRoute
+  '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/logbook': typeof LogbookRoute
   '/members': typeof MembersRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/billing'
     | '/currency'
     | '/fleet'
+    | '/help'
     | '/history'
     | '/logbook'
     | '/members'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/billing'
     | '/currency'
     | '/fleet'
+    | '/help'
     | '/history'
     | '/logbook'
     | '/members'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/billing'
     | '/currency'
     | '/fleet'
+    | '/help'
     | '/history'
     | '/logbook'
     | '/members'
@@ -203,6 +215,7 @@ export interface RootRouteChildren {
   BillingRoute: typeof BillingRoute
   CurrencyRoute: typeof CurrencyRoute
   FleetRoute: typeof FleetRoute
+  HelpRoute: typeof HelpRoute
   HistoryRoute: typeof HistoryRoute
   LogbookRoute: typeof LogbookRoute
   MembersRoute: typeof MembersRoute
@@ -248,6 +261,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fleet': {
@@ -323,6 +343,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillingRoute: BillingRoute,
   CurrencyRoute: CurrencyRoute,
   FleetRoute: FleetRoute,
+  HelpRoute: HelpRoute,
   HistoryRoute: HistoryRoute,
   LogbookRoute: LogbookRoute,
   MembersRoute: MembersRoute,
