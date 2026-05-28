@@ -976,7 +976,19 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Daily Log — {fmtUKDate(date)}</CardTitle></CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle>Daily Log — {fmtUKDate(date)}</CardTitle>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => save(false)}
+          disabled={loading || saving}
+          title="Save & sync Duty Instructor and Duty Pilot names now"
+        >
+          <RefreshCw className={`size-4 mr-1 ${saving ? "animate-spin" : ""}`} />
+          DI &amp; DP Sync
+        </Button>
+      </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <Label>Duty Instructor</Label>
@@ -991,7 +1003,7 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
           <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={loading} />
         </div>
         <div className="md:col-span-2 flex justify-end items-center gap-2 text-xs text-muted-foreground">
-          {saving ? "Saving…" : "Auto-saved"}
+          {saving ? "Syncing…" : "Auto-saved — tap DI & DP Sync to push now"}
         </div>
       </CardContent>
     </Card>
