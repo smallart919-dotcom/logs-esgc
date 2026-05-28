@@ -116,7 +116,23 @@ function previewTemplate(tpl: string) {
   });
 }
 
-const DEFAULT_FROM = "Jacob Abundy <caravan@notify.spaghettigalleries.uk>";
+const SENDER_DOMAIN = "notify.spaghettigalleries.uk";
+const DEFAULT_FROM = `Jacob Abundy <caravan@${SENDER_DOMAIN}>`;
+
+// Parse "Name <user@domain>" or "user@domain" into { name, local }
+function parseFrom(raw: string): { name: string; local: string } {
+  const m = raw.match(/^\s*(.*?)\s*<\s*([^@\s]+)@([^>\s]+)\s*>\s*$/);
+  if (m) return { name: m[1] ?? "", local: m[2] ?? "" };
+  const m2 = raw.match(/^\s*([^@\s]+)@([^\s]+)\s*$/);
+  if (m2) return { name: "", local: m2[1] ?? "" };
+  return { name: raw.trim(), local: "" };
+}
+function buildFrom(name: string, local: string): string {
+  const n = name.trim();
+  const l = local.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
+  if (!l) return "";
+  return n ? `${n} <${l}@${SENDER_DOMAIN}>` : `${l}@${SENDER_DOMAIN}`;
+}
 
 export function EmailSettingsCard() {
   const [loaded, setLoaded] = useState(false);
@@ -213,18 +229,47 @@ export function EmailSettingsCard() {
 
         <div className="space-y-2">
           <Label className="text-xs">From (sender)</Label>
-          <Input
-            ref={fromRef}
-            type="text"
-            autoCapitalize="none"
-            autoComplete="off"
-            spellCheck={false}
-            value={state.from_email}
-            onChange={(e) => setState((s) => ({ ...s, from_email: e.target.value }))}
-            placeholder={DEFAULT_FROM}
-          />
+          {(() => {
+            const { name, local } = parseFrom(state.from_email);
+            const update = (n: string, l: string) =>
+              setState((s) => ({ ...s, from_email: buildFrom(n, l) || s.from_email }));
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Display name</Label>
+                  <Input
+                    type="text"
+                    value={name}
+                    onChange={(e) => update(e.target.value, local)}
+                    placeholder="Jacob Abundy"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Address</Label>
+                  <div className="flex items-stretch rounded-md border bg-transparent focus-within:ring-1 focus-within:ring-ring overflow-hidden">
+                    <input
+                      ref={fromRef}
+                      type="text"
+                      autoCapitalize="none"
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="flex-1 min-w-0 bg-transparent px-3 py-1 text-sm outline-none"
+                      value={local}
+                      onChange={(e) => update(name, e.target.value)}
+                      placeholder="caravan"
+                    />
+                    <span className="px-2 py-1 text-xs text-muted-foreground bg-muted/40 border-l whitespace-nowrap flex items-center">
+                      @{SENDER_DOMAIN}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           <p className="text-[11px] text-muted-foreground">
-            Edit which office/sender the email comes from. Format: <code>Name &lt;address@domain&gt;</code>.
+            Preview: <span className="text-foreground font-mono">{state.from_email}</span>
+            <br />
+            The domain is fixed — only the display name and username before <code>@</code> can change.
           </p>
         </div>
 
