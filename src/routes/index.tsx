@@ -335,7 +335,8 @@ function FlightsPage() {
     const dutyInstructor = daily?.duty_instructor ?? "";
     const dutyPilot = daily?.duty_pilot ?? "";
 
-    const wb = new ExcelJS.Workbook();
+    const ExcelJSMod = (await import("exceljs")).default;
+    const wb = new ExcelJSMod.Workbook();
 
     const RED = "FFC00000";
     const PINK = "FFFCE4E6";
