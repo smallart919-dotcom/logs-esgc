@@ -1,0 +1,1 @@
+ALTER TABLE public.email_settings ADD COLUMN IF NOT EXISTS from_email text NOT NULL DEFAULT 'Jacob Abundy <caravan@notify.spaghettigalleries.uk>';
