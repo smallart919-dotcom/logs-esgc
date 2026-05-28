@@ -14,6 +14,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend, LineChart, Line,
 } from "recharts";
+import { computeFlightCharge, fmtGBP } from "@/lib/pricing";
 
 export const Route = createFileRoute("/stats")({
   beforeLoad: requireAuth,
@@ -28,9 +29,14 @@ type Flight = {
   launch_type: "aerotow" | "winch" | null;
   takeoff_time: string | null;
   landing_time: string | null;
+  aerotow_height_ft: number | null;
+  under_21: boolean | null;
   p1_name: string | null; p1_membership: string | null; p1_charge: boolean | null;
   p2_name: string | null; p2_membership: string | null; p2_charge: boolean | null;
 };
+
+type Gfe = { flight_date: string };
+type DutyLog = { flight_date: string; duty_instructor: string | null };
 
 const COLORS = ["hsl(220 80% 55%)", "hsl(35 90% 55%)", "hsl(160 60% 45%)", "hsl(280 60% 55%)", "hsl(0 70% 55%)"];
 
