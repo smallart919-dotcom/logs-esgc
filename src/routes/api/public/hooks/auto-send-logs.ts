@@ -347,7 +347,7 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     }
 
     await supabaseAdmin.from("auto_send_log").update({
-      note: `sent:${reason}${copy.status === "rejected" ? " (cc_failed)" : ""}`,
+      note: `sent:${reason}${copy && copy.status === "rejected" ? " (cc_failed)" : ""}`,
       flights_count: flights.length,
       message_id: primary.value.message_id ?? null,
       recipient: to,
