@@ -13,6 +13,7 @@ import { Mail, Calendar, FileText, Link2, Clock, GripVertical, RotateCcw } from 
 type Settings = {
   enabled: boolean;
   to_email: string;
+  from_email: string;
   subject_template: string;
   body_template: string;
 };
