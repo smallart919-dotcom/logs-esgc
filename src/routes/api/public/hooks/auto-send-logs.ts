@@ -305,13 +305,15 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     // Email settings
     const { data: settings } = await supabaseAdmin
       .from("email_settings")
-      .select("enabled, to_email, from_email, subject_template, body_template")
+      .select("enabled, to_email, cc_email, from_email, subject_template, body_template")
       .eq("id", 1).maybeSingle();
     if (settings && settings.enabled === false) {
       await supabaseAdmin.from("auto_send_log").update({ note: "skipped:email_disabled", flights_count: flights.length }).eq("flight_date", flightDate);
       return { status: "email_disabled" };
     }
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
+    const ccRaw = (settings as { cc_email?: string } | null)?.cc_email;
+    const cc = (ccRaw === undefined ? DEFAULT_CC : (ccRaw ?? "").trim());
     const from = normalizeSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
@@ -329,10 +331,15 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.55;color:#111"><p style="margin:0 0 12px;color:#666;font-size:12px">Auto-sent at midnight by Caravan.</p>${htmlBody}</div>`;
 
     const idemBase = `auto-logs-${flightDate}`;
-    const [primary, copy] = await Promise.allSettled([
+    const tasks: Promise<Awaited<ReturnType<typeof sendOne>>>[] = [
       sendOne({ recipient: to, from, subject, text, html, idemKey: `${idemBase}-to`, apiKey }),
-      sendOne({ recipient: CC, from, subject, text, html, idemKey: `${idemBase}-cc`, apiKey }),
-    ]);
+    ];
+    if (cc && cc.toLowerCase() !== to.toLowerCase()) {
+      tasks.push(sendOne({ recipient: cc, from, subject, text, html, idemKey: `${idemBase}-cc`, apiKey }));
+    }
+    const results = await Promise.allSettled(tasks);
+    const primary = results[0];
+    const copy = results[1];
 
     if (primary.status === "rejected") {
       const msg = primary.reason instanceof Error ? primary.reason.message : String(primary.reason);
