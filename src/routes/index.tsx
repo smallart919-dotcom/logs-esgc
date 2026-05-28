@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 import { toast } from "sonner";
-import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown, Mail, ChevronDown } from "lucide-react";
+import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown, Mail, ChevronDown, MessageCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ExcelJS from "exceljs";
 import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate, shiftIso } from "@/lib/uktime";
@@ -25,6 +25,7 @@ import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 import { useServerFn } from "@tanstack/react-start";
 import { sendLogsEmail } from "@/lib/send-logs-email.functions";
+import { uploadLogsForShare } from "@/lib/upload-logs.functions";
 import { GfeCard } from "@/components/gfe-card";
 
 function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
