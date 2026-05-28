@@ -54,10 +54,10 @@ export function AirborneBadge() {
     >
       <span className="relative inline-flex size-2">
         <span
-          className={`absolute inset-0 rounded-full animate-ping opacity-70 ${isEmpty ? "bg-red-500" : "bg-emerald-500"}`}
+          className={`absolute inset-0 rounded-full ${isEmpty ? "bg-red-400/50 animate-pulse" : "bg-emerald-500 animate-ping opacity-70"}`}
         />
         <span
-          className={`relative inline-flex size-2 rounded-full ${isEmpty ? "bg-red-500" : "bg-emerald-500"}`}
+          className={`relative inline-flex size-2 rounded-full ${isEmpty ? "bg-red-400/80" : "bg-emerald-500"}`}
         />
       </span>
       <span className="tabular-nums">{count}</span>
