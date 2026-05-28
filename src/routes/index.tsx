@@ -231,7 +231,7 @@ function FlightsPage() {
     return () => { supabase.removeChannel(ch); };
   }, [load]);
 
-  const [icao] = useState<string>("UKRIN");
+  const icao = "UKRIN"; // OGN airfield is fixed — Ringmer (UKRIN).
 
   const syncOgn = useCallback(async (silent = false) => {
     const code = icao;
@@ -303,8 +303,12 @@ function FlightsPage() {
   };
 
   const landNow = async (id: string) => {
-    // Stamp landing_time with the current instant (adjusted for the day's clock offset).
-    const now = new Date(Date.now() - offsetSec * 1000).toISOString();
+    // Stamp landing_time with the current instant (adjusted for the day's
+    // clock offset), truncated to whole minutes so the duration calc never
+    // rounds a 59s flight up to a minute it didn't fly.
+    const d = new Date(Date.now() - offsetSec * 1000);
+    d.setSeconds(0, 0);
+    const now = d.toISOString();
     // Optimistic update so the row reflects immediately.
     setFlights((prev) => prev.map((x) => x.id === id ? { ...x, landing_time: now } : x));
     const { error } = await supabase.from("flights").update({ landing_time: now }).eq("id", id);
@@ -323,7 +327,7 @@ function FlightsPage() {
       return `${h}:${String(mm).padStart(2, "0")}`;
     };
     const pilotName = (kind: PilotKind | null, name: string | null) =>
-      kind === "gfe" ? "GFE" : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
+      kind === "gfe" ? (name ? `GFE (${name})` : "GFE") : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor") : (name || "");
 
     const { data: daily } = await supabase.from("daily_logs").select("duty_instructor,duty_pilot").eq("flight_date", date).maybeSingle();
     const dutyInstructor = daily?.duty_instructor ?? "";
@@ -547,7 +551,7 @@ function FlightsPage() {
               size="sm"
               onClick={toggleOgnSync}
               className="gap-1.5 whitespace-nowrap"
-              title={autoSyncEnabled ? `Auto-syncing ${icao} from OGN — tap to pause.` : `OGN sync paused for ${icao} — tap to resume.`}
+              title={autoSyncEnabled ? "Auto-syncing UKRIN from OGN — tap to pause." : "OGN sync paused for UKRIN — tap to resume."}
             >
               <RefreshCw className={`size-3.5 ${syncing || loadingFlights ? "animate-spin" : ""}`} />
               <span>OGN Live {autoSyncEnabled ? "On" : "Off"}</span>
@@ -1022,11 +1026,67 @@ function FlightDialog({
   const gfeChargedNeedsVoucher = (p1Kind === "gfe" || p2Kind === "gfe");
   const hasVoucherId = /\d{3,}/.test(notes); // e.g. "1234"
 
+  // Extract any 3+ digit voucher numbers from notes for duplicate detection.
+  const voucherIds = useMemo(() => {
+    const m = notes.match(/\d{3,}/g);
+    return m ? Array.from(new Set(m)) : [];
+  }, [notes]);
+
+  // Find a member by membership number (case-insensitive, trimmed).
+  const findMemberByMem = (mem: string | null | undefined) => {
+    const k = (mem || "").trim().toLowerCase();
+    if (!k) return null;
+    return members.find((m) => (m.membership_number || "").trim().toLowerCase() === k) ?? null;
+  };
+
   const save = async () => {
+    // GFE pilots still need a name recorded (the passenger flying the
+    // experience). Previously the name input was hidden for GFE — make it
+    // explicit so the daily log shows who actually flew.
+    if (p1Kind === "gfe" && !(form.p1_name || "").trim()) {
+      toast.error("P1 GFE name required — enter the passenger's name.");
+      return;
+    }
+    if (p2Kind === "gfe" && !(form.p2_name || "").trim()) {
+      toast.error("P2 GFE name required — enter the passenger's name.");
+      return;
+    }
     if (gfeChargedNeedsVoucher && !hasVoucherId) {
       toast.error("Voucher ID required in comments for a GFE flight (digits only, e.g. \"1234\").");
       return;
     }
+
+    // Voucher duplicate warning — check other flights this day for the same digits.
+    if (voucherIds.length) {
+      const dup = dayFlights.find((f) => {
+        if (flight && f.id === flight.id) return false;
+        const n = (f.notes || "").trim();
+        return voucherIds.some((v) => new RegExp(`\\b${v}\\b`).test(n));
+      });
+      if (dup) {
+        const which = voucherIds.find((v) => new RegExp(`\\b${v}\\b`).test(dup.notes || "")) ?? voucherIds[0];
+        if (!confirm(`Voucher #${which} is already used on another flight today (${dup.glider_registration || "—"}). Save anyway?`)) return;
+      }
+    }
+
+    // Membership ↔ name mismatch warning. If the membership # resolves to a
+    // known member but the typed name doesn't match, warn before saving.
+    const mismatchFor = (label: string, kind: PilotKind, name: string, mem: string): string | null => {
+      if (kind !== "member") return null;
+      const m = findMemberByMem(mem);
+      if (!m) return null;
+      const a = (name || "").trim().toLowerCase();
+      const b = (m.full_name || "").trim().toLowerCase();
+      if (!a || !b || a === b) return null;
+      return `${label}: membership ${mem} belongs to "${m.full_name}", not "${name}".`;
+    };
+    const mm1 = mismatchFor("P1", p1Kind, form.p1_name || "", form.p1_membership || "");
+    const mm2 = mismatchFor("P2", p2Kind, form.p2_name || "", form.p2_membership || "");
+    const mismatches = [mm1, mm2].filter(Boolean);
+    if (mismatches.length) {
+      if (!confirm(`${mismatches.join("\n")}\n\nSave anyway?`)) return;
+    }
+
     const payload: any = {
       flight_date: form.flight_date || date,
       glider_id: form.glider_id || null,
@@ -1035,11 +1095,11 @@ function FlightDialog({
       takeoff_time: form.takeoff_time || null,
       landing_time: form.landing_time || null,
       p1_kind: p1Kind,
-      p1_name: p1Kind === "gfe" ? null : (form.p1_name || null),
+      p1_name: form.p1_name || null,
       p1_membership: p1Kind === "member" ? (form.p1_membership || null) : null,
       p1_charge: !!form.p1_charge,
       p2_kind: p2Kind,
-      p2_name: p2Kind === "gfe" ? null : (form.p2_name || null),
+      p2_name: form.p2_name || null,
       p2_membership: p2Kind === "member" ? (form.p2_membership || null) : null,
       p2_charge: !!form.p2_charge,
       launch_type: form.launch_type || null,
@@ -1116,6 +1176,16 @@ function FlightDialog({
             preferredNames={preferredNames}
             onPick={(m) => setPilot(which, m.full_name, m.membership_number)}
             onText={(t) => setForm({ ...form, [`p${which}_name`]: t })} />
+        )}
+        {kind === "gfe" && (
+          <div>
+            <Label>GFE passenger name <span className="text-destructive">*</span></Label>
+            <Input
+              value={name}
+              placeholder="Voucher passenger name"
+              onChange={(e) => setForm({ ...form, [`p${which}_name`]: e.target.value })}
+            />
+          </div>
         )}
         {kind === "member" && (
           <div>
