@@ -536,8 +536,8 @@ function FlightsPage() {
     }
   };
 
-  const uploadForShareFn = useServerFn(uploadLogsForShare);
   const shareWhatsApp = async () => {
+
     const t = toast.loading("Preparing logs for WhatsApp…");
     try {
       const { blob, filename } = await exportXlsx();
