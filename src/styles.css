@@ -465,23 +465,26 @@ nav.sticky {
 .liquid-glass { background: color-mix(in oklab, var(--background) 55%, transparent) !important; }
 .dark .liquid-glass { background: color-mix(in oklab, var(--background) 45%, transparent) !important; }
 
-/* Red flashing pulse for "no gliders airborne" state */
+/* Soft, smooth red breathing pulse for "no gliders airborne" state */
 @keyframes airborne-red-flash {
   0%, 100% {
-    background: color-mix(in oklab, oklch(0.62 0.22 27) 18%, transparent) !important;
-    box-shadow: 0 0 0 0 color-mix(in oklab, oklch(0.62 0.22 27) 45%, transparent);
+    background: color-mix(in oklab, oklch(0.62 0.22 27) 8%, transparent) !important;
+    box-shadow: 0 0 0 0 color-mix(in oklab, oklch(0.62 0.22 27) 18%, transparent);
   }
   50% {
-    background: color-mix(in oklab, oklch(0.62 0.22 27) 40%, transparent) !important;
-    box-shadow: 0 0 0 8px color-mix(in oklab, oklch(0.62 0.22 27) 0%, transparent);
+    background: color-mix(in oklab, oklch(0.62 0.22 27) 16%, transparent) !important;
+    box-shadow: 0 0 0 4px color-mix(in oklab, oklch(0.62 0.22 27) 0%, transparent);
   }
 }
 .airborne-empty {
-  animation: airborne-red-flash 1.4s ease-in-out infinite;
-  color: oklch(0.32 0.18 27);
-  border-color: color-mix(in oklab, oklch(0.62 0.22 27) 55%, transparent) !important;
+  animation: airborne-red-flash 2.8s ease-in-out infinite;
+  color: oklch(0.45 0.14 27);
+  border-color: color-mix(in oklab, oklch(0.62 0.22 27) 30%, transparent) !important;
 }
-.dark .airborne-empty { color: oklch(0.95 0.14 25); }
+.dark .airborne-empty { color: oklch(0.88 0.10 25); }
+@media (prefers-reduced-motion: reduce) {
+  .airborne-empty { animation: none; }
+}
 
 
 /* Glassy dialogs, popovers, dropdowns, sheets, command palettes */
