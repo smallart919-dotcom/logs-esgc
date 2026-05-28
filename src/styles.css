@@ -649,3 +649,18 @@ table thead th {
   60%  { opacity: 1; filter: blur(0); }
   100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
 }
+
+/* Chart cards scale-in on mount */
+@keyframes chart-pop {
+  0%   { opacity: 0; transform: scale(0.96) translateY(6px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.chart-pop {
+  animation: chart-pop 540ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+/* Extra-small visibility utility used by AirborneBadge */
+@media (min-width: 380px) {
+  .xs\:inline-flex { display: inline-flex; }
+}
