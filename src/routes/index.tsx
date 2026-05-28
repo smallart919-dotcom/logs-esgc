@@ -1177,6 +1177,16 @@ function FlightDialog({
             onPick={(m) => setPilot(which, m.full_name, m.membership_number)}
             onText={(t) => setForm({ ...form, [`p${which}_name`]: t })} />
         )}
+        {kind === "gfe" && (
+          <div>
+            <Label>GFE passenger name <span className="text-destructive">*</span></Label>
+            <Input
+              value={name}
+              placeholder="Voucher passenger name"
+              onChange={(e) => setForm({ ...form, [`p${which}_name`]: e.target.value })}
+            />
+          </div>
+        )}
         {kind === "member" && (
           <div>
             <Label>Membership #</Label>
