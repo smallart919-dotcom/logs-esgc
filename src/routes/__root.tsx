@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { ShapesBackground } from "@/components/shapes-background";
 import { MacDock } from "@/components/mac-dock";
 import { AirborneBadge } from "@/components/airborne-badge";
+import { SkyStrip } from "@/components/sky-strip";
+import { HorizonGradient } from "@/components/horizon-gradient";
 import { ThemeToggle } from "@/components/theme-toggle";
 import esgcLogo from "@/assets/esgc-logo.png";
 
