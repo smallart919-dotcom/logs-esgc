@@ -13,6 +13,7 @@ import { Mail, Calendar, FileText, Link2, Clock, GripVertical, RotateCcw } from 
 type Settings = {
   enabled: boolean;
   to_email: string;
+  from_email: string;
   subject_template: string;
   body_template: string;
 };
@@ -120,10 +121,10 @@ const DEFAULT_FROM = "Jacob Abundy <caravan@notify.spaghettigalleries.uk>";
 export function EmailSettingsCard() {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [fromField, setFromField] = useState<string>(DEFAULT_FROM);
   const [state, setState] = useState<Settings>({
     enabled: true,
     to_email: "office@sussexgliding.co.uk",
+    from_email: DEFAULT_FROM,
     subject_template: DEFAULT_SUBJECT,
     body_template: DEFAULT_BODY,
   });
@@ -139,6 +140,7 @@ export function EmailSettingsCard() {
         setState({
           enabled: data.enabled,
           to_email: data.to_email ?? "",
+          from_email: (data as { from_email?: string }).from_email ?? DEFAULT_FROM,
           subject_template: data.subject_template ?? DEFAULT_SUBJECT,
           body_template: data.body_template ?? DEFAULT_BODY,
         });
@@ -168,11 +170,12 @@ export function EmailSettingsCard() {
     const { error } = await supabase.from("email_settings").update({
       enabled: state.enabled,
       to_email: to,
+      from_email: state.from_email,
       subject_template: state.subject_template,
       body_template: state.body_template,
       updated_by: u.user?.id ?? null,
       updated_at: new Date().toISOString(),
-    }).eq("id", 1);
+    } as never).eq("id", 1);
     setSaving(false);
     if (error) toast.error(error.message); else toast.success("Email settings saved");
   };
@@ -216,8 +219,8 @@ export function EmailSettingsCard() {
             autoCapitalize="none"
             autoComplete="off"
             spellCheck={false}
-            value={fromField}
-            onChange={(e) => setFromField(e.target.value)}
+            value={state.from_email}
+            onChange={(e) => setState((s) => ({ ...s, from_email: e.target.value }))}
             placeholder={DEFAULT_FROM}
           />
           <p className="text-[11px] text-muted-foreground">

@@ -231,6 +231,7 @@ export type Database = {
         Row: {
           body_template: string
           enabled: boolean
+          from_email: string
           id: number
           subject_template: string
           to_email: string
@@ -240,6 +241,7 @@ export type Database = {
         Insert: {
           body_template?: string
           enabled?: boolean
+          from_email?: string
           id?: number
           subject_template?: string
           to_email?: string
@@ -249,6 +251,7 @@ export type Database = {
         Update: {
           body_template?: string
           enabled?: boolean
+          from_email?: string
           id?: number
           subject_template?: string
           to_email?: string
