@@ -11,6 +11,8 @@ export type CngGfe = {
   passenger_name: string | null;
   gfe_type: string | null;
   ref: string | null;
+  phone: string | null;
+  notes: string | null;
   raw_text: string;
 };
 
