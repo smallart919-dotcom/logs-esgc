@@ -451,6 +451,27 @@ export type Database = {
           },
         ]
       }
+      help_content: {
+        Row: {
+          body: string
+          id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body?: string
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
