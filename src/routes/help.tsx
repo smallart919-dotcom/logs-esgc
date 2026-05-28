@@ -32,9 +32,9 @@ function renderMarkdown(md: string): string {
   const closeAll = () => { closeP(); closeUl(); closeOl(); };
   const inline = (s: string) =>
     esc(s)
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*\*(.+?)\*\*/g, '<strong class="text-foreground font-semibold">$1</strong>')
       .replace(/\*(.+?)\*/g, "<em>$1</em>")
-      .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-muted text-xs">$1</code>');
+      .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[0.85em] font-mono">$1</code>');
 
   for (const raw of lines) {
     const line = raw.trimEnd();
@@ -43,16 +43,21 @@ function renderMarkdown(md: string): string {
     if (h) {
       closeAll();
       const lvl = h[1].length;
-      const sizes = ["text-2xl font-bold mt-6 mb-3", "text-xl font-semibold mt-5 mb-2", "text-lg font-semibold mt-4 mb-2", "text-base font-semibold mt-3 mb-1"];
+      const sizes = [
+        "text-3xl font-bold tracking-tight mt-8 mb-4 pb-2 border-b",
+        "text-xl font-semibold tracking-tight mt-6 mb-2 text-primary",
+        "text-base font-semibold mt-4 mb-1.5 uppercase tracking-wide text-muted-foreground",
+        "text-sm font-semibold mt-3 mb-1",
+      ];
       html += `<h${lvl} class="${sizes[lvl - 1]}">${inline(h[2])}</h${lvl}>`;
       continue;
     }
     const ul = line.match(/^[-*]\s+(.*)$/);
-    if (ul) { closeP(); closeOl(); if (!inUl) { html += '<ul class="list-disc pl-6 space-y-1 my-2">'; inUl = true; } html += `<li>${inline(ul[1])}</li>`; continue; }
-    const ol = line.match(/^\d+\.\s+(.*)$/);
-    if (ol) { closeP(); closeUl(); if (!inOl) { html += '<ol class="list-decimal pl-6 space-y-1 my-2">'; inOl = true; } html += `<li>${inline(ol[1])}</li>`; continue; }
+    if (ul) { closeP(); closeOl(); if (!inUl) { html += '<ul class="space-y-1.5 my-3 pl-1">'; inUl = true; } html += `<li class="flex gap-2 items-start"><span class="text-primary mt-1 shrink-0">▸</span><span>${inline(ul[1])}</span></li>`; continue; }
+    const ol = line.match(/^(\d+)\.\s+(.*)$/);
+    if (ol) { closeP(); closeUl(); if (!inOl) { html += '<ol class="space-y-1.5 my-3 pl-1 counter-reset:item">'; inOl = true; } html += `<li class="flex gap-2 items-start"><span class="text-primary font-semibold mt-0.5 shrink-0 min-w-[1.5rem]">${ol[1]}.</span><span>${inline(ol[2])}</span></li>`; continue; }
     closeUl(); closeOl();
-    if (!inP) { html += '<p class="my-2 leading-relaxed">'; inP = true; } else { html += " "; }
+    if (!inP) { html += '<p class="my-2 leading-relaxed text-foreground/90">'; inP = true; } else { html += " "; }
     html += inline(line);
   }
   closeAll();
