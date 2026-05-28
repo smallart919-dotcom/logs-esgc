@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 import { toast } from "sonner";
-import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown, Mail, ChevronDown } from "lucide-react";
+import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown, Mail, ChevronDown, MessageCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ExcelJS from "exceljs";
 import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate, shiftIso } from "@/lib/uktime";
@@ -25,6 +25,7 @@ import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 import { useServerFn } from "@tanstack/react-start";
 import { sendLogsEmail } from "@/lib/send-logs-email.functions";
+import { uploadLogsForShare } from "@/lib/upload-logs.functions";
 import { GfeCard } from "@/components/gfe-card";
 
 function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
@@ -530,6 +531,57 @@ function FlightsPage() {
     }
   };
 
+  const uploadForShareFn = useServerFn(uploadLogsForShare);
+  const shareWhatsApp = async () => {
+    const t = toast.loading("Preparing logs for WhatsApp…");
+    try {
+      const { blob, filename } = await exportXlsx();
+      const buf = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      const base64 = btoa(bin);
+      const { url } = await uploadForShareFn({ data: { filename, base64 } });
+
+      const message =
+        `Sussex Gliding — Logs ${fmtUKDate(date)}\n\n` +
+        `Download (valid 30 days):\n${url}\n\n` +
+        `From Caravan.`;
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+      // Try to copy link too so the user has a fallback if WA strips it.
+      try {
+        await navigator.clipboard?.writeText(url);
+      } catch {
+        /* clipboard may be unavailable — non-fatal */
+      }
+
+      // Open WhatsApp. Use a real anchor click so mobile Safari opens the app.
+      const a = document.createElement("a");
+      a.href = waUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      toast.success("WhatsApp opened — pick the club group", {
+        id: t,
+        description: "The download link is also copied to your clipboard.",
+        duration: 6000,
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Couldn't prepare WhatsApp share", {
+        id: t,
+        description: err?.message ?? "Please try again in a moment.",
+      });
+    }
+  };
+
 
 
   return (
@@ -599,6 +651,9 @@ function FlightsPage() {
                     title={emailEnabled ? undefined : "Disabled in Settings"}
                   >
                     <Mail className="size-4 mr-2" />Email to office {emailEnabled ? "" : "(off)"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={shareWhatsApp}>
+                    <MessageCircle className="size-4 mr-2" />Share to WhatsApp
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
