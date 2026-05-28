@@ -237,10 +237,10 @@ async function tokenFor(addr: string) {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function sendOne(opts: { recipient: string; subject: string; text: string; html: string; idemKey: string; apiKey: string }) {
+async function sendOne(opts: { recipient: string; from: string; subject: string; text: string; html: string; idemKey: string; apiKey: string }) {
   return sendLovableEmail({
     to: opts.recipient,
-    from: FROM,
+    from: opts.from,
     sender_domain: SENDER_DOMAIN,
     reply_to: REPLY_TO,
     subject: opts.subject,
@@ -306,13 +306,14 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     // Email settings
     const { data: settings } = await supabaseAdmin
       .from("email_settings")
-      .select("enabled, to_email, subject_template, body_template")
+      .select("enabled, to_email, from_email, subject_template, body_template")
       .eq("id", 1).maybeSingle();
     if (settings && settings.enabled === false) {
       await supabaseAdmin.from("auto_send_log").update({ note: "skipped:email_disabled", flights_count: flights.length }).eq("flight_date", flightDate);
       return { status: "email_disabled" };
     }
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
+    const from = (settings as { from_email?: string } | null)?.from_email?.trim() || FROM;
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
 
@@ -330,8 +331,8 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
 
     const idemBase = `auto-logs-${flightDate}`;
     const [primary, copy] = await Promise.allSettled([
-      sendOne({ recipient: to, subject, text, html, idemKey: `${idemBase}-to`, apiKey }),
-      sendOne({ recipient: CC, subject, text, html, idemKey: `${idemBase}-cc`, apiKey }),
+      sendOne({ recipient: to, from, subject, text, html, idemKey: `${idemBase}-to`, apiKey }),
+      sendOne({ recipient: CC, from, subject, text, html, idemKey: `${idemBase}-cc`, apiKey }),
     ]);
 
     if (primary.status === "rejected") {

@@ -30,10 +30,10 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
 
-    // Load office-configured settings (enabled, to_email, templates)
+    // Load office-configured settings (enabled, to_email, from_email, templates)
     const { data: settings } = await supabaseAdmin
       .from("email_settings")
-      .select("enabled, to_email, subject_template, body_template")
+      .select("enabled, to_email, from_email, subject_template, body_template")
       .eq("id", 1)
       .maybeSingle();
 
@@ -42,6 +42,7 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     }
 
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
+    const from = (settings as { from_email?: string } | null)?.from_email?.trim() || FROM;
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
 
@@ -114,7 +115,7 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
       sendLovableEmail(
         {
           to: recipient,
-          from: FROM,
+          from,
           sender_domain: SENDER_DOMAIN,
           reply_to: REPLY_TO,
           subject,
