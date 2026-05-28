@@ -652,6 +652,9 @@ function FlightsPage() {
                   >
                     <Mail className="size-4 mr-2" />Email to office {emailEnabled ? "" : "(off)"}
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={shareWhatsApp}>
+                    <MessageCircle className="size-4 mr-2" />Share to WhatsApp
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button onClick={() => setAdding(true)} variant="outline" size="sm" className="whitespace-nowrap"><Plus className="size-4 mr-1" />Add</Button>
