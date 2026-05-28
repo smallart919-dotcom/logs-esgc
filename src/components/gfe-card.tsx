@@ -84,6 +84,8 @@ export function GfeCard({ date }: { date: string }) {
         </Button>
       </CardHeader>
       <CardContent>
+        <p className="text-xs italic text-muted-foreground mb-3">Jeffries as Russ says</p>
+
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : rows.length === 0 ? (
