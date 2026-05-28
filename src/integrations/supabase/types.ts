@@ -125,7 +125,9 @@ export type Database = {
           flight_date: string
           gfe_type: string | null
           id: string
+          notes: string | null
           passenger_name: string | null
+          phone: string | null
           position: number
           raw_text: string
           ref: string | null
@@ -137,7 +139,9 @@ export type Database = {
           flight_date: string
           gfe_type?: string | null
           id?: string
+          notes?: string | null
           passenger_name?: string | null
+          phone?: string | null
           position: number
           raw_text: string
           ref?: string | null
@@ -149,7 +153,9 @@ export type Database = {
           flight_date?: string
           gfe_type?: string | null
           id?: string
+          notes?: string | null
           passenger_name?: string | null
+          phone?: string | null
           position?: number
           raw_text?: string
           ref?: string | null

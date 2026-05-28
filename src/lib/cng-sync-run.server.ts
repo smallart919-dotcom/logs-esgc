@@ -74,6 +74,8 @@ export async function runCngSync(input: { date?: string } = {}): Promise<CngSync
       passenger_name: g.passenger_name,
       gfe_type: g.gfe_type,
       ref: g.ref,
+      phone: g.phone,
+      notes: g.notes,
       raw_text: g.raw_text,
       source: g.source,
     }));

@@ -11,6 +11,8 @@ export type CngGfe = {
   passenger_name: string | null;
   gfe_type: string | null;
   ref: string | null;
+  phone: string | null;
+  notes: string | null;
   raw_text: string;
 };
 
@@ -149,30 +151,45 @@ function extractMemberNames(boxHtml: string): string[] {
 }
 
 function parseGfeLine(raw: string): CngGfe {
-  // Examples:
-  //   "16:00 - ** Aerobatic Flight** Dionne McGrath - 25-11355 - 07503 540249"
-  //   "14:00 - Gerald Gatton - Aerotow GFE - 26-11417 - 07542165607"
-  //   "10.30 - Hilton - Ultimate GFE - 07762701882"
   const text = raw.trim();
+
   // Time at the start (HH:MM or HH.MM)
   const timeMatch = text.match(/^(\d{1,2}[:.]\d{2})\s*-?\s*/);
   const time_text = timeMatch ? timeMatch[1].replace(".", ":") : null;
-  const afterTime = timeMatch ? text.slice(timeMatch[0].length) : text;
+  let body = timeMatch ? text.slice(timeMatch[0].length) : text;
 
-  // Split on " - " separators
-  const parts = afterTime.split(/\s+-\s+/).map((p) => p.trim()).filter(Boolean);
+  // Phone: UK mobile (07 + 9 digits, optional space) or +44 form. Pull it out
+  // wherever it sits in the string, so it works even when glued to the ref
+  // (e.g. "26-11427 07833 287780") or not separated by " - ".
+  const phoneRe = /(?:\+?44\s?|0)\s?7\d{2,3}[\s-]?\d{3}[\s-]?\d{3,4}/;
+  const phoneMatch = body.match(phoneRe);
+  const phone = phoneMatch ? phoneMatch[0].replace(/\s+/g, " ").trim() : null;
+  if (phoneMatch) body = body.replace(phoneMatch[0], " ").trim();
+
   // Reference looks like "25-11355" / "26-11417"
-  const refIdx = parts.findIndex((p) => /^\d{2}-\d{3,6}$/.test(p));
-  const ref = refIdx >= 0 ? parts[refIdx] : null;
-  // GFE type contains "GFE" or "Flight"
-  const typeIdx = parts.findIndex((p) => /GFE|Flight/i.test(p));
-  const gfe_type = typeIdx >= 0 ? parts[typeIdx] : null;
-  // Passenger = first part that isn't ref/type/phone-only
-  const isPhone = (p: string) => /^[\d\s+()-]{7,}$/.test(p);
-  const passenger_name =
-    parts.find((p, i) => i !== refIdx && i !== typeIdx && !isPhone(p) && p.length > 1) ?? null;
+  const refRe = /\b(\d{2}-\d{3,6})\b/;
+  const refMatch = body.match(refRe);
+  const ref = refMatch ? refMatch[1] : null;
+  if (refMatch) body = body.replace(refMatch[0], " ").trim();
 
-  return { time_text, passenger_name, gfe_type, ref, raw_text: text };
+  // Split on " - " separators, drop empties and stray dashes
+  const parts = body.split(/\s+-\s+/).map((p) => p.replace(/^-+|-+$/g, "").trim()).filter(Boolean);
+
+  // GFE type: anything mentioning GFE, Flight, Aerotow, Winch, F&F / F & F
+  const typeIdx = parts.findIndex((p) => /\b(GFE|Flight|Aerotow|Winch|F\s*&\s*F)\b/i.test(p));
+  const gfe_type = typeIdx >= 0 ? parts[typeIdx] : null;
+
+  // Passenger = first remaining part that isn't the type and looks like a name
+  const passengerIdx = parts.findIndex(
+    (p, i) => i !== typeIdx && p.length > 1 && /[A-Za-z]/.test(p),
+  );
+  const passenger_name = passengerIdx >= 0 ? parts[passengerIdx] : null;
+
+  // Notes = whatever's left (e.g. "* 80th Birthday *", "returning member")
+  const notesParts = parts.filter((_, i) => i !== typeIdx && i !== passengerIdx);
+  const notes = notesParts.length ? notesParts.join(" · ").replace(/\*/g, "").trim() || null : null;
+
+  return { time_text, passenger_name, gfe_type, ref, phone, notes, raw_text: text };
 }
 
 function parseGfeBox(boxHtml: string | null): CngGfe[] {
