@@ -21,6 +21,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/hooks/ogn-sync'
 import { Route as ApiPublicHooksCngSyncRouteImport } from './routes/api/public/hooks/cng-sync'
+import { Route as ApiPublicHooksAutoSendLogsRouteImport } from './routes/api/public/hooks/auto-send-logs'
 
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
@@ -82,6 +83,12 @@ const ApiPublicHooksCngSyncRoute = ApiPublicHooksCngSyncRouteImport.update({
   path: '/api/public/hooks/cng-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksAutoSendLogsRoute =
+  ApiPublicHooksAutoSendLogsRouteImport.update({
+    id: '/api/public/hooks/auto-send-logs',
+    path: '/api/public/hooks/auto-send-logs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
@@ -108,6 +116,7 @@ export interface FileRoutesByTo {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
@@ -123,6 +132,7 @@ export interface FileRoutesById {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
 }
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
+    | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
   fileRoutesByTo: FileRoutesByTo
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
+    | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
   id:
@@ -167,6 +179,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
+    | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
   fileRoutesById: FileRoutesById
@@ -182,6 +195,7 @@ export interface RootRouteChildren {
   MembersRoute: typeof MembersRoute
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
+  ApiPublicHooksAutoSendLogsRoute: typeof ApiPublicHooksAutoSendLogsRoute
   ApiPublicHooksCngSyncRoute: typeof ApiPublicHooksCngSyncRoute
   ApiPublicHooksOgnSyncRoute: typeof ApiPublicHooksOgnSyncRoute
 }
@@ -272,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksCngSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/auto-send-logs': {
+      id: '/api/public/hooks/auto-send-logs'
+      path: '/api/public/hooks/auto-send-logs'
+      fullPath: '/api/public/hooks/auto-send-logs'
+      preLoaderRoute: typeof ApiPublicHooksAutoSendLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -286,6 +307,7 @@ const rootRouteChildren: RootRouteChildren = {
   MembersRoute: MembersRoute,
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
+  ApiPublicHooksAutoSendLogsRoute: ApiPublicHooksAutoSendLogsRoute,
   ApiPublicHooksCngSyncRoute: ApiPublicHooksCngSyncRoute,
   ApiPublicHooksOgnSyncRoute: ApiPublicHooksOgnSyncRoute,
 }
