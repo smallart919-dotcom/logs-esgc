@@ -28,8 +28,9 @@ function parseSetCookie(headers: Headers): Map<string, string> {
   // Cloudflare/Workers exposes set-cookie via .getSetCookie() when available,
   // else fall back to getAll-like behavior.
   const jar = new Map<string, string>();
-  // @ts-expect-error — getSetCookie exists in modern runtimes
-  const list: string[] = typeof headers.getSetCookie === "function" ? headers.getSetCookie() : [];
+  const anyHeaders = headers as unknown as { getSetCookie?: () => string[] };
+  const list: string[] =
+    typeof anyHeaders.getSetCookie === "function" ? anyHeaders.getSetCookie() : [];
   if (list.length === 0) {
     const raw = headers.get("set-cookie");
     if (raw) list.push(raw);
