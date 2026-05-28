@@ -221,6 +221,7 @@ function RootComponent() {
                 <NavLink to="/currency" icon={<Activity className="size-4" />} label="Currency" compact />
                 <NavLink to="/logbook" icon={<BookOpen className="size-4" />} label="Logbook" compact />
                 <NavLink to="/stats" icon={<BarChart3 className="size-4" />} label="Stats" compact />
+                <NavLink to="/help" icon={<BookOpen className="size-4" />} label="Help" compact />
                 {isOffice && (
                   <>
                     <NavLink to="/history" icon={<History className="size-4" />} label="History" compact />
@@ -248,6 +249,7 @@ function RootComponent() {
           { to: "/currency", label: "Currency", icon: <Activity className="size-5" /> },
           { to: "/logbook", label: "Logbook", icon: <BookOpen className="size-5" /> },
           { to: "/stats", label: "Stats", icon: <BarChart3 className="size-5" /> },
+          { to: "/help", label: "Help", icon: <BookOpen className="size-5" /> },
           ...(isOffice
             ? [
                 { to: "/history", label: "History", icon: <History className="size-5" /> },
