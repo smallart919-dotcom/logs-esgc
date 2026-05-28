@@ -19,7 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { toast } from "sonner";
 import { Download, Plus, RefreshCw, Pencil, Trash2, Plane, ChevronsUpDown, Mail, ChevronDown, MessageCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import ExcelJS from "exceljs";
+import type ExcelJS from "exceljs";
 import { fmtUKTime, toUKLocalInput, fromUKLocalInput, fmtUKDate, fmtUKTimeSec, todayUKDate, shiftIso } from "@/lib/uktime";
 import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
