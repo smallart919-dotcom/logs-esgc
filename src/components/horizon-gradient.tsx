@@ -64,17 +64,6 @@ export function HorizonGradient() {
         WebkitMaskImage: "linear-gradient(180deg, black 0%, black 60%, transparent 100%)",
       }}
     >
-      {/* Sun / moon orb */}
-      <div
-        className="absolute size-20 rounded-full horizon-orb"
-        style={{
-          left: `${orbX}%`,
-          top: `${orbY}%`,
-          background: `radial-gradient(circle at 35% 35%, ${p.orb}, ${p.orbGlow} 60%, transparent 75%)`,
-          filter: `drop-shadow(0 0 32px ${p.orbGlow})`,
-          transform: "translate(-50%, -50%)",
-        }}
-      />
       {/* Star sparkle layer for night */}
       {p.isNight && (
         <div
