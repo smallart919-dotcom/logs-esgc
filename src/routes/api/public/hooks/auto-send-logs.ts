@@ -331,8 +331,8 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
 
     const idemBase = `auto-logs-${flightDate}`;
     const [primary, copy] = await Promise.allSettled([
-      sendOne({ recipient: to, subject, text, html, idemKey: `${idemBase}-to`, apiKey }),
-      sendOne({ recipient: CC, subject, text, html, idemKey: `${idemBase}-cc`, apiKey }),
+      sendOne({ recipient: to, from, subject, text, html, idemKey: `${idemBase}-to`, apiKey }),
+      sendOne({ recipient: CC, from, subject, text, html, idemKey: `${idemBase}-cc`, apiKey }),
     ]);
 
     if (primary.status === "rejected") {
