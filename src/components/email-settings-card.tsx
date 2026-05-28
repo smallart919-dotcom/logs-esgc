@@ -170,11 +170,12 @@ export function EmailSettingsCard() {
     const { error } = await supabase.from("email_settings").update({
       enabled: state.enabled,
       to_email: to,
+      from_email: state.from_email,
       subject_template: state.subject_template,
       body_template: state.body_template,
       updated_by: u.user?.id ?? null,
       updated_at: new Date().toISOString(),
-    }).eq("id", 1);
+    } as never).eq("id", 1);
     setSaving(false);
     if (error) toast.error(error.message); else toast.success("Email settings saved");
   };
