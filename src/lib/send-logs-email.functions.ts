@@ -32,7 +32,7 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     // Load office-configured settings (enabled, to_email, from_email, templates)
     const { data: settings } = await supabaseAdmin
       .from("email_settings")
-      .select("enabled, to_email, from_email, subject_template, body_template")
+      .select("enabled, to_email, cc_email, from_email, subject_template, body_template")
       .eq("id", 1)
       .maybeSingle();
 
@@ -41,6 +41,7 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     }
 
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
+    const cc = (settings as { cc_email?: string } | null)?.cc_email?.trim() || "";
     const from = normalizeSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
