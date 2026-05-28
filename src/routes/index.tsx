@@ -25,6 +25,7 @@ import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 import { useServerFn } from "@tanstack/react-start";
 import { sendLogsEmail } from "@/lib/send-logs-email.functions";
+import { GfeCard } from "@/components/gfe-card";
 
 function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
