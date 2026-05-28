@@ -51,31 +51,76 @@ function StatsPage() {
   const [fromDate, setFromDate] = useState(defaultFrom);
   const [toDate, setToDate] = useState(today);
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [gfes, setGfes] = useState<Gfe[]>([]);
+  const [dutyLogs, setDutyLogs] = useState<DutyLog[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase.from("flights")
-        .select("id, flight_date, glider_registration, launch_type, takeoff_time, landing_time, p1_name, p1_membership, p1_charge, p2_name, p2_membership, p2_charge")
-        .gte("flight_date", fromDate).lte("flight_date", toDate)
-        .neq("glider_registration", "G-ESGC")
-        .order("flight_date", { ascending: true })
-        .limit(20000);
-      setFlights((data as Flight[]) ?? []);
+      const [{ data: f }, { data: g }, { data: d }] = await Promise.all([
+        supabase.from("flights")
+          .select("id, flight_date, glider_registration, launch_type, takeoff_time, landing_time, aerotow_height_ft, under_21, p1_name, p1_membership, p1_charge, p2_name, p2_membership, p2_charge")
+          .gte("flight_date", fromDate).lte("flight_date", toDate)
+          .neq("glider_registration", "G-ESGC")
+          .order("flight_date", { ascending: true })
+          .limit(20000),
+        supabase.from("daily_gfes")
+          .select("flight_date")
+          .gte("flight_date", fromDate).lte("flight_date", toDate)
+          .limit(20000),
+        supabase.from("daily_logs")
+          .select("flight_date, duty_instructor")
+          .gte("flight_date", fromDate).lte("flight_date", toDate)
+          .limit(20000),
+      ]);
+      setFlights((f as Flight[]) ?? []);
+      setGfes((g as Gfe[]) ?? []);
+      setDutyLogs((d as DutyLog[]) ?? []);
       setLoading(false);
     })();
   }, [fromDate, toDate]);
 
+  const revenueByFlight = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const f of flights) {
+      const charge = computeFlightCharge(f as any, !!f.under_21);
+      map.set(f.id, charge.total || 0);
+    }
+    return map;
+  }, [flights]);
+
   const totals = useMemo(() => {
-    let mins = 0, aerotow = 0, winch = 0;
+    let mins = 0, aerotow = 0, winch = 0, revenue = 0;
     for (const f of flights) {
       mins += durationMin(f);
       if (f.launch_type === "aerotow") aerotow++;
       else if (f.launch_type === "winch") winch++;
+      revenue += revenueByFlight.get(f.id) || 0;
     }
-    return { count: flights.length, mins, aerotow, winch };
-  }, [flights]);
+    return { count: flights.length, mins, aerotow, winch, revenue, gfes: gfes.length };
+  }, [flights, gfes, revenueByFlight]);
+
+  const instructorHours = useMemo(() => {
+    // Sum flight hours on days where a duty instructor is set, grouped by instructor name.
+    const dutyByDay = new Map<string, string>();
+    for (const d of dutyLogs) {
+      if (d.duty_instructor && d.duty_instructor.trim()) dutyByDay.set(d.flight_date, d.duty_instructor.trim());
+    }
+    const map = new Map<string, { name: string; mins: number; days: Set<string> }>();
+    for (const f of flights) {
+      const instr = dutyByDay.get(f.flight_date);
+      if (!instr) continue;
+      const key = instr.toUpperCase();
+      const row = map.get(key) ?? { name: instr, mins: 0, days: new Set<string>() };
+      row.mins += durationMin(f);
+      row.days.add(f.flight_date);
+      map.set(key, row);
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.mins - a.mins)
+      .map((r) => ({ name: r.name, hours: +(r.mins / 60).toFixed(1), days: r.days.size }));
+  }, [flights, dutyLogs]);
 
   const dailyData = useMemo(() => {
     const days = eachDayOfInterval({ start: new Date(`${fromDate}T12:00:00Z`), end: new Date(`${toDate}T12:00:00Z`) });
