@@ -25,7 +25,7 @@ import { useDayOffset } from "@/lib/clock-offset";
 import { ClockSyncCard } from "@/components/clock-sync-card";
 import { useServerFn } from "@tanstack/react-start";
 import { sendLogsEmail } from "@/lib/send-logs-email.functions";
-import { uploadLogsForShare } from "@/lib/upload-logs.functions";
+
 import { GfeCard } from "@/components/gfe-card";
 
 // WhatsApp deep-link target for "Share to WhatsApp". Edit here to change recipient.
