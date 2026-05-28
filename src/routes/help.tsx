@@ -297,46 +297,98 @@ function HelpPage() {
       </Card>
 
       {/* Pre-publish checklist */}
-      {!editing && (
-        <Card className={`liquid-glass transition-colors ${allChecked ? "ring-1 ring-emerald-500/40" : ""}`}>
+      {!editing && (checklistEnabled || isOffice) && (
+        <Card className={`liquid-glass transition-colors ${allChecked && checklistEnabled ? "ring-1 ring-emerald-500/40" : ""}`}>
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <ListChecks className="size-5 text-primary" />
               Pre-publish checklist
-              <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
-                {checkedCount}/{CHECKLIST_ITEMS.length}
-              </span>
+              {checklistEnabled ? (
+                <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
+                  {checkedCount}/{checklistItems.length}
+                </span>
+              ) : (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">(hidden — office only)</span>
+              )}
             </CardTitle>
-            {checkedCount > 0 && (
-              <Button size="sm" variant="ghost" onClick={resetChecklist}>
-                Reset
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {checklistEnabled && checkedCount > 0 && !editingChecklist && (
+                <Button size="sm" variant="ghost" onClick={resetChecklist}>Reset</Button>
+              )}
+              {isOffice && !editingChecklist && (
+                <Button size="sm" variant="outline" onClick={startEditChecklist}>
+                  <Pencil className="size-4 mr-1" /> Edit
+                </Button>
+              )}
+              {isOffice && editingChecklist && (
+                <>
+                  <Button size="sm" variant="ghost" onClick={cancelEditChecklist} disabled={savingChecklist}>
+                    <X className="size-4 mr-1" /> Cancel
+                  </Button>
+                  <Button size="sm" onClick={saveChecklist} disabled={savingChecklist}>
+                    <Save className="size-4 mr-1" /> {savingChecklist ? "Saving…" : "Save"}
+                  </Button>
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Tick each item before sending today's log. Saved locally for {today}.
-            </p>
-            <ul className="space-y-2">
-              {CHECKLIST_ITEMS.map((item) => (
-                <li key={item.id}>
-                  <label className="flex items-center gap-3 rounded-md border bg-background/40 p-2.5 cursor-pointer hover:bg-background/70 transition-colors">
-                    <Checkbox
-                      checked={!!checked[item.id]}
-                      onCheckedChange={() => toggle(item.id)}
-                    />
-                    <span className={`text-sm ${checked[item.id] ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                      {item.label}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-            {allChecked && (
-              <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
-                <CheckCircle2 className="size-4" />
-                All checks complete — safe to publish today's log.
-              </div>
+            {editingChecklist ? (
+              <>
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-background/40 p-2.5">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-medium">Show checklist to caravan</div>
+                    <p className="text-xs text-muted-foreground">Turn off to hide it from everyone except office.</p>
+                  </div>
+                  <Switch checked={draftEnabled} onCheckedChange={setDraftEnabled} />
+                </div>
+                <ul className="space-y-2">
+                  {draftItems.map((item, idx) => (
+                    <li key={item.id} className="flex items-center gap-2">
+                      <Input
+                        value={item.label}
+                        onChange={(e) => updateItem(idx, e.target.value)}
+                        placeholder="Checklist item"
+                      />
+                      <Button size="icon" variant="ghost" onClick={() => removeItem(idx)} aria-label="Remove">
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+                <Button size="sm" variant="outline" onClick={addItem} className="gap-1.5">
+                  <Plus className="size-4" /> Add item
+                </Button>
+              </>
+            ) : checklistEnabled ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Tick each item before sending today's log. Saved locally for {today}.
+                </p>
+                <ul className="space-y-2">
+                  {checklistItems.map((item) => (
+                    <li key={item.id}>
+                      <label className="flex items-center gap-3 rounded-md border bg-background/40 p-2.5 cursor-pointer hover:bg-background/70 transition-colors">
+                        <Checkbox
+                          checked={!!checked[item.id]}
+                          onCheckedChange={() => toggle(item.id)}
+                        />
+                        <span className={`text-sm ${checked[item.id] ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                          {item.label}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                {allChecked && (
+                  <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                    <CheckCircle2 className="size-4" />
+                    All checks complete — safe to publish today's log.
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Checklist is currently turned off.</p>
             )}
           </CardContent>
         </Card>
