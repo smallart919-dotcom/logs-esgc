@@ -237,10 +237,10 @@ async function tokenFor(addr: string) {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function sendOne(opts: { recipient: string; subject: string; text: string; html: string; idemKey: string; apiKey: string }) {
+async function sendOne(opts: { recipient: string; from: string; subject: string; text: string; html: string; idemKey: string; apiKey: string }) {
   return sendLovableEmail({
     to: opts.recipient,
-    from: FROM,
+    from: opts.from,
     sender_domain: SENDER_DOMAIN,
     reply_to: REPLY_TO,
     subject: opts.subject,
