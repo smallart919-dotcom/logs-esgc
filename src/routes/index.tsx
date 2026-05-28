@@ -610,6 +610,8 @@ function FlightsPage() {
 
       <DailyLogCard date={date} members={members} />
 
+      <GfeCard date={date} />
+
       <ClockSyncCard date={date} isCaravan={isCaravan} />
 
       <Card>
