@@ -28,6 +28,10 @@ import { sendLogsEmail } from "@/lib/send-logs-email.functions";
 import { uploadLogsForShare } from "@/lib/upload-logs.functions";
 import { GfeCard } from "@/components/gfe-card";
 
+// WhatsApp deep-link target for "Share to WhatsApp". Edit here to change recipient.
+const WHATSAPP_PHONE = "447300798768";
+
+
 function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   return (
