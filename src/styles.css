@@ -445,17 +445,42 @@ nav.sticky {
   -webkit-backdrop-filter: blur(18px) saturate(170%);
 }
 
-/* Glassy cards */
+/* Glassy cards — !important to override Tailwind bg-card utility */
 [data-slot="card"] {
-  background: color-mix(in oklab, var(--card) 78%, transparent);
-  backdrop-filter: blur(10px) saturate(140%);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-  border: 1px solid color-mix(in oklab, white 30%, transparent);
+  background: color-mix(in oklab, var(--card) 72%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid color-mix(in oklab, white 30%, transparent) !important;
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 45%, transparent) inset,
+    0 10px 30px -16px color-mix(in oklab, var(--sky-deep) 35%, transparent);
 }
 .dark [data-slot="card"] {
-  background: color-mix(in oklab, var(--card) 70%, transparent);
-  border-color: color-mix(in oklab, white 8%, transparent);
+  background: color-mix(in oklab, var(--card) 60%, transparent) !important;
+  border-color: color-mix(in oklab, white 10%, transparent) !important;
 }
+
+/* Also ensure .liquid-glass beats utility bg classes */
+.liquid-glass { background: color-mix(in oklab, var(--background) 55%, transparent) !important; }
+.dark .liquid-glass { background: color-mix(in oklab, var(--background) 45%, transparent) !important; }
+
+/* Red flashing pulse for "no gliders airborne" state */
+@keyframes airborne-red-flash {
+  0%, 100% {
+    background: color-mix(in oklab, oklch(0.62 0.22 27) 18%, transparent) !important;
+    box-shadow: 0 0 0 0 color-mix(in oklab, oklch(0.62 0.22 27) 45%, transparent);
+  }
+  50% {
+    background: color-mix(in oklab, oklch(0.62 0.22 27) 40%, transparent) !important;
+    box-shadow: 0 0 0 8px color-mix(in oklab, oklch(0.62 0.22 27) 0%, transparent);
+  }
+}
+.airborne-empty {
+  animation: airborne-red-flash 1.4s ease-in-out infinite;
+  color: oklch(0.32 0.18 27);
+  border-color: color-mix(in oklab, oklch(0.62 0.22 27) 55%, transparent) !important;
+}
+.dark .airborne-empty { color: oklch(0.95 0.14 25); }
 
 
 /* Glassy dialogs, popovers, dropdowns, sheets, command palettes */
