@@ -97,7 +97,20 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     const CC = "accounts@sussexgliding.co.uk";
     const idemBase = `logs-${new Date().toISOString().slice(0, 10)}-${crypto.randomUUID()}`;
 
-    const send = (recipient: string, suffix: string) =>
+    // Deterministic unsubscribe token per recipient (required by Lovable Email API
+    // for transactional purpose). This is operational mail to the club office; no
+    // real opt-out flow is needed, but the API mandates the field.
+    const tokenFor = async (addr: string) => {
+      const buf = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(`caravan-logs:${addr.toLowerCase()}`),
+      );
+      return Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    };
+
+    const send = async (recipient: string, suffix: string) =>
       sendLovableEmail(
         {
           to: recipient,
@@ -108,6 +121,7 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
           text,
           html,
           purpose: "transactional",
+          unsubscribe_token: await tokenFor(recipient),
           idempotency_key: `${idemBase}-${suffix}`,
         },
         { apiKey },
