@@ -230,6 +230,7 @@ export type Database = {
       email_settings: {
         Row: {
           body_template: string
+          cc_email: string
           enabled: boolean
           from_email: string
           id: number
@@ -240,6 +241,7 @@ export type Database = {
         }
         Insert: {
           body_template?: string
+          cc_email?: string
           enabled?: boolean
           from_email?: string
           id?: number
@@ -250,6 +252,7 @@ export type Database = {
         }
         Update: {
           body_template?: string
+          cc_email?: string
           enabled?: boolean
           from_email?: string
           id?: number
@@ -457,18 +460,24 @@ export type Database = {
       help_content: {
         Row: {
           body: string
+          checklist_enabled: boolean
+          checklist_items: Json
           id: number
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           body?: string
+          checklist_enabled?: boolean
+          checklist_items?: Json
           id?: number
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           body?: string
+          checklist_enabled?: boolean
+          checklist_items?: Json
           id?: number
           updated_at?: string
           updated_by?: string | null
