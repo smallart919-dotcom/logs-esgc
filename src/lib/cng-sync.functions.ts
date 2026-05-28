@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 
 // Thin wrapper that triggers the public sync endpoint from the UI. We can't
 // invoke a public TanStack route via `useServerFn` directly, so this server fn
@@ -8,11 +9,14 @@ import { createServerFn } from "@tanstack/react-start";
 export const cngSyncNow = createServerFn({ method: "POST" })
   .inputValidator((d: { date?: string } | undefined) => d ?? {})
   .handler(async ({ data }) => {
-    const baseUrl =
-      process.env.PUBLIC_BASE_URL ||
-      process.env.VITE_BASE_URL ||
-      "https://logs-esgc.lovable.app";
-    const url = new URL("/api/public/hooks/cng-sync", baseUrl).toString();
+    const origin = (() => {
+      try {
+        return new URL(getRequest().url).origin;
+      } catch {
+        return process.env.PUBLIC_BASE_URL || "https://logs-esgc.lovable.app";
+      }
+    })();
+    const url = new URL("/api/public/hooks/cng-sync", origin).toString();
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
