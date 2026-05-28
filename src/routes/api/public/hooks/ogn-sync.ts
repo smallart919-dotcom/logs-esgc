@@ -41,12 +41,10 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
       POST: async ({ request }) => {
         let body: { icao?: string; date?: string } = {};
         try { body = await request.json(); } catch {}
-        const icao = (body.icao || process.env.OGN_AIRFIELD_ICAO || "").toUpperCase().trim();
+        // ICAO is permanently fixed to UKRIN (Ringmer). Any client-supplied
+        // value or OGN_AIRFIELD_ICAO env var is ignored.
+        const icao = "UKRIN";
         const date = body.date || todayUTC();
-
-        if (!icao) {
-          return Response.json({ error: "Missing airfield ICAO. Set it in Settings." }, { status: 400 });
-        }
 
         // Fetch fleet to know which FLARM IDs belong to the club
         const { data: fleet, error: fleetErr } = await supabaseAdmin
