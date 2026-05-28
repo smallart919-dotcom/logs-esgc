@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { sendLovableEmail } from "@lovable.dev/email-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { DEFAULT_FROM, SENDER_DOMAIN, normalizeSender } from "@/lib/email-sender";
 
 interface Input {
   filename: string;
@@ -8,8 +9,6 @@ interface Input {
   dateLabel: string;
 }
 
-const SENDER_DOMAIN = "notify.spaghettigalleries.uk";
-const FROM = `Jacob Abundy <caravan@${SENDER_DOMAIN}>`;
 const REPLY_TO = "jacobabundy@icloud.com";
 
 const DEFAULT_SUBJECT = "Logs {date}";
@@ -42,7 +41,7 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     }
 
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
-    const from = (settings as { from_email?: string } | null)?.from_email?.trim() || FROM;
+    const from = normalizeSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
 
