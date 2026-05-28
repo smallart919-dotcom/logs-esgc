@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { BookOpen, Pencil, Save, X } from "lucide-react";
+import { BookOpen, Pencil, Save, X, CheckCircle2, ListChecks } from "lucide-react";
+import { todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/help")({
   component: HelpPage,
@@ -16,6 +18,17 @@ export const Route = createFileRoute("/help")({
     ],
   }),
 });
+
+/** Slugify a heading for use as a stable in-page anchor id. */
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60) || "section";
+}
 
 /** Tiny markdown → HTML renderer covering headings, bold, italic, lists, and paragraphs. */
 function renderMarkdown(md: string): string {
@@ -44,12 +57,13 @@ function renderMarkdown(md: string): string {
       closeAll();
       const lvl = h[1].length;
       const sizes = [
-        "text-3xl font-bold tracking-tight mt-8 mb-4 pb-2 border-b",
-        "text-xl font-semibold tracking-tight mt-6 mb-2 text-primary",
-        "text-base font-semibold mt-4 mb-1.5 uppercase tracking-wide text-muted-foreground",
-        "text-sm font-semibold mt-3 mb-1",
+        "text-3xl font-bold tracking-tight mt-8 mb-4 pb-2 border-b scroll-mt-32",
+        "text-xl font-semibold tracking-tight mt-6 mb-2 text-primary scroll-mt-32",
+        "text-base font-semibold mt-4 mb-1.5 uppercase tracking-wide text-muted-foreground scroll-mt-32",
+        "text-sm font-semibold mt-3 mb-1 scroll-mt-32",
       ];
-      html += `<h${lvl} class="${sizes[lvl - 1]}">${inline(h[2])}</h${lvl}>`;
+      const id = slugify(h[2]);
+      html += `<h${lvl} id="${id}" class="${sizes[lvl - 1]}">${inline(h[2])}</h${lvl}>`;
       continue;
     }
     const ul = line.match(/^[-*]\s+(.*)$/);
@@ -64,6 +78,29 @@ function renderMarkdown(md: string): string {
   return html;
 }
 
+/** Extract all level 1-2 headings from the markdown body for the jump-link bar. */
+function extractHeadings(md: string): { id: string; text: string; level: number }[] {
+  const out: { id: string; text: string; level: number }[] = [];
+  for (const raw of md.split(/\r?\n/)) {
+    const m = raw.trim().match(/^(#{1,2})\s+(.*)$/);
+    if (m) out.push({ id: slugify(m[2]), text: m[2], level: m[1].length });
+  }
+  return out;
+}
+
+/** Jump-link targets — matched fuzzily against headings in the guide. */
+const JUMP_TARGETS = [
+  { label: "Duty", match: /duty/i },
+  { label: "Names sync", match: /(names?\s*sync|di.*dp.*sync|dp.*di.*sync|sync)/i },
+  { label: "Logging steps", match: /(logging|log\s*(a\s*)?flight|how to log)/i },
+];
+
+const CHECKLIST_ITEMS = [
+  { id: "sync", label: "DI & DP names synced" },
+  { id: "launch", label: "Launch type confirmed (aerotow / winch)" },
+  { id: "tow", label: "Tow height confirmed" },
+] as const;
+
 function HelpPage() {
   const [body, setBody] = useState<string>("");
   const [draft, setDraft] = useState<string>("");
@@ -71,6 +108,9 @@ function HelpPage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isOffice, setIsOffice] = useState(false);
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const today = todayUKDate();
+  const storageKey = `esgc.help.checklist.${today}`;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -81,7 +121,34 @@ function HelpPage() {
       setBody(data?.body ?? "");
       setLoading(false);
     });
-  }, []);
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) setChecked(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, [storageKey]);
+
+  const toggle = (id: string) => {
+    setChecked((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  const resetChecklist = () => {
+    setChecked({});
+    try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+  };
+
+  const headings = useMemo(() => extractHeadings(body), [body]);
+  const jumpLinks = useMemo(() => {
+    return JUMP_TARGETS.map((t) => {
+      const hit = headings.find((h) => t.match.test(h.text));
+      return { label: t.label, id: hit?.id };
+    });
+  }, [headings]);
+
+  const allChecked = CHECKLIST_ITEMS.every((c) => checked[c.id]);
+  const checkedCount = CHECKLIST_ITEMS.filter((c) => checked[c.id]).length;
 
   const startEdit = () => { setDraft(body); setEditing(true); };
   const cancel = () => { setEditing(false); setDraft(""); };
@@ -99,8 +166,14 @@ function HelpPage() {
     toast.success("Help guide updated");
   };
 
+  const scrollTo = (id?: string) => {
+    if (!id) { toast.info("Heading not found in the guide yet."); return; }
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto space-y-4">
       <Card className="liquid-glass">
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2">
@@ -123,6 +196,28 @@ function HelpPage() {
           )}
         </CardHeader>
         <CardContent>
+          {/* Jump-link bar — hidden while editing */}
+          {!editing && !loading && body.trim() && (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border bg-background/40 p-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
+                Jump to
+              </span>
+              {jumpLinks.map((j) => (
+                <Button
+                  key={j.label}
+                  size="sm"
+                  variant={j.id ? "secondary" : "ghost"}
+                  className="h-7 text-xs"
+                  onClick={() => scrollTo(j.id)}
+                  disabled={!j.id}
+                  title={j.id ? `Jump to ${j.label}` : "No matching heading yet"}
+                >
+                  {j.label}
+                </Button>
+              ))}
+            </div>
+          )}
+
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : editing ? (
@@ -136,6 +231,7 @@ function HelpPage() {
               />
               <p className="text-xs text-muted-foreground">
                 Markdown supported: <code>#</code> headings, <code>**bold**</code>, <code>*italic*</code>, <code>-</code> lists.
+                Jump links match headings named <em>Duty</em>, <em>Names sync</em>, and <em>Logging</em>.
               </p>
             </div>
           ) : body.trim() ? (
@@ -148,6 +244,52 @@ function HelpPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pre-publish checklist */}
+      {!editing && (
+        <Card className={`liquid-glass transition-colors ${allChecked ? "ring-1 ring-emerald-500/40" : ""}`}>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ListChecks className="size-5 text-primary" />
+              Pre-publish checklist
+              <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
+                {checkedCount}/{CHECKLIST_ITEMS.length}
+              </span>
+            </CardTitle>
+            {checkedCount > 0 && (
+              <Button size="sm" variant="ghost" onClick={resetChecklist}>
+                Reset
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Tick each item before sending today's log. Saved locally for {today}.
+            </p>
+            <ul className="space-y-2">
+              {CHECKLIST_ITEMS.map((item) => (
+                <li key={item.id}>
+                  <label className="flex items-center gap-3 rounded-md border bg-background/40 p-2.5 cursor-pointer hover:bg-background/70 transition-colors">
+                    <Checkbox
+                      checked={!!checked[item.id]}
+                      onCheckedChange={() => toggle(item.id)}
+                    />
+                    <span className={`text-sm ${checked[item.id] ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                      {item.label}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            {allChecked && (
+              <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                <CheckCircle2 className="size-4" />
+                All checks complete — safe to publish today's log.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
