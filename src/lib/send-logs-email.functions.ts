@@ -115,7 +115,7 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
       sendLovableEmail(
         {
           to: recipient,
-          from: FROM,
+          from,
           sender_domain: SENDER_DOMAIN,
           reply_to: REPLY_TO,
           subject,
