@@ -124,6 +124,7 @@ export function EmailSettingsCard() {
   const [state, setState] = useState<Settings>({
     enabled: true,
     to_email: "office@sussexgliding.co.uk",
+    cc_email: "accounts@sussexgliding.co.uk",
     from_email: DEFAULT_FROM,
     subject_template: DEFAULT_SUBJECT,
     body_template: DEFAULT_BODY,
