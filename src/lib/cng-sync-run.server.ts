@@ -39,14 +39,15 @@ export async function runCngSync(input: { date?: string } = {}): Promise<CngSync
     return { error: message };
   }
 
+  // Always sync duty fields from CnG when CnG returned a value; keep the
+  // existing value only when CnG has nothing (so we never blank out a manual
+  // entry just because the CnG box was empty).
   const { data: existingLog } = await supabaseAdmin
     .from("daily_logs").select("duty_instructor, duty_pilot")
     .eq("flight_date", date).maybeSingle();
 
-  const nextDI = existingLog?.duty_instructor && existingLog.duty_instructor.trim().length > 0
-    ? existingLog.duty_instructor : snapshot.duty_instructor;
-  const nextDP = existingLog?.duty_pilot && existingLog.duty_pilot.trim().length > 0
-    ? existingLog.duty_pilot : snapshot.duty_pilot;
+  const nextDI = snapshot.duty_instructor ?? existingLog?.duty_instructor ?? null;
+  const nextDP = snapshot.duty_pilot ?? existingLog?.duty_pilot ?? null;
 
   const { error: logErr } = await supabaseAdmin.from("daily_logs").upsert(
     {
