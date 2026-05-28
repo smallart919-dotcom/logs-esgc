@@ -247,8 +247,9 @@ function RootComponent() {
           ...(isOffice
             ? [
                 { to: "/history", label: "History", icon: <History className="size-5" /> },
+                { to: "/audit", label: "Audit", icon: <History className="size-5" /> },
                 { to: "/fleet", label: "Fleet", icon: <Plane className="size-5" /> },
-                { to: "/members", label: "Members", icon: <Users className="size-5" /> },
+                { to: "/members", label: "Users", icon: <Users className="size-5" /> },
                 { to: "/settings", label: "Settings", icon: <SettingsIcon className="size-5" /> },
               ]
             : []),
