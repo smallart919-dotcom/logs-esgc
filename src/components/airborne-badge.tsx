@@ -40,16 +40,25 @@ export function AirborneBadge() {
     };
   }, []);
 
-  if (count === null || count === 0) return null;
+  if (count === null) return null;
+  const isEmpty = count === 0;
   return (
     <span
-      className="hidden xs:inline-flex sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold liquid-glass"
-      title={`${count} ${count === 1 ? "glider is" : "gliders are"} currently airborne`}
+      className={`hidden xs:inline-flex sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold liquid-glass ${isEmpty ? "airborne-empty" : ""}`}
+      title={
+        isEmpty
+          ? "No gliders currently airborne"
+          : `${count} ${count === 1 ? "glider is" : "gliders are"} currently airborne`
+      }
       aria-live="polite"
     >
       <span className="relative inline-flex size-2">
-        <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-70" />
-        <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+        <span
+          className={`absolute inset-0 rounded-full animate-ping opacity-70 ${isEmpty ? "bg-red-500" : "bg-emerald-500"}`}
+        />
+        <span
+          className={`relative inline-flex size-2 rounded-full ${isEmpty ? "bg-red-500" : "bg-emerald-500"}`}
+        />
       </span>
       <span className="tabular-nums">{count}</span>
       <span className="opacity-80">airborne</span>
