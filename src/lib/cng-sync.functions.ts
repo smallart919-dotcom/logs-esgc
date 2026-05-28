@@ -18,11 +18,19 @@ export const cngSyncNow = createServerFn({ method: "POST" })
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data ?? {}),
     });
-    const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      ok?: boolean;
+      date?: string;
+      duty_instructor?: string | null;
+      duty_pilot?: string | null;
+      gfes_inserted?: number;
+      fetched_at?: string;
+      skipped?: boolean;
+      reason?: string;
+    };
     if (!res.ok) {
-      throw new Error(
-        typeof json.error === "string" ? json.error : `Sync failed (HTTP ${res.status})`,
-      );
+      throw new Error(json.error || `Sync failed (HTTP ${res.status})`);
     }
     return json;
   });
