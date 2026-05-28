@@ -10,6 +10,7 @@ import { BarChart3 } from "lucide-react";
 import { format, subDays, eachDayOfInterval, startOfMonth } from "date-fns";
 import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 import { useCountUp } from "@/lib/count-up";
+import { useInView } from "@/lib/in-view";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend, LineChart, Line,
@@ -406,10 +407,11 @@ function StatsPage() {
 }
 
 function StatCard({ label, value, decimals = 0 }: { label: string; value: number; decimals?: number }) {
-  const animated = useCountUp(value);
+  const [ref, inView] = useInView<HTMLDivElement>();
+  const animated = useCountUp(inView ? value : 0);
   const text = decimals > 0 ? animated.toFixed(decimals) : Math.round(animated).toLocaleString("en-GB");
   return (
-    <Card>
+    <Card ref={ref} className={inView ? "stat-rise" : "opacity-0"}>
       <CardContent className="p-4">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
         <div className="text-2xl font-bold mt-1 tabular-nums">{text}</div>

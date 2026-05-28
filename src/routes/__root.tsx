@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { ShapesBackground } from "@/components/shapes-background";
 import { MacDock } from "@/components/mac-dock";
 import { AirborneBadge } from "@/components/airborne-badge";
+import { SkyStrip } from "@/components/sky-strip";
+import { HorizonGradient } from "@/components/horizon-gradient";
 import { ThemeToggle } from "@/components/theme-toggle";
 import esgcLogo from "@/assets/esgc-logo.png";
 
@@ -145,6 +147,7 @@ function RootComponent() {
 
   return (
     <div className="min-h-screen flex flex-col relative">
+      <HorizonGradient />
       <ShapesBackground routeKey={path} />
       <header className="border-b backdrop-blur-md bg-background/80 sticky top-0 z-40 relative overflow-hidden">
         {/* Wave animation behind the logo/signout bar */}
@@ -181,6 +184,7 @@ function RootComponent() {
             />
             <span className="hidden sm:inline">ESGC Logs</span>
             <AirborneBadge />
+            <SkyStrip />
           </Link>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <ThemeToggle />
