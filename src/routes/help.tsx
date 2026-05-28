@@ -97,11 +97,13 @@ const JUMP_TARGETS = [
   { label: "Logging steps", match: /(logging|log\s*(a\s*)?flight|how to log)/i },
 ];
 
-const CHECKLIST_ITEMS = [
+type ChecklistItem = { id: string; label: string };
+
+const DEFAULT_CHECKLIST: ChecklistItem[] = [
   { id: "sync", label: "DI & DP names synced" },
   { id: "launch", label: "Launch type confirmed (aerotow / winch)" },
   { id: "tow", label: "Tow height confirmed" },
-] as const;
+];
 
 function HelpPage() {
   const [body, setBody] = useState<string>("");
@@ -111,6 +113,12 @@ function HelpPage() {
   const [saving, setSaving] = useState(false);
   const [isOffice, setIsOffice] = useState(false);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(DEFAULT_CHECKLIST);
+  const [checklistEnabled, setChecklistEnabled] = useState(true);
+  const [editingChecklist, setEditingChecklist] = useState(false);
+  const [draftItems, setDraftItems] = useState<ChecklistItem[]>([]);
+  const [draftEnabled, setDraftEnabled] = useState(true);
+  const [savingChecklist, setSavingChecklist] = useState(false);
   const today = todayUKDate();
   const storageKey = `esgc.help.checklist.${today}`;
 
@@ -119,8 +127,13 @@ function HelpPage() {
       const email = (data.user?.email || "").toLowerCase();
       setIsOffice(email === "office@esgc.local");
     });
-    supabase.from("help_content").select("body").eq("id", 1).maybeSingle().then(({ data }) => {
+    supabase.from("help_content").select("*").eq("id", 1).maybeSingle().then(({ data }) => {
       setBody(data?.body ?? "");
+      const row = data as { checklist_items?: ChecklistItem[] | null; checklist_enabled?: boolean | null } | null;
+      if (Array.isArray(row?.checklist_items) && row!.checklist_items!.length > 0) {
+        setChecklistItems(row!.checklist_items as ChecklistItem[]);
+      }
+      if (typeof row?.checklist_enabled === "boolean") setChecklistEnabled(row.checklist_enabled);
       setLoading(false);
     });
     try {
@@ -140,6 +153,42 @@ function HelpPage() {
     setChecked({});
     try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
   };
+
+  const startEditChecklist = () => {
+    setDraftItems(checklistItems.map((i) => ({ ...i })));
+    setDraftEnabled(checklistEnabled);
+    setEditingChecklist(true);
+  };
+  const cancelEditChecklist = () => { setEditingChecklist(false); };
+  const saveChecklist = async () => {
+    const cleaned = draftItems
+      .map((i) => ({ id: i.id.trim() || crypto.randomUUID(), label: i.label.trim() }))
+      .filter((i) => i.label);
+    setSavingChecklist(true);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("help_content").upsert(
+      {
+        id: 1,
+        body,
+        checklist_items: cleaned,
+        checklist_enabled: draftEnabled,
+        updated_at: new Date().toISOString(),
+        updated_by: u.user?.id ?? null,
+      } as never,
+      { onConflict: "id" },
+    );
+    setSavingChecklist(false);
+    if (error) { toast.error(error.message); return; }
+    setChecklistItems(cleaned);
+    setChecklistEnabled(draftEnabled);
+    setEditingChecklist(false);
+    toast.success("Checklist updated");
+  };
+  const addItem = () => setDraftItems((arr) => [...arr, { id: crypto.randomUUID(), label: "" }]);
+  const removeItem = (idx: number) => setDraftItems((arr) => arr.filter((_, i) => i !== idx));
+  const updateItem = (idx: number, label: string) =>
+    setDraftItems((arr) => arr.map((it, i) => (i === idx ? { ...it, label } : it)));
+
 
   const headings = useMemo(() => extractHeadings(body), [body]);
   const jumpLinks = useMemo(() => {
