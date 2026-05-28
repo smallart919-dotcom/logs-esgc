@@ -194,12 +194,15 @@ function parseGfeLine(raw: string): CngGfe {
 
 function parseGfeBox(boxHtml: string | null): CngGfe[] {
   if (!boxHtml) return [];
-  // Each booking is rendered as `<div class=''>- TEXT</div>`
-  const re = /<div class=['"]['"]>\s*-?\s*([^<]+)<\/div>/gi;
+  // Each booking is a `<div class=''>…</div>` (sometimes with nested tags like
+  // a <span class='nom_membre'> for linked member names). Capture the whole
+  // inner block, then strip any inner tags to recover the booking text.
+  const re = /<div class=['"]['"]>([\s\S]*?)<\/div>/gi;
   const out: CngGfe[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(boxHtml))) {
-    const raw = decodeEntities(m[1]).trim();
+    const stripped = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    const raw = decodeEntities(stripped).replace(/^\s*-\s*/, "").trim();
     if (!raw || raw === "-") continue;
     out.push(parseGfeLine(raw));
   }
