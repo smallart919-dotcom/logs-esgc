@@ -141,6 +141,7 @@ export function EmailSettingsCard() {
         setState({
           enabled: data.enabled,
           to_email: data.to_email ?? "",
+          cc_email: (data as { cc_email?: string }).cc_email ?? "accounts@sussexgliding.co.uk",
           from_email: normalizeSender((data as { from_email?: string }).from_email),
           subject_template: data.subject_template ?? DEFAULT_SUBJECT,
           body_template: data.body_template ?? DEFAULT_BODY,
