@@ -56,12 +56,12 @@ export function HorizonGradient() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[44vh] overflow-hidden"
+      className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[38vh] overflow-hidden"
       style={{
         background: `linear-gradient(180deg, ${p.top} 0%, ${p.mid} 45%, ${p.bot} 75%, transparent 100%)`,
-        opacity: 0.55,
-        maskImage: "linear-gradient(180deg, black 0%, black 60%, transparent 100%)",
-        WebkitMaskImage: "linear-gradient(180deg, black 0%, black 60%, transparent 100%)",
+        opacity: 0.28,
+        maskImage: "linear-gradient(180deg, black 0%, black 55%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(180deg, black 0%, black 55%, transparent 100%)",
       }}
     >
       {/* Star sparkle layer for night */}
