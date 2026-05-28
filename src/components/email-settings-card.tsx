@@ -121,10 +121,10 @@ const DEFAULT_FROM = "Jacob Abundy <caravan@notify.spaghettigalleries.uk>";
 export function EmailSettingsCard() {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [fromField, setFromField] = useState<string>(DEFAULT_FROM);
   const [state, setState] = useState<Settings>({
     enabled: true,
     to_email: "office@sussexgliding.co.uk",
+    from_email: DEFAULT_FROM,
     subject_template: DEFAULT_SUBJECT,
     body_template: DEFAULT_BODY,
   });
@@ -140,6 +140,7 @@ export function EmailSettingsCard() {
         setState({
           enabled: data.enabled,
           to_email: data.to_email ?? "",
+          from_email: (data as { from_email?: string }).from_email ?? DEFAULT_FROM,
           subject_template: data.subject_template ?? DEFAULT_SUBJECT,
           body_template: data.body_template ?? DEFAULT_BODY,
         });
