@@ -537,12 +537,46 @@ function FlightsPage() {
   };
 
   const shareWhatsApp = async () => {
-
     const t = toast.loading("Preparing logs for WhatsApp…");
     try {
       const { blob, filename } = await exportXlsx();
 
-      // Trigger a local download so the user has the file to attach in WhatsApp.
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, "0");
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const yyyy = now.getFullYear();
+      const dateStr = `${dd}/${mm}/${yyyy}`;
+      const message = `${dateStr} logs\n${filename}\nThanks, Caravan`;
+
+      const file = new File([blob], filename, {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      // Prefer the native share sheet so the user can pick ANY WhatsApp chat
+      // or group and attach the real .xlsx file (iOS/Android).
+      const nav: any = typeof navigator !== "undefined" ? navigator : null;
+      const canShareFile = !!(nav?.canShare && nav.canShare({ files: [file] }) && nav.share);
+
+      if (canShareFile) {
+        try {
+          await nav.share({
+            files: [file],
+            title: `${dateStr} logs`,
+            text: message,
+          });
+          toast.success("Shared", { id: t, description: filename, duration: 4000 });
+          return;
+        } catch (err: any) {
+          if (err?.name === "AbortError") {
+            toast.dismiss(t);
+            return;
+          }
+          // fall through to desktop fallback
+        }
+      }
+
+      // Fallback (desktop / browsers without file-share): download locally
+      // and open WhatsApp's chat picker (no phone number = pick any chat/group).
       const dlUrl = URL.createObjectURL(blob);
       const dl = document.createElement("a");
       dl.href = dlUrl;
@@ -552,18 +586,10 @@ function FlightsPage() {
       dl.remove();
       setTimeout(() => URL.revokeObjectURL(dlUrl), 10_000);
 
-      // Build the pre-filled WhatsApp message in the exact requested format.
-      const now = new Date();
-      const dd = String(now.getDate()).padStart(2, "0");
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const yyyy = now.getFullYear();
-      const dateStr = `${dd}/${mm}/${yyyy}`;
-
-      const message = `${dateStr} logs\n${filename}\nThanks, Caravan`;
-      const waUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
       window.open(waUrl, "_blank", "noopener,noreferrer");
 
-      toast.success("WhatsApp opened — attach the downloaded file", {
+      toast.success("WhatsApp opened — pick a chat & attach the file", {
         id: t,
         description: `Saved ${filename} to your downloads.`,
         duration: 6000,
