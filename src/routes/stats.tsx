@@ -312,6 +312,67 @@ function StatsPage() {
         </Card>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="chart-pop">
+          <CardHeader><CardTitle>Revenue per month</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `£${v}`} />
+                <Tooltip formatter={(v: any) => fmtGBP(Number(v))} />
+                <Bar dataKey="revenue" fill={COLORS[3]} name="Revenue" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="chart-pop">
+          <CardHeader><CardTitle>GFEs per day</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyData}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="gfes" fill={COLORS[4]} name="GFEs" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>Instructor hours (duty days)</CardTitle></CardHeader>
+        <CardContent className="overflow-x-auto p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">#</TableHead>
+                <TableHead>Instructor</TableHead>
+                <TableHead className="text-right">Duty days</TableHead>
+                <TableHead className="text-right">Flying hours on duty</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {instructorHours.map((p, i) => (
+                <TableRow key={p.name + i}>
+                  <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell className="text-right font-mono">{p.days}</TableCell>
+                  <TableCell className="text-right font-mono">{p.hours.toFixed(1)}</TableCell>
+                </TableRow>
+              ))}
+              {instructorHours.length === 0 && (
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">{loading ? "Loading…" : "No duty instructor entries in range."}</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader><CardTitle>Top pilots</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto p-0">
