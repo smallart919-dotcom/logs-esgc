@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      auto_send_log: {
+        Row: {
+          flight_date: string
+          flights_count: number
+          message_id: string | null
+          note: string | null
+          recipient: string | null
+          sent_at: string
+        }
+        Insert: {
+          flight_date: string
+          flights_count?: number
+          message_id?: string | null
+          note?: string | null
+          recipient?: string | null
+          sent_at?: string
+        }
+        Update: {
+          flight_date?: string
+          flights_count?: number
+          message_id?: string | null
+          note?: string | null
+          recipient?: string | null
+          sent_at?: string
+        }
+        Relationships: []
+      }
       clock_offsets: {
         Row: {
           flight_date: string
