@@ -219,8 +219,8 @@ export function EmailSettingsCard() {
             autoCapitalize="none"
             autoComplete="off"
             spellCheck={false}
-            value={fromField}
-            onChange={(e) => setFromField(e.target.value)}
+            value={state.from_email}
+            onChange={(e) => setState((s) => ({ ...s, from_email: e.target.value }))}
             placeholder={DEFAULT_FROM}
           />
           <p className="text-[11px] text-muted-foreground">
