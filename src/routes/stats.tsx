@@ -124,10 +124,10 @@ function StatsPage() {
 
   const dailyData = useMemo(() => {
     const days = eachDayOfInterval({ start: new Date(`${fromDate}T12:00:00Z`), end: new Date(`${toDate}T12:00:00Z`) });
-    const byDay = new Map<string, { date: string; flights: number; aerotow: number; winch: number; hours: number }>();
+    const byDay = new Map<string, { date: string; key: string; flights: number; aerotow: number; winch: number; hours: number; revenue: number; gfes: number }>();
     for (const d of days) {
       const k = format(d, "yyyy-MM-dd");
-      byDay.set(k, { date: fmtUKDate(k), flights: 0, aerotow: 0, winch: 0, hours: 0 });
+      byDay.set(k, { date: fmtUKDate(k), key: k, flights: 0, aerotow: 0, winch: 0, hours: 0, revenue: 0, gfes: 0 });
     }
     for (const f of flights) {
       const row = byDay.get(f.flight_date);
@@ -136,24 +136,37 @@ function StatsPage() {
       if (f.launch_type === "aerotow") row.aerotow++;
       if (f.launch_type === "winch") row.winch++;
       row.hours += durationMin(f) / 60;
+      row.revenue += revenueByFlight.get(f.id) || 0;
     }
-    return Array.from(byDay.values()).map((r) => ({ ...r, hours: +r.hours.toFixed(1) }));
-  }, [flights, fromDate, toDate]);
+    for (const g of gfes) {
+      const row = byDay.get(g.flight_date);
+      if (row) row.gfes++;
+    }
+    return Array.from(byDay.values()).map((r) => ({ ...r, hours: +r.hours.toFixed(1), revenue: +r.revenue.toFixed(2) }));
+  }, [flights, gfes, revenueByFlight, fromDate, toDate]);
 
   const monthlyData = useMemo(() => {
-    const byMonth = new Map<string, { month: string; flights: number; hours: number }>();
+    const byMonth = new Map<string, { month: string; flights: number; hours: number; revenue: number; gfes: number }>();
     for (const f of flights) {
       const k = format(startOfMonth(new Date(f.flight_date + "T12:00:00Z")), "yyyy-MM");
       const label = format(startOfMonth(new Date(f.flight_date + "T12:00:00Z")), "MM-yyyy");
-      const row = byMonth.get(k) ?? { month: label, flights: 0, hours: 0 };
+      const row = byMonth.get(k) ?? { month: label, flights: 0, hours: 0, revenue: 0, gfes: 0 };
       row.flights++;
       row.hours += durationMin(f) / 60;
+      row.revenue += revenueByFlight.get(f.id) || 0;
+      byMonth.set(k, row);
+    }
+    for (const g of gfes) {
+      const k = format(startOfMonth(new Date(g.flight_date + "T12:00:00Z")), "yyyy-MM");
+      const label = format(startOfMonth(new Date(g.flight_date + "T12:00:00Z")), "MM-yyyy");
+      const row = byMonth.get(k) ?? { month: label, flights: 0, hours: 0, revenue: 0, gfes: 0 };
+      row.gfes++;
       byMonth.set(k, row);
     }
     return Array.from(byMonth.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([, v]) => ({ ...v, hours: +v.hours.toFixed(1) }));
-  }, [flights]);
+      .map(([, v]) => ({ ...v, hours: +v.hours.toFixed(1), revenue: +v.revenue.toFixed(2) }));
+  }, [flights, gfes, revenueByFlight]);
 
   const launchPie = useMemo(() => {
     const data = [
