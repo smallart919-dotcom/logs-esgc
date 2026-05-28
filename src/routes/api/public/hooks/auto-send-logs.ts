@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type ExcelJSNs from "exceljs";
 import { sendLovableEmail } from "@lovable.dev/email-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { DEFAULT_FROM, SENDER_DOMAIN, normalizeSender } from "@/lib/email-sender";
 
 // --- UK time helpers (duplicated here so this route has no client deps) ---
 const LONDON = "Europe/London";
@@ -221,8 +222,6 @@ async function getOffsetSec(flightDate: string): Promise<number> {
 }
 
 // --- Email config (mirrors send-logs-email.functions.ts) ---
-const SENDER_DOMAIN = "notify.spaghettigalleries.uk";
-const FROM = `Jacob Abundy <caravan@${SENDER_DOMAIN}>`;
 const REPLY_TO = "jacobabundy@icloud.com";
 const DEFAULT_SUBJECT = "Logs {date}";
 const DEFAULT_BODY = "Please find today's logs attached via the link below:\n\n{link}\n\nFrom Caravan, have a good evening.";
@@ -313,7 +312,7 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
       return { status: "email_disabled" };
     }
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
-    const from = (settings as { from_email?: string } | null)?.from_email?.trim() || FROM;
+    const from = normalizeSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
 
