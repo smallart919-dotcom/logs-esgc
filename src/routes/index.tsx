@@ -231,7 +231,7 @@ function FlightsPage() {
     return () => { supabase.removeChannel(ch); };
   }, [load]);
 
-  const [icao] = useState<string>("UKRIN");
+  const icao = "UKRIN"; // OGN airfield is fixed — Ringmer (UKRIN).
 
   const syncOgn = useCallback(async (silent = false) => {
     const code = icao;
