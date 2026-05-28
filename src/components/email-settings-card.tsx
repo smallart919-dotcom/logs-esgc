@@ -14,6 +14,7 @@ import { DEFAULT_FROM, SENDER_DOMAIN, buildSender, normalizeSender, parseSender 
 type Settings = {
   enabled: boolean;
   to_email: string;
+  cc_email: string;
   from_email: string;
   subject_template: string;
   body_template: string;
@@ -123,6 +124,7 @@ export function EmailSettingsCard() {
   const [state, setState] = useState<Settings>({
     enabled: true,
     to_email: "office@sussexgliding.co.uk",
+    cc_email: "accounts@sussexgliding.co.uk",
     from_email: DEFAULT_FROM,
     subject_template: DEFAULT_SUBJECT,
     body_template: DEFAULT_BODY,
@@ -139,6 +141,7 @@ export function EmailSettingsCard() {
         setState({
           enabled: data.enabled,
           to_email: data.to_email ?? "",
+          cc_email: (data as { cc_email?: string }).cc_email ?? "accounts@sussexgliding.co.uk",
           from_email: normalizeSender((data as { from_email?: string }).from_email),
           subject_template: data.subject_template ?? DEFAULT_SUBJECT,
           body_template: data.body_template ?? DEFAULT_BODY,
@@ -164,11 +167,14 @@ export function EmailSettingsCard() {
   const save = async () => {
     const to = state.to_email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { toast.error("Enter a valid email"); return; }
+    const cc = state.cc_email.trim();
+    if (cc && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cc)) { toast.error("CC must be a valid email or empty"); return; }
     setSaving(true);
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("email_settings").update({
       enabled: state.enabled,
       to_email: to,
+      cc_email: cc,
       from_email: normalizeSender(state.from_email),
       subject_template: state.subject_template,
       body_template: state.body_template,
@@ -271,6 +277,21 @@ export function EmailSettingsCard() {
             onChange={(e) => setState((s) => ({ ...s, to_email: e.target.value }))}
             placeholder="office@sussexgliding.co.uk"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">CC (carbon copy)</Label>
+          <Input
+            type="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoComplete="email"
+            spellCheck={false}
+            value={state.cc_email}
+            onChange={(e) => setState((s) => ({ ...s, cc_email: e.target.value }))}
+            placeholder="accounts@sussexgliding.co.uk"
+          />
+          <p className="text-[11px] text-muted-foreground">Leave empty to skip CC.</p>
         </div>
 
         <div className="space-y-2">

@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { BookOpen, Pencil, Save, X, CheckCircle2, ListChecks } from "lucide-react";
+import { BookOpen, Pencil, Save, X, CheckCircle2, ListChecks, Plus, Trash2 } from "lucide-react";
 import { todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/help")({
@@ -95,11 +97,13 @@ const JUMP_TARGETS = [
   { label: "Logging steps", match: /(logging|log\s*(a\s*)?flight|how to log)/i },
 ];
 
-const CHECKLIST_ITEMS = [
+type ChecklistItem = { id: string; label: string };
+
+const DEFAULT_CHECKLIST: ChecklistItem[] = [
   { id: "sync", label: "DI & DP names synced" },
   { id: "launch", label: "Launch type confirmed (aerotow / winch)" },
   { id: "tow", label: "Tow height confirmed" },
-] as const;
+];
 
 function HelpPage() {
   const [body, setBody] = useState<string>("");
@@ -109,6 +113,12 @@ function HelpPage() {
   const [saving, setSaving] = useState(false);
   const [isOffice, setIsOffice] = useState(false);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(DEFAULT_CHECKLIST);
+  const [checklistEnabled, setChecklistEnabled] = useState(true);
+  const [editingChecklist, setEditingChecklist] = useState(false);
+  const [draftItems, setDraftItems] = useState<ChecklistItem[]>([]);
+  const [draftEnabled, setDraftEnabled] = useState(true);
+  const [savingChecklist, setSavingChecklist] = useState(false);
   const today = todayUKDate();
   const storageKey = `esgc.help.checklist.${today}`;
 
@@ -117,8 +127,13 @@ function HelpPage() {
       const email = (data.user?.email || "").toLowerCase();
       setIsOffice(email === "office@esgc.local");
     });
-    supabase.from("help_content").select("body").eq("id", 1).maybeSingle().then(({ data }) => {
+    supabase.from("help_content").select("*").eq("id", 1).maybeSingle().then(({ data }) => {
       setBody(data?.body ?? "");
+      const row = data as { checklist_items?: ChecklistItem[] | null; checklist_enabled?: boolean | null } | null;
+      if (Array.isArray(row?.checklist_items) && row!.checklist_items!.length > 0) {
+        setChecklistItems(row!.checklist_items as ChecklistItem[]);
+      }
+      if (typeof row?.checklist_enabled === "boolean") setChecklistEnabled(row.checklist_enabled);
       setLoading(false);
     });
     try {
@@ -139,6 +154,42 @@ function HelpPage() {
     try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
   };
 
+  const startEditChecklist = () => {
+    setDraftItems(checklistItems.map((i) => ({ ...i })));
+    setDraftEnabled(checklistEnabled);
+    setEditingChecklist(true);
+  };
+  const cancelEditChecklist = () => { setEditingChecklist(false); };
+  const saveChecklist = async () => {
+    const cleaned = draftItems
+      .map((i) => ({ id: i.id.trim() || crypto.randomUUID(), label: i.label.trim() }))
+      .filter((i) => i.label);
+    setSavingChecklist(true);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("help_content").upsert(
+      {
+        id: 1,
+        body,
+        checklist_items: cleaned,
+        checklist_enabled: draftEnabled,
+        updated_at: new Date().toISOString(),
+        updated_by: u.user?.id ?? null,
+      } as never,
+      { onConflict: "id" },
+    );
+    setSavingChecklist(false);
+    if (error) { toast.error(error.message); return; }
+    setChecklistItems(cleaned);
+    setChecklistEnabled(draftEnabled);
+    setEditingChecklist(false);
+    toast.success("Checklist updated");
+  };
+  const addItem = () => setDraftItems((arr) => [...arr, { id: crypto.randomUUID(), label: "" }]);
+  const removeItem = (idx: number) => setDraftItems((arr) => arr.filter((_, i) => i !== idx));
+  const updateItem = (idx: number, label: string) =>
+    setDraftItems((arr) => arr.map((it, i) => (i === idx ? { ...it, label } : it)));
+
+
   const headings = useMemo(() => extractHeadings(body), [body]);
   const jumpLinks = useMemo(() => {
     return JUMP_TARGETS.map((t) => {
@@ -147,8 +198,8 @@ function HelpPage() {
     });
   }, [headings]);
 
-  const allChecked = CHECKLIST_ITEMS.every((c) => checked[c.id]);
-  const checkedCount = CHECKLIST_ITEMS.filter((c) => checked[c.id]).length;
+  const allChecked = checklistItems.length > 0 && checklistItems.every((c) => checked[c.id]);
+  const checkedCount = checklistItems.filter((c) => checked[c.id]).length;
 
   const startEdit = () => { setDraft(body); setEditing(true); };
   const cancel = () => { setEditing(false); setDraft(""); };
@@ -246,46 +297,98 @@ function HelpPage() {
       </Card>
 
       {/* Pre-publish checklist */}
-      {!editing && (
-        <Card className={`liquid-glass transition-colors ${allChecked ? "ring-1 ring-emerald-500/40" : ""}`}>
+      {!editing && (checklistEnabled || isOffice) && (
+        <Card className={`liquid-glass transition-colors ${allChecked && checklistEnabled ? "ring-1 ring-emerald-500/40" : ""}`}>
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <ListChecks className="size-5 text-primary" />
               Pre-publish checklist
-              <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
-                {checkedCount}/{CHECKLIST_ITEMS.length}
-              </span>
+              {checklistEnabled ? (
+                <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
+                  {checkedCount}/{checklistItems.length}
+                </span>
+              ) : (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">(hidden — office only)</span>
+              )}
             </CardTitle>
-            {checkedCount > 0 && (
-              <Button size="sm" variant="ghost" onClick={resetChecklist}>
-                Reset
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {checklistEnabled && checkedCount > 0 && !editingChecklist && (
+                <Button size="sm" variant="ghost" onClick={resetChecklist}>Reset</Button>
+              )}
+              {isOffice && !editingChecklist && (
+                <Button size="sm" variant="outline" onClick={startEditChecklist}>
+                  <Pencil className="size-4 mr-1" /> Edit
+                </Button>
+              )}
+              {isOffice && editingChecklist && (
+                <>
+                  <Button size="sm" variant="ghost" onClick={cancelEditChecklist} disabled={savingChecklist}>
+                    <X className="size-4 mr-1" /> Cancel
+                  </Button>
+                  <Button size="sm" onClick={saveChecklist} disabled={savingChecklist}>
+                    <Save className="size-4 mr-1" /> {savingChecklist ? "Saving…" : "Save"}
+                  </Button>
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Tick each item before sending today's log. Saved locally for {today}.
-            </p>
-            <ul className="space-y-2">
-              {CHECKLIST_ITEMS.map((item) => (
-                <li key={item.id}>
-                  <label className="flex items-center gap-3 rounded-md border bg-background/40 p-2.5 cursor-pointer hover:bg-background/70 transition-colors">
-                    <Checkbox
-                      checked={!!checked[item.id]}
-                      onCheckedChange={() => toggle(item.id)}
-                    />
-                    <span className={`text-sm ${checked[item.id] ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                      {item.label}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-            {allChecked && (
-              <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
-                <CheckCircle2 className="size-4" />
-                All checks complete — safe to publish today's log.
-              </div>
+            {editingChecklist ? (
+              <>
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-background/40 p-2.5">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-medium">Show checklist to caravan</div>
+                    <p className="text-xs text-muted-foreground">Turn off to hide it from everyone except office.</p>
+                  </div>
+                  <Switch checked={draftEnabled} onCheckedChange={setDraftEnabled} />
+                </div>
+                <ul className="space-y-2">
+                  {draftItems.map((item, idx) => (
+                    <li key={item.id} className="flex items-center gap-2">
+                      <Input
+                        value={item.label}
+                        onChange={(e) => updateItem(idx, e.target.value)}
+                        placeholder="Checklist item"
+                      />
+                      <Button size="icon" variant="ghost" onClick={() => removeItem(idx)} aria-label="Remove">
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+                <Button size="sm" variant="outline" onClick={addItem} className="gap-1.5">
+                  <Plus className="size-4" /> Add item
+                </Button>
+              </>
+            ) : checklistEnabled ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Tick each item before sending today's log. Saved locally for {today}.
+                </p>
+                <ul className="space-y-2">
+                  {checklistItems.map((item) => (
+                    <li key={item.id}>
+                      <label className="flex items-center gap-3 rounded-md border bg-background/40 p-2.5 cursor-pointer hover:bg-background/70 transition-colors">
+                        <Checkbox
+                          checked={!!checked[item.id]}
+                          onCheckedChange={() => toggle(item.id)}
+                        />
+                        <span className={`text-sm ${checked[item.id] ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                          {item.label}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                {allChecked && (
+                  <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                    <CheckCircle2 className="size-4" />
+                    All checks complete — safe to publish today's log.
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Checklist is currently turned off.</p>
             )}
           </CardContent>
         </Card>

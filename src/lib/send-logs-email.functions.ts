@@ -32,7 +32,7 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     // Load office-configured settings (enabled, to_email, from_email, templates)
     const { data: settings } = await supabaseAdmin
       .from("email_settings")
-      .select("enabled, to_email, from_email, subject_template, body_template")
+      .select("enabled, to_email, cc_email, from_email, subject_template, body_template")
       .eq("id", 1)
       .maybeSingle();
 
@@ -41,6 +41,7 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     }
 
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
+    const cc = (settings as { cc_email?: string } | null)?.cc_email?.trim() || "";
     const from = normalizeSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
@@ -94,7 +95,6 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     const htmlBody = fillTokens(esc(bodyTpl), htmlTokens).replace(/\n/g, "<br/>");
     const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.55;color:#111">${htmlBody}</div>`;
 
-    const CC = "accounts@sussexgliding.co.uk";
     const idemBase = `logs-${new Date().toISOString().slice(0, 10)}-${crypto.randomUUID()}`;
 
     // Deterministic unsubscribe token per recipient (required by Lovable Email API
@@ -127,20 +127,25 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
         { apiKey },
       );
 
-    const [primary, copy] = await Promise.allSettled([send(to, "to"), send(CC, "cc")]);
+    const tasks: Promise<Awaited<ReturnType<typeof send>>>[] = [send(to, "to")];
+    if (cc && cc.toLowerCase() !== to.toLowerCase()) tasks.push(send(cc, "cc"));
+    const results = await Promise.allSettled(tasks);
+    const primary = results[0];
+    const copy = results[1];
 
     if (primary.status === "rejected") {
       const msg = primary.reason instanceof Error ? primary.reason.message : String(primary.reason);
       throw new Error(`Send failed: ${msg}`);
     }
-    if (copy.status === "rejected") {
-      console.warn("CC to accounts@ failed:", copy.reason);
+    if (copy && copy.status === "rejected") {
+      console.warn(`CC to ${cc} failed:`, copy.reason);
     }
 
     return {
       success: primary.value.success,
       messageId: primary.value.message_id,
       to,
-      cc: copy.status === "fulfilled" ? CC : null,
+      cc: copy && copy.status === "fulfilled" ? cc : null,
     };
   });
+
