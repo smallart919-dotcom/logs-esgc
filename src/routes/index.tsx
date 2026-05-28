@@ -541,41 +541,31 @@ function FlightsPage() {
     const t = toast.loading("Preparing logs for WhatsApp…");
     try {
       const { blob, filename } = await exportXlsx();
-      const buf = await blob.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let bin = "";
-      const chunk = 0x8000;
-      for (let i = 0; i < bytes.length; i += chunk) {
-        bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
-      }
-      const base64 = btoa(bin);
-      const { url } = await uploadForShareFn({ data: { filename, base64 } });
 
-      const message =
-        `Sussex Gliding — Logs ${fmtUKDate(date)}\n\n` +
-        `Download (valid 30 days):\n${url}\n\n` +
-        `From Caravan.`;
-      const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      // Trigger a local download so the user has the file to attach in WhatsApp.
+      const dlUrl = URL.createObjectURL(blob);
+      const dl = document.createElement("a");
+      dl.href = dlUrl;
+      dl.download = filename;
+      document.body.appendChild(dl);
+      dl.click();
+      dl.remove();
+      setTimeout(() => URL.revokeObjectURL(dlUrl), 10_000);
 
-      // Try to copy link too so the user has a fallback if WA strips it.
-      try {
-        await navigator.clipboard?.writeText(url);
-      } catch {
-        /* clipboard may be unavailable — non-fatal */
-      }
+      // Build the pre-filled WhatsApp message in the exact requested format.
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, "0");
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const yyyy = now.getFullYear();
+      const dateStr = `${dd}/${mm}/${yyyy}`;
 
-      // Open WhatsApp. Use a real anchor click so mobile Safari opens the app.
-      const a = document.createElement("a");
-      a.href = waUrl;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      const message = `${dateStr} logs\n${filename}\nThanks, Caravan`;
+      const waUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
+      window.open(waUrl, "_blank", "noopener,noreferrer");
 
-      toast.success("WhatsApp opened — pick the club group", {
+      toast.success("WhatsApp opened — attach the downloaded file", {
         id: t,
-        description: "The download link is also copied to your clipboard.",
+        description: `Saved ${filename} to your downloads.`,
         duration: 6000,
       });
     } catch (err: any) {
@@ -586,6 +576,7 @@ function FlightsPage() {
       });
     }
   };
+
 
 
 
