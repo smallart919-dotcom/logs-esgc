@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { BookOpen, Pencil, Save, X, CheckCircle2, ListChecks } from "lucide-react";
+import { BookOpen, Pencil, Save, X, CheckCircle2, ListChecks, Plus, Trash2 } from "lucide-react";
 import { todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/help")({
