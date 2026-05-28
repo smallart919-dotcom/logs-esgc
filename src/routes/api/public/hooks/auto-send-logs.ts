@@ -57,6 +57,7 @@ async function buildXlsx(opts: {
       : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor")
       : (name || "");
 
+  const ExcelJS = ((await import("exceljs")) as unknown as { default: typeof ExcelJSNs }).default;
   const wb = new ExcelJS.Workbook();
   const RED = "FFC00000";
   const PINK = "FFFCE4E6";
