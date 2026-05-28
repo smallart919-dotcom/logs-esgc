@@ -198,8 +198,8 @@ function HelpPage() {
     });
   }, [headings]);
 
-  const allChecked = CHECKLIST_ITEMS.every((c) => checked[c.id]);
-  const checkedCount = CHECKLIST_ITEMS.filter((c) => checked[c.id]).length;
+  const allChecked = checklistItems.length > 0 && checklistItems.every((c) => checked[c.id]);
+  const checkedCount = checklistItems.filter((c) => checked[c.id]).length;
 
   const startEdit = () => { setDraft(body); setEditing(true); };
   const cancel = () => { setEditing(false); setDraft(""); };
