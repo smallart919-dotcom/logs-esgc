@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Mail, Calendar, FileText, Link2, Clock, GripVertical, RotateCcw } from "lucide-react";
+import { DEFAULT_FROM, SENDER_DOMAIN, buildSender, normalizeSender, parseSender } from "@/lib/email-sender";
 
 type Settings = {
   enabled: boolean;
@@ -116,24 +117,6 @@ function previewTemplate(tpl: string) {
   });
 }
 
-const SENDER_DOMAIN = "notify.spaghettigalleries.uk";
-const DEFAULT_FROM = `Jacob Abundy <caravan@${SENDER_DOMAIN}>`;
-
-// Parse "Name <user@domain>" or "user@domain" into { name, local }
-function parseFrom(raw: string): { name: string; local: string } {
-  const m = raw.match(/^\s*(.*?)\s*<\s*([^@\s]+)@([^>\s]+)\s*>\s*$/);
-  if (m) return { name: m[1] ?? "", local: m[2] ?? "" };
-  const m2 = raw.match(/^\s*([^@\s]+)@([^\s]+)\s*$/);
-  if (m2) return { name: "", local: m2[1] ?? "" };
-  return { name: raw.trim(), local: "" };
-}
-function buildFrom(name: string, local: string): string {
-  const n = name.trim();
-  const l = local.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
-  if (!l) return "";
-  return n ? `${n} <${l}@${SENDER_DOMAIN}>` : `${l}@${SENDER_DOMAIN}`;
-}
-
 export function EmailSettingsCard() {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -156,7 +139,7 @@ export function EmailSettingsCard() {
         setState({
           enabled: data.enabled,
           to_email: data.to_email ?? "",
-          from_email: (data as { from_email?: string }).from_email ?? DEFAULT_FROM,
+          from_email: normalizeSender((data as { from_email?: string }).from_email),
           subject_template: data.subject_template ?? DEFAULT_SUBJECT,
           body_template: data.body_template ?? DEFAULT_BODY,
         });
@@ -186,7 +169,7 @@ export function EmailSettingsCard() {
     const { error } = await supabase.from("email_settings").update({
       enabled: state.enabled,
       to_email: to,
-      from_email: state.from_email,
+      from_email: normalizeSender(state.from_email),
       subject_template: state.subject_template,
       body_template: state.body_template,
       updated_by: u.user?.id ?? null,
@@ -230,9 +213,9 @@ export function EmailSettingsCard() {
         <div className="space-y-2">
           <Label className="text-xs">From (sender)</Label>
           {(() => {
-            const { name, local } = parseFrom(state.from_email);
+            const { name, local } = parseSender(state.from_email);
             const update = (n: string, l: string) =>
-              setState((s) => ({ ...s, from_email: buildFrom(n, l) || s.from_email }));
+              setState((s) => ({ ...s, from_email: buildSender(n, l) }));
             return (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
