@@ -209,7 +209,25 @@ export function EmailSettingsCard() {
         </div>
 
         <div className="space-y-2">
+          <Label className="text-xs">From (sender)</Label>
+          <Input
+            ref={fromRef}
+            type="text"
+            autoCapitalize="none"
+            autoComplete="off"
+            spellCheck={false}
+            value={fromField}
+            onChange={(e) => setFromField(e.target.value)}
+            placeholder={DEFAULT_FROM}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Edit which office/sender the email comes from. Format: <code>Name &lt;address@domain&gt;</code>.
+          </p>
+        </div>
+
+        <div className="space-y-2">
           <Label className="text-xs">Recipient</Label>
+
           <Input
             ref={toRef}
             type="email"
