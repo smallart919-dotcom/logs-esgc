@@ -306,13 +306,14 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     // Email settings
     const { data: settings } = await supabaseAdmin
       .from("email_settings")
-      .select("enabled, to_email, subject_template, body_template")
+      .select("enabled, to_email, from_email, subject_template, body_template")
       .eq("id", 1).maybeSingle();
     if (settings && settings.enabled === false) {
       await supabaseAdmin.from("auto_send_log").update({ note: "skipped:email_disabled", flights_count: flights.length }).eq("flight_date", flightDate);
       return { status: "email_disabled" };
     }
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
+    const from = (settings as { from_email?: string } | null)?.from_email?.trim() || FROM;
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
 
