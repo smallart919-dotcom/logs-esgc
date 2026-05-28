@@ -115,17 +115,44 @@ async function fetchDashboard(jar: Map<string, string>, date: string): Promise<s
   return html;
 }
 
+function extractDivInner(html: string, divStart: number): string | null {
+  const tagRe = /<\/??div\b[^>]*>/gi;
+  tagRe.lastIndex = divStart;
+
+  let depth = 0;
+  let contentStart = -1;
+  let m: RegExpExecArray | null;
+  while ((m = tagRe.exec(html))) {
+    const tag = m[0];
+    const isClose = /^<\//.test(tag);
+
+    if (!isClose) {
+      if (depth === 0) contentStart = tagRe.lastIndex;
+      depth += 1;
+      continue;
+    }
+
+    depth -= 1;
+    if (depth === 0 && contentStart >= 0) return html.slice(contentStart, m.index);
+  }
+
+  return null;
+}
+
 // Extracts the inner HTML of the `<div class="org-box-main">…</div>` that
 // follows a `<h3>{title}…</h3>` heading. Returns null if not found.
 function extractBoxAfter(html: string, title: string): string | null {
-  // Escape regex specials in the title
   const t = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(
-    `<h3>\\s*${t}[^<]*</h3>[\\s\\S]*?<div class="org-box-main">([\\s\\S]*?)</div>\\s*</div>`,
-    "i",
-  );
-  const m = html.match(re);
-  return m ? m[1] : null;
+  const headingRe = new RegExp(`<h3>\\s*${t}[^<]*</h3>`, "i");
+  const heading = headingRe.exec(html);
+  if (!heading) return null;
+
+  const afterHeading = heading.index + heading[0].length;
+  const mainRe = /<div\b[^>]*class=['"][^'"]*\borg-box-main\b[^'"]*['"][^>]*>/i;
+  const main = mainRe.exec(html.slice(afterHeading));
+  if (!main) return null;
+
+  return extractDivInner(html, afterHeading + main.index);
 }
 
 function decodeEntities(s: string): string {
