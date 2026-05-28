@@ -80,7 +80,7 @@ export const Route = createFileRoute("/api/public/hooks/cng-sync")({
               duty_instructor: nextDI,
               duty_pilot: nextDP,
               cng_synced_at: snapshot.fetched_at,
-              cng_raw: snapshot as unknown as Record<string, unknown>,
+              cng_raw: JSON.parse(JSON.stringify(snapshot)),
             },
             { onConflict: "flight_date" },
           );
