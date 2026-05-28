@@ -280,6 +280,21 @@ export function EmailSettingsCard() {
         </div>
 
         <div className="space-y-2">
+          <Label className="text-xs">CC (carbon copy)</Label>
+          <Input
+            type="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoComplete="email"
+            spellCheck={false}
+            value={state.cc_email}
+            onChange={(e) => setState((s) => ({ ...s, cc_email: e.target.value }))}
+            placeholder="accounts@sussexgliding.co.uk"
+          />
+          <p className="text-[11px] text-muted-foreground">Leave empty to skip CC.</p>
+        </div>
+
+        <div className="space-y-2">
           <Label className="text-xs">Drag presets into the subject or message — or tap to insert</Label>
           <div className="flex flex-wrap gap-2">
             {PRESETS.map((p) => (
