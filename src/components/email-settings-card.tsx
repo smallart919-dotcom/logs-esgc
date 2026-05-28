@@ -115,9 +115,12 @@ function previewTemplate(tpl: string) {
   });
 }
 
+const DEFAULT_FROM = "Jacob Abundy <caravan@notify.spaghettigalleries.uk>";
+
 export function EmailSettingsCard() {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [fromField, setFromField] = useState<string>(DEFAULT_FROM);
   const [state, setState] = useState<Settings>({
     enabled: true,
     to_email: "office@sussexgliding.co.uk",
@@ -128,6 +131,7 @@ export function EmailSettingsCard() {
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const toRef = useRef<HTMLInputElement>(null);
+  const fromRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     supabase.from("email_settings").select("*").eq("id", 1).maybeSingle().then(({ data }) => {
@@ -142,6 +146,7 @@ export function EmailSettingsCard() {
       setLoaded(true);
     });
   }, []);
+
 
   useDroppable(subjectRef, (t) => insertAtCursor(subjectRef.current, state.subject_template, (v) => setState((s) => ({ ...s, subject_template: v })), t));
   useDroppable(bodyRef, (t) => insertAtCursor(bodyRef.current, state.body_template, (v) => setState((s) => ({ ...s, body_template: v })), t));
@@ -204,7 +209,25 @@ export function EmailSettingsCard() {
         </div>
 
         <div className="space-y-2">
+          <Label className="text-xs">From (sender)</Label>
+          <Input
+            ref={fromRef}
+            type="text"
+            autoCapitalize="none"
+            autoComplete="off"
+            spellCheck={false}
+            value={fromField}
+            onChange={(e) => setFromField(e.target.value)}
+            placeholder={DEFAULT_FROM}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Edit which office/sender the email comes from. Format: <code>Name &lt;address@domain&gt;</code>.
+          </p>
+        </div>
+
+        <div className="space-y-2">
           <Label className="text-xs">Recipient</Label>
+
           <Input
             ref={toRef}
             type="email"
