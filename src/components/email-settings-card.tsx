@@ -14,6 +14,7 @@ import { DEFAULT_FROM, SENDER_DOMAIN, buildSender, normalizeSender, parseSender 
 type Settings = {
   enabled: boolean;
   to_email: string;
+  cc_email: string;
   from_email: string;
   subject_template: string;
   body_template: string;
