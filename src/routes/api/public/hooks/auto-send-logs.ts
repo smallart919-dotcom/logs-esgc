@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import ExcelJS from "exceljs";
+// Type-only import — the real exceljs module is loaded dynamically inside
+// buildXlsx() so a future Node-only regression in the package can't crash
+// module-init for the entire Cloudflare Worker bundle.
+import type ExcelJSNs from "exceljs";
 import { sendLovableEmail } from "@lovable.dev/email-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -54,6 +57,7 @@ async function buildXlsx(opts: {
       : kind === "visitor" ? (name ? `Visitor (${name})` : "Visitor")
       : (name || "");
 
+  const ExcelJS = ((await import("exceljs")) as unknown as { default: typeof ExcelJSNs }).default;
   const wb = new ExcelJS.Workbook();
   const RED = "FFC00000";
   const PINK = "FFFCE4E6";

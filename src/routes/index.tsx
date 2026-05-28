@@ -1391,8 +1391,9 @@ function GliderPicker({ gliders, registration, onSelect, onChangeText, onCreated
       callsign: draft.callsign.trim() || null,
       flarm_id: draft.flarm_id.trim().toUpperCase() || null,
       glider_type: draft.glider_type.trim() || null,
-    }).select().single();
+    }).select().maybeSingle();
     if (error) return toast.error(error.message);
+    if (!data) return toast.error("Glider was not saved — please try again.");
     toast.success("Glider added to fleet");
     setAddOpen(false);
     setDraft({ registration: "", callsign: "", flarm_id: "", glider_type: "" });
