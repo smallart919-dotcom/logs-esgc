@@ -284,6 +284,48 @@ export type Database = {
         }
         Relationships: []
       }
+      flight_audit: {
+        Row: {
+          action: string
+          after_row: Json | null
+          before_row: Json | null
+          changed_at: string
+          changed_by: string | null
+          changed_by_email: string | null
+          changed_fields: string[] | null
+          flight_date: string | null
+          flight_id: string
+          glider_registration: string | null
+          id: number
+        }
+        Insert: {
+          action: string
+          after_row?: Json | null
+          before_row?: Json | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          changed_fields?: string[] | null
+          flight_date?: string | null
+          flight_id: string
+          glider_registration?: string | null
+          id?: number
+        }
+        Update: {
+          action?: string
+          after_row?: Json | null
+          before_row?: Json | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          changed_fields?: string[] | null
+          flight_date?: string | null
+          flight_id?: string
+          glider_registration?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
       flight_tombstones: {
         Row: {
           created_at: string
