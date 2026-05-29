@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 interface Input {
   filename: string;
@@ -12,6 +13,7 @@ interface Input {
  * instead of a file attachment (wa.me doesn't support attachments).
  */
 export const uploadLogsForShare = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: Input) => {
     if (!d?.filename || typeof d.filename !== "string") throw new Error("Missing filename");
     if (!d?.base64 || typeof d.base64 !== "string") throw new Error("Missing file data");
