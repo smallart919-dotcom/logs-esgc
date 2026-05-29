@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runCngSync } from "@/lib/cng-sync-run.server";
+import { authorizePublicHook } from "@/lib/public-hook-auth";
 
 // POST /api/public/hooks/cng-sync
 // Body (optional): { date?: "YYYY-MM-DD" }
@@ -7,12 +8,15 @@ import { runCngSync } from "@/lib/cng-sync-run.server";
 // Logs into Click n' Glide using server-side stored credentials, scrapes the
 // chosen day's dashboard, and persists the result.
 //
-// Called by pg_cron nightly and from the "Sync now" button in the UI.
+// Requires Authorization: Bearer <CRON_SECRET> (pg_cron) or a valid Supabase JWT.
 
 export const Route = createFileRoute("/api/public/hooks/cng-sync")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const unauth = await authorizePublicHook(request);
+        if (unauth) return unauth;
+
         let body: { date?: string } = {};
         try { body = (await request.json()) as { date?: string }; } catch {}
 

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { fromUKLocalInput, todayUKDate } from "@/lib/uktime";
+import { authorizePublicHook } from "@/lib/public-hook-auth";
 
 // OGN Flightbook public API: https://flightbook.glidernet.org/api/logbook/{ICAO}/
 // Returns devices[] (with address = FLARM ID) and flights[] for the day.
@@ -39,6 +40,8 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const unauth = await authorizePublicHook(request);
+        if (unauth) return unauth;
         let body: { icao?: string; date?: string } = {};
         try { body = await request.json(); } catch {}
         // ICAO is permanently fixed to UKRIN (Ringmer). Any client-supplied
