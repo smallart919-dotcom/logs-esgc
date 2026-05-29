@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { sendLovableEmail } from "@lovable.dev/email-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { DEFAULT_FROM, SENDER_DOMAIN, normalizeSender } from "@/lib/email-sender";
+
+
 
 interface Input {
   filename: string;
@@ -20,6 +23,7 @@ function fillTokens(tpl: string, tokens: Record<string, string>) {
 }
 
 export const sendLogsEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: Input) => {
     if (!d?.filename || !d?.base64 || !d?.dateLabel) throw new Error("Missing fields");
     if (d.base64.length > 15_000_000) throw new Error("File too large");

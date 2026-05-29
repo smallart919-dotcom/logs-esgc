@@ -6,6 +6,8 @@ import type ExcelJSNs from "exceljs";
 import { sendLovableEmail } from "@lovable.dev/email-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { DEFAULT_FROM, SENDER_DOMAIN, normalizeSender } from "@/lib/email-sender";
+import { authorizePublicHook } from "@/lib/public-hook-auth";
+
 
 // --- UK time helpers (duplicated here so this route has no client deps) ---
 const LONDON = "Europe/London";
@@ -367,8 +369,11 @@ export const Route = createFileRoute("/api/public/hooks/auto-send-logs")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const unauth = await authorizePublicHook(request);
+        if (unauth) return unauth;
         try {
           const body = await request.json().catch(() => ({} as any));
+
           const force = body?.force === true;
           const explicitDate: string | undefined = typeof body?.date === "string" ? body.date : undefined;
 
