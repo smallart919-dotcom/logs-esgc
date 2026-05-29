@@ -244,7 +244,16 @@ function FlightsPage() {
     syncInFlightRef.current = true;
     if (!silent) { setSyncing(true); setSyncResult(null); }
     try {
-      const res = await fetch("/api/public/hooks/ogn-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icao: code, date }) });
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      const res = await fetch("/api/public/hooks/ogn-sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ icao: code, date }),
+      });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
       if (!silent) setSyncResult(j);
