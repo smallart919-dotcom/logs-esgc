@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { runCngSync } from "@/lib/cng-sync-run.server";
 
 export const cngSyncNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { date?: string } | undefined) => d ?? {})
   .handler(async ({ data }) => {
     const result = await runCngSync(data ?? {});
