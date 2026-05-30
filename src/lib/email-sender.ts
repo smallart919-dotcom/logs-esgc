@@ -31,5 +31,14 @@ export function buildSender(name: string, local: string): string {
  */
 export function resolveSender(raw: string | null | undefined): string {
   const value = (raw || "").trim();
-  return value || DEFAULT_FROM;
+  if (!value) return DEFAULT_FROM;
+  // Only allow senders on the verified domain. Anything else (e.g. a stale
+  // notify.spaghettigalleries.uk address saved in email_settings) is rewritten
+  // onto esgclogs.uk so Resend accepts the send.
+  const parsed = parseSender(value);
+  const domainMatch = value.match(/@([^>\s]+)/);
+  const domain = domainMatch?.[1]?.toLowerCase().trim();
+  if (domain === SENDER_DOMAIN) return value;
+  const local = parsed.local || "noreply";
+  return buildSender(parsed.name, local);
 }
