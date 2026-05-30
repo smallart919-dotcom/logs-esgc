@@ -3,9 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 // buildXlsx() so a future Node-only regression in the package can't crash
 // module-init for the entire Cloudflare Worker bundle.
 import type ExcelJSNs from "exceljs";
-import { sendLovableEmail } from "@lovable.dev/email-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { DEFAULT_FROM, SENDER_DOMAIN, normalizeSender } from "@/lib/email-sender";
+import { DEFAULT_FROM, resolveSender } from "@/lib/email-sender";
+import { sendResendEmail } from "@/lib/resend-email";
 import { authorizePublicHook } from "@/lib/public-hook-auth";
 
 
