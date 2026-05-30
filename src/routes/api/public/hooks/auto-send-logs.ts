@@ -233,24 +233,21 @@ function fillTokens(tpl: string, tokens: Record<string, string>) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => tokens[k] ?? `{${k}}`);
 }
 
-async function tokenFor(addr: string) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`caravan-logs:${addr.toLowerCase()}`));
-  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+async function tokenFor(_addr: string) {
+  return "";
 }
 
-async function sendOne(opts: { recipient: string; from: string; subject: string; text: string; html: string; idemKey: string; apiKey: string }) {
-  return sendLovableEmail({
-    to: opts.recipient,
+async function sendOne(opts: { recipient: string; cc?: string | null; from: string; subject: string; text: string; html: string; idemKey: string }) {
+  return sendResendEmail({
     from: opts.from,
-    sender_domain: SENDER_DOMAIN,
-    reply_to: REPLY_TO,
+    to: opts.recipient,
+    cc: opts.cc ?? null,
+    replyTo: REPLY_TO,
     subject: opts.subject,
     text: opts.text,
     html: opts.html,
-    purpose: "transactional",
-    unsubscribe_token: await tokenFor(opts.recipient),
-    idempotency_key: opts.idemKey,
-  }, { apiKey: opts.apiKey });
+    idempotencyKey: opts.idemKey,
+  });
 }
 
 // --- Core: run auto-send for a target UK date ---
