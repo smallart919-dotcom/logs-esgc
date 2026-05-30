@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Mail, Calendar, FileText, Link2, Clock, GripVertical, RotateCcw } from "lucide-react";
-import { DEFAULT_FROM, SENDER_DOMAIN, buildSender, normalizeSender, parseSender } from "@/lib/email-sender";
+import { DEFAULT_FROM, SENDER_DOMAIN, buildSender, resolveSender, parseSender } from "@/lib/email-sender";
 
 type Settings = {
   enabled: boolean;
