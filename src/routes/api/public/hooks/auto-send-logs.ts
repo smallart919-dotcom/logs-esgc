@@ -233,9 +233,6 @@ function fillTokens(tpl: string, tokens: Record<string, string>) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => tokens[k] ?? `{${k}}`);
 }
 
-async function tokenFor(_addr: string) {
-  return "";
-}
 
 async function sendOne(opts: { recipient: string; cc?: string | null; from: string; subject: string; text: string; html: string; idemKey: string }) {
   return sendResendEmail({
