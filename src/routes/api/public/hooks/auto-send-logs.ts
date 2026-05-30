@@ -262,8 +262,7 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
   }
 
   try {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
+
 
     const { data: flights, error: fErr } = await supabaseAdmin
       .from("flights").select("*").eq("flight_date", flightDate).order("takeoff_time", { ascending: true });
@@ -313,7 +312,7 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
     const ccRaw = (settings as { cc_email?: string } | null)?.cc_email;
     const cc = (ccRaw === undefined ? DEFAULT_CC : (ccRaw ?? "").trim());
-    const from = normalizeSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
+    const from = resolveSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
 
@@ -331,10 +330,10 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
 
     const idemBase = `auto-logs-${flightDate}`;
     const tasks: Promise<Awaited<ReturnType<typeof sendOne>>>[] = [
-      sendOne({ recipient: to, from, subject, text, html, idemKey: `${idemBase}-to`, apiKey }),
+      sendOne({ recipient: to, from, subject, text, html, idemKey: `${idemBase}-to` }),
     ];
     if (cc && cc.toLowerCase() !== to.toLowerCase()) {
-      tasks.push(sendOne({ recipient: cc, from, subject, text, html, idemKey: `${idemBase}-cc`, apiKey }));
+      tasks.push(sendOne({ recipient: cc, from, subject, text, html, idemKey: `${idemBase}-cc` }));
     }
     const results = await Promise.allSettled(tasks);
     const primary = results[0];
