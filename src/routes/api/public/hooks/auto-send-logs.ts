@@ -3,9 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 // buildXlsx() so a future Node-only regression in the package can't crash
 // module-init for the entire Cloudflare Worker bundle.
 import type ExcelJSNs from "exceljs";
-import { sendLovableEmail } from "@lovable.dev/email-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { DEFAULT_FROM, SENDER_DOMAIN, normalizeSender } from "@/lib/email-sender";
+import { DEFAULT_FROM, resolveSender } from "@/lib/email-sender";
+import { sendResendEmail } from "@/lib/resend-email";
 import { authorizePublicHook } from "@/lib/public-hook-auth";
 
 
@@ -233,24 +233,18 @@ function fillTokens(tpl: string, tokens: Record<string, string>) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => tokens[k] ?? `{${k}}`);
 }
 
-async function tokenFor(addr: string) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`caravan-logs:${addr.toLowerCase()}`));
-  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
-async function sendOne(opts: { recipient: string; from: string; subject: string; text: string; html: string; idemKey: string; apiKey: string }) {
-  return sendLovableEmail({
-    to: opts.recipient,
+async function sendOne(opts: { recipient: string; cc?: string | null; from: string; subject: string; text: string; html: string; idemKey: string }) {
+  return sendResendEmail({
     from: opts.from,
-    sender_domain: SENDER_DOMAIN,
-    reply_to: REPLY_TO,
+    to: opts.recipient,
+    cc: opts.cc ?? null,
+    replyTo: REPLY_TO,
     subject: opts.subject,
     text: opts.text,
     html: opts.html,
-    purpose: "transactional",
-    unsubscribe_token: await tokenFor(opts.recipient),
-    idempotency_key: opts.idemKey,
-  }, { apiKey: opts.apiKey });
+    idempotencyKey: opts.idemKey,
+  });
 }
 
 // --- Core: run auto-send for a target UK date ---
@@ -265,8 +259,7 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
   }
 
   try {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
+
 
     const { data: flights, error: fErr } = await supabaseAdmin
       .from("flights").select("*").eq("flight_date", flightDate).order("takeoff_time", { ascending: true });
@@ -316,7 +309,7 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
     const ccRaw = (settings as { cc_email?: string } | null)?.cc_email;
     const cc = (ccRaw === undefined ? DEFAULT_CC : (ccRaw ?? "").trim());
-    const from = normalizeSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
+    const from = resolveSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
 
@@ -334,10 +327,10 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
 
     const idemBase = `auto-logs-${flightDate}`;
     const tasks: Promise<Awaited<ReturnType<typeof sendOne>>>[] = [
-      sendOne({ recipient: to, from, subject, text, html, idemKey: `${idemBase}-to`, apiKey }),
+      sendOne({ recipient: to, from, subject, text, html, idemKey: `${idemBase}-to` }),
     ];
     if (cc && cc.toLowerCase() !== to.toLowerCase()) {
-      tasks.push(sendOne({ recipient: cc, from, subject, text, html, idemKey: `${idemBase}-cc`, apiKey }));
+      tasks.push(sendOne({ recipient: cc, from, subject, text, html, idemKey: `${idemBase}-cc` }));
     }
     const results = await Promise.allSettled(tasks);
     const primary = results[0];

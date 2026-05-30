@@ -1,10 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { sendLovableEmail } from "@lovable.dev/email-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { DEFAULT_FROM, SENDER_DOMAIN, normalizeSender } from "@/lib/email-sender";
-
-
+import { DEFAULT_FROM, resolveSender } from "@/lib/email-sender";
+import { sendResendEmail } from "@/lib/resend-email";
 
 interface Input {
   filename: string;
@@ -30,10 +28,6 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-
-    // Load office-configured settings (enabled, to_email, from_email, templates)
     const { data: settings } = await supabaseAdmin
       .from("email_settings")
       .select("enabled, to_email, cc_email, from_email, subject_template, body_template")
@@ -46,11 +40,10 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
 
     const to = settings?.to_email?.trim() || "office@sussexgliding.co.uk";
     const cc = (settings as { cc_email?: string } | null)?.cc_email?.trim() || "";
-    const from = normalizeSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
+    const from = resolveSender((settings as { from_email?: string } | null)?.from_email || DEFAULT_FROM);
     const subjectTpl = settings?.subject_template?.trim() || DEFAULT_SUBJECT;
     const bodyTpl = settings?.body_template ?? DEFAULT_BODY;
 
-    // Decode base64 to bytes and upload to private storage
     const bin = Uint8Array.from(atob(data.base64), (c) => c.charCodeAt(0));
     const path = `${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${data.filename}`;
 
@@ -85,7 +78,6 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
     const subject = fillTokens(subjectTpl, tokens);
     const text = fillTokens(bodyTpl, tokens);
 
-    // Build HTML: escape template first (preserves {tokens}), then fill with HTML values.
     const esc = (s: string) =>
       s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const linkAnchor = `<a href="${esc(link)}">${esc(data.filename)}</a>`;
@@ -101,55 +93,26 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
 
     const idemBase = `logs-${new Date().toISOString().slice(0, 10)}-${crypto.randomUUID()}`;
 
-    // Deterministic unsubscribe token per recipient (required by Lovable Email API
-    // for transactional purpose). This is operational mail to the club office; no
-    // real opt-out flow is needed, but the API mandates the field.
-    const tokenFor = async (addr: string) => {
-      const buf = await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(`caravan-logs:${addr.toLowerCase()}`),
-      );
-      return Array.from(new Uint8Array(buf))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-    };
+    try {
+      const primary = await sendResendEmail({
+        from,
+        to,
+        cc: cc && cc.toLowerCase() !== to.toLowerCase() ? cc : null,
+        replyTo: REPLY_TO,
+        subject,
+        text,
+        html,
+        idempotencyKey: `${idemBase}-to`,
+      });
 
-    const send = async (recipient: string, suffix: string) =>
-      sendLovableEmail(
-        {
-          to: recipient,
-          from,
-          sender_domain: SENDER_DOMAIN,
-          reply_to: REPLY_TO,
-          subject,
-          text,
-          html,
-          purpose: "transactional",
-          unsubscribe_token: await tokenFor(recipient),
-          idempotency_key: `${idemBase}-${suffix}`,
-        },
-        { apiKey },
-      );
-
-    const tasks: Promise<Awaited<ReturnType<typeof send>>>[] = [send(to, "to")];
-    if (cc && cc.toLowerCase() !== to.toLowerCase()) tasks.push(send(cc, "cc"));
-    const results = await Promise.allSettled(tasks);
-    const primary = results[0];
-    const copy = results[1];
-
-    if (primary.status === "rejected") {
-      const msg = primary.reason instanceof Error ? primary.reason.message : String(primary.reason);
+      return {
+        success: primary.success,
+        messageId: primary.message_id,
+        to,
+        cc: cc && cc.toLowerCase() !== to.toLowerCase() ? cc : null,
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       throw new Error(`Send failed: ${msg}`);
     }
-    if (copy && copy.status === "rejected") {
-      console.warn(`CC to ${cc} failed:`, copy.reason);
-    }
-
-    return {
-      success: primary.value.success,
-      messageId: primary.value.message_id,
-      to,
-      cc: copy && copy.status === "fulfilled" ? cc : null,
-    };
   });
-
