@@ -148,6 +148,8 @@ export type Database = {
       }
       daily_gfes: {
         Row: {
+          checked: boolean
+          checked_at: string | null
           created_at: string
           flight_date: string
           gfe_type: string | null
@@ -162,6 +164,8 @@ export type Database = {
           time_text: string | null
         }
         Insert: {
+          checked?: boolean
+          checked_at?: string | null
           created_at?: string
           flight_date: string
           gfe_type?: string | null
@@ -176,6 +180,8 @@ export type Database = {
           time_text?: string | null
         }
         Update: {
+          checked?: boolean
+          checked_at?: string | null
           created_at?: string
           flight_date?: string
           gfe_type?: string | null
