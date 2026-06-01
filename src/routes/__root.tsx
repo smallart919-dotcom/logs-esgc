@@ -12,6 +12,7 @@ import {
   Activity,
   BookOpen,
   BarChart3,
+  Map as MapIcon,
   Settings as SettingsIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
