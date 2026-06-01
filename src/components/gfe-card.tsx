@@ -20,7 +20,18 @@ type GfeRow = {
   notes: string | null;
   raw_text: string;
   source: string;
+  checked: boolean;
+  checked_at: string | null;
 };
+
+function sortByTime(rows: GfeRow[]): GfeRow[] {
+  return [...rows].sort((a, b) => {
+    if (!a.time_text && !b.time_text) return 0;
+    if (!a.time_text) return 1;
+    if (!b.time_text) return -1;
+    return a.time_text.localeCompare(b.time_text);
+  });
+}
 
 export function GfeCard({ date }: { date: string }) {
   const [rows, setRows] = useState<GfeRow[]>([]);
@@ -46,6 +57,19 @@ export function GfeCard({ date }: { date: string }) {
 
   useEffect(() => { void load(); }, [load]);
 
+  // Realtime: keep tick-off state in sync across devices/sessions.
+  useEffect(() => {
+    const ch = supabase
+      .channel(`daily-gfes-rt-${date}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "daily_gfes", filter: `flight_date=eq.${date}` },
+        () => { void load(); },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [date, load]);
+
   const onSync = async () => {
     setSyncing(true);
     try {
@@ -63,13 +87,40 @@ export function GfeCard({ date }: { date: string }) {
     }
   };
 
+  const handleToggle = async (id: string, val: boolean) => {
+    const nowIso = new Date().toISOString();
+    // Optimistic update
+    setRows((prev) => prev.map((x) =>
+      x.id === id ? { ...x, checked: val, checked_at: val ? nowIso : null } : x,
+    ));
+    const { error } = await supabase
+      .from("daily_gfes")
+      .update({ checked: val, checked_at: val ? nowIso : null })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      void load();
+    }
+  };
+
+  const gfeRows = sortByTime(rows.filter((r) => r.source === "cng"));
+  const tmgRows = sortByTime(rows.filter((r) => r.source === "cng-tmg"));
+  const gfeDone = gfeRows.filter((r) => r.checked).length;
+  const tmgDone = tmgRows.filter((r) => r.checked).length;
+
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
         <div className="min-w-0 flex-1">
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base flex-wrap">
             <Plane className="size-4 shrink-0" />
             <span className="truncate">GFEs — {fmtUKDate(date)}</span>
+            <Badge variant="secondary" className="text-xs">{gfeRows.length} glider</Badge>
+            {tmgRows.length > 0 && (
+              <Badge variant="outline" className="text-xs text-amber-600 border-amber-400">
+                {tmgRows.length} TMG
+              </Badge>
+            )}
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
             From Click n&apos; Glide ·{" "}
@@ -91,51 +142,84 @@ export function GfeCard({ date }: { date: string }) {
         ) : rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">No GFEs booked for this day.</p>
         ) : (
-          <ul className="divide-y divide-border/60 -my-2">
-            {rows.map((r) => {
-              const hasName = !!r.passenger_name?.trim();
-              const meta = [r.gfe_type, r.ref].filter(Boolean).join(" · ");
-              const telHref = r.phone ? `tel:${r.phone.replace(/[^\d+]/g, "")}` : null;
-              return (
-                <li key={r.id} className="flex items-start gap-3 py-2 text-sm">
-                  <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 tabular-nums">
-                    {r.time_text?.trim() || "—"}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-medium break-words ${hasName ? "" : "italic text-muted-foreground"}`}>
-                      {hasName ? r.passenger_name : (r.raw_text?.trim() || "No details")}
-                    </div>
-                    <div className="text-xs text-muted-foreground break-words">
-                      {meta || <span className="opacity-60">—</span>}
-                    </div>
-                    {r.notes && (
-                      <div className="text-xs text-muted-foreground/90 italic break-words mt-0.5">
-                        {r.notes}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    {r.source === "cng-tmg" && (
-                      <Badge variant="secondary">TMG</Badge>
-                    )}
-                    {telHref ? (
-                      <Button asChild size="sm" variant="outline" className="h-7 px-2 gap-1">
-                        <a href={telHref} aria-label={`Call ${r.passenger_name ?? "passenger"}`}>
-                          <Phone className="size-3" />
-                          <span className="tabular-nums text-xs">{r.phone}</span>
-                        </a>
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/60">no phone</span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            {/* Glider GFEs */}
+            {gfeRows.length > 0 && (
+              <>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {gfeDone}/{gfeRows.length} completed
+                </p>
+                <ul className="divide-y divide-border/60 -my-2">
+                  {gfeRows.map((r) => (
+                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} />
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {/* TMG section */}
+            {tmgRows.length > 0 && (
+              <div className="mt-5 pt-4 border-t">
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
+                  <span className="w-1 h-4 rounded-full bg-amber-400 inline-block" />
+                  TMG GFEs (G-KIAU)
+                  <Badge variant="outline" className="text-xs">{tmgRows.length}</Badge>
+                </h3>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {tmgDone}/{tmgRows.length} completed
+                </p>
+                <ul className="divide-y divide-border/60 -my-2">
+                  {tmgRows.map((r) => (
+                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} />
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
   );
 }
 
+function GfeRowItem({ row: r, onToggle }: { row: GfeRow; onToggle: (id: string, val: boolean) => void }) {
+  const hasName = !!r.passenger_name?.trim();
+  const meta = [r.gfe_type, r.ref].filter(Boolean).join(" · ");
+  const telHref = r.phone ? `tel:${r.phone.replace(/[^\d+]/g, "")}` : null;
+  return (
+    <li className={`flex items-start gap-3 py-2 text-sm transition-opacity ${r.checked ? "opacity-50" : ""}`}>
+      <input
+        type="checkbox"
+        checked={r.checked}
+        aria-label={`Mark ${r.passenger_name ?? "GFE"} as flown`}
+        onChange={(e) => onToggle(r.id, e.target.checked)}
+        className="mt-1 size-4 rounded shrink-0 cursor-pointer accent-primary"
+      />
+      <span className={`font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 tabular-nums ${r.checked ? "line-through" : ""}`}>
+        {r.time_text?.trim() || "—"}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className={`font-medium break-words ${r.checked ? "line-through text-muted-foreground" : ""} ${!hasName ? "italic text-muted-foreground" : ""}`}>
+          {hasName ? r.passenger_name : (r.raw_text?.trim() || "No details")}
+        </div>
+        {meta && <div className="text-xs text-muted-foreground break-words">{meta}</div>}
+        {r.notes && (
+          <div className="text-xs text-muted-foreground/90 italic break-words mt-0.5">{r.notes}</div>
+        )}
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        {r.source === "cng-tmg" && <Badge variant="secondary">TMG</Badge>}
+        {telHref ? (
+          <Button asChild size="sm" variant="outline" className="h-7 px-2 gap-1">
+            <a href={telHref} aria-label={`Call ${r.passenger_name ?? "passenger"}`}>
+              <Phone className="size-3" />
+              <span className="tabular-nums text-xs">{r.phone}</span>
+            </a>
+          </Button>
+        ) : (
+          <span className="text-xs text-muted-foreground/60">no phone</span>
+        )}
+      </div>
+    </li>
+  );
+}
