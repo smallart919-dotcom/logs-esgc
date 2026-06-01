@@ -161,6 +161,7 @@ function FlightsPage() {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [dailyGfes, setDailyGfes] = useState<{ id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [loadingFlights, setLoadingFlights] = useState(false);
@@ -181,10 +182,14 @@ function FlightsPage() {
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoadingFlights(true);
     try {
-      const [{ data: f, error: fErr }, { data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
+      const [{ data: f, error: fErr }, { data: g, error: gErr }, { data: m, error: mErr }, { data: gfeData }] = await Promise.all([
         supabase.from("flights").select("*").eq("flight_date", date).order("takeoff_time", { ascending: true, nullsFirst: false }),
         supabase.from("fleet_gliders").select("*").order("registration"),
         supabase.from("club_members").select("*").order("full_name"),
+        supabase.from("daily_gfes")
+          .select("id,passenger_name,source,checked,time_text")
+          .eq("flight_date", date)
+          .order("time_text", { ascending: true, nullsFirst: false }),
       ]);
       const err = fErr || gErr || mErr;
       if (err) throw err;
@@ -217,6 +222,7 @@ function FlightsPage() {
       }
       setGliders((g as Glider[]) ?? []);
       setMembers((m as Member[]) ?? []);
+      setDailyGfes((gfeData ?? []) as { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]);
     } finally {
       if (!silent) setLoadingFlights(false);
     }
