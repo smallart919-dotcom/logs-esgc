@@ -161,6 +161,7 @@ function FlightsPage() {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [dailyGfes, setDailyGfes] = useState<{ id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [loadingFlights, setLoadingFlights] = useState(false);
