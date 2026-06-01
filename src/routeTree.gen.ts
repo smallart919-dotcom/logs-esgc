@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as MembersRouteImport } from './routes/members'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as LogbookRouteImport } from './routes/logbook'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HelpRouteImport } from './routes/help'
@@ -38,6 +39,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const MembersRoute = MembersRouteImport.update({
   id: '/members',
   path: '/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogbookRoute = LogbookRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/logbook': typeof LogbookRoute
+  '/map': typeof MapRoute
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/logbook': typeof LogbookRoute
+  '/map': typeof MapRoute
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/logbook': typeof LogbookRoute
+  '/map': typeof MapRoute
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/history'
     | '/logbook'
+    | '/map'
     | '/members'
     | '/settings'
     | '/stats'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/history'
     | '/logbook'
+    | '/map'
     | '/members'
     | '/settings'
     | '/stats'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/history'
     | '/logbook'
+    | '/map'
     | '/members'
     | '/settings'
     | '/stats'
@@ -218,6 +230,7 @@ export interface RootRouteChildren {
   HelpRoute: typeof HelpRoute
   HistoryRoute: typeof HistoryRoute
   LogbookRoute: typeof LogbookRoute
+  MapRoute: typeof MapRoute
   MembersRoute: typeof MembersRoute
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
@@ -247,6 +260,13 @@ declare module '@tanstack/react-router' {
       path: '/members'
       fullPath: '/members'
       preLoaderRoute: typeof MembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logbook': {
@@ -346,6 +366,7 @@ const rootRouteChildren: RootRouteChildren = {
   HelpRoute: HelpRoute,
   HistoryRoute: HistoryRoute,
   LogbookRoute: LogbookRoute,
+  MapRoute: MapRoute,
   MembersRoute: MembersRoute,
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
