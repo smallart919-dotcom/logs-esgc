@@ -221,6 +221,7 @@ function RootComponent() {
                 <NavLink to="/billing" icon={<Receipt className="size-4" />} label="Billing" compact />
                 <NavLink to="/currency" icon={<Activity className="size-4" />} label="Currency" compact />
                 <NavLink to="/logbook" icon={<BookOpen className="size-4" />} label="Logbook" compact />
+                <NavLink to="/map" icon={<MapIcon className="size-4" />} label="Map" compact />
                 <NavLink to="/stats" icon={<BarChart3 className="size-4" />} label="Stats" compact />
                 <NavLink to="/help" icon={<BookOpen className="size-4" />} label="Help" compact />
                 {isOffice && (
