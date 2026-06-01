@@ -222,6 +222,7 @@ function FlightsPage() {
       }
       setGliders((g as Glider[]) ?? []);
       setMembers((m as Member[]) ?? []);
+      setDailyGfes((gfeData ?? []) as { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]);
     } finally {
       if (!silent) setLoadingFlights(false);
     }
