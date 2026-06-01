@@ -139,21 +139,20 @@ function MapPage() {
         const json: { ac?: unknown[]; now?: number } = await res.json();
         const list = json.ac ?? [];
         const serverNow = json.now ?? Date.now() / 1000;
-        return list.map((raw) => {
+        const mapped: (LiveAircraft | null)[] = list.map((raw) => {
           const a = raw as Record<string, unknown>;
           const cat = String(a.category ?? a.t ?? "");
           const altFt = parseFloat(String(a.alt_baro ?? a.altitude ?? a.alt ?? 0)) || 0;
           const seen = parseFloat(String(a.seen_pos ?? a.seen ?? 0)) || 0;
           const lat = parseFloat(String(a.lat));
           const lon = parseFloat(String(a.lon));
+          if (isNaN(lat) || isNaN(lon)) return null;
           // Clip to our region
-          if (lat < 50.4 || lat > 51.4 || lon < -0.6 || lon > 1.8) {
-            return null;
-          }
+          if (lat < 50.4 || lat > 51.4 || lon < -0.6 || lon > 1.8) return null;
           let type: AircraftType = "powered";
           if (/^A[67]|glider/i.test(cat)) type = "glider";
           else if (/^A[34]|heli/i.test(cat)) type = "helicopter";
-          return {
+          const ac: LiveAircraft = {
             id: String(a.hex ?? a.icao ?? `${lat}-${lon}`).toUpperCase(),
             lat,
             lon,
@@ -166,12 +165,15 @@ function MapPage() {
             type,
             category: cat,
             squawk: a.squawk ? String(a.squawk) : undefined,
-            source: "adsb" as const,
+            source: "adsb",
             isOwnFleet: false,
             isStale: seen > 60,
             ts: serverNow - seen,
           };
-        }).filter((a): a is LiveAircraft => a !== null && !isNaN(a.lat) && !isNaN(a.lon));
+          return ac;
+        });
+        return mapped.filter((a): a is LiveAircraft => a !== null);
+
       } catch {
         return [];
       }
