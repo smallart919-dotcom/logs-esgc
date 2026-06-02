@@ -801,4 +801,24 @@ table thead th {
   border-radius: 6px !important;
   font-size: 12px !important;
   font-family: system-ui, sans-serif;
+  padding: 6px 10px !important;
+  line-height: 1.5;
+}
+.airspace-label {
+  pointer-events: none;
+  text-align: center;
+  font-family: system-ui, sans-serif;
+  text-shadow: 0 0 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9);
+  color: #f1f5f9;
+}
+.airspace-label-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--asp, #f1f5f9);
+}
+.airspace-label-meta {
+  font-size: 9px;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
 }
