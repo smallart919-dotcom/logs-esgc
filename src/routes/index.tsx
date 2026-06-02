@@ -101,6 +101,41 @@ async function maybeAddMember(existing: Member[], kind: PilotKind | null | undef
   await supabase.from("club_members").insert({ full_name: n, membership_number: m });
 }
 
+/** Normalize a name for fuzzy matching: lowercase, alpha-only, collapse spaces. */
+function normName(s: string | null | undefined): string {
+  return (s || "").toLowerCase().replace(/[^a-z\s]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/** When a flight is saved with a GFE pilot, tick the matching daily_gfes row. */
+async function autoTickDailyGfes(
+  payload: { flight_date: string; glider_registration: string | null; p1_kind: PilotKind | null; p1_name: string | null; p2_kind: PilotKind | null; p2_name: string | null },
+  dailyGfes: { id: string; passenger_name: string | null; source: string; checked: boolean }[],
+) {
+  const reg = (payload.glider_registration || "").toUpperCase().trim();
+  const expectedSource = reg === "G-KIAU" ? "cng-tmg" : "cng";
+  const gfeNames: string[] = [];
+  if (payload.p1_kind === "gfe" && payload.p1_name) gfeNames.push(payload.p1_name);
+  if (payload.p2_kind === "gfe" && payload.p2_name) gfeNames.push(payload.p2_name);
+  if (gfeNames.length === 0) return;
+  const candidates = dailyGfes.filter((g) => !g.checked && g.source === expectedSource && g.passenger_name);
+  const idsToTick: string[] = [];
+  for (const name of gfeNames) {
+    const norm = normName(name);
+    if (!norm) continue;
+    const match = candidates.find((c) => {
+      const cn = normName(c.passenger_name);
+      if (!cn) return false;
+      return cn === norm || cn.includes(norm) || norm.includes(cn);
+    });
+    if (match && !idsToTick.includes(match.id)) idsToTick.push(match.id);
+  }
+  if (idsToTick.length === 0) return;
+  await supabase
+    .from("daily_gfes")
+    .update({ checked: true, checked_at: new Date().toISOString() })
+    .in("id", idsToTick);
+}
+
 async function maybeUpsertFleet(
   gliders: Glider[],
   registration: string | null,
