@@ -1562,6 +1562,44 @@ function FlightDialog({
   );
 }
 
+function SaveStatusPill({ status, lastSavedAt }: { status: "idle" | "saving" | "saved" | "error" | "dirty"; lastSavedAt: Date | null }) {
+  const [, force] = useState(0);
+  // Re-render every 30s so "Saved Xs ago" stays fresh.
+  useEffect(() => {
+    const i = setInterval(() => force((x) => x + 1), 30_000);
+    return () => clearInterval(i);
+  }, []);
+  const styles: Record<typeof status, string> = {
+    idle: "bg-muted text-muted-foreground",
+    dirty: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    saving: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
+    saved: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+    error: "bg-destructive/15 text-destructive border-destructive/30",
+  };
+  const labels: Record<typeof status, string> = {
+    idle: "Autosave ready",
+    dirty: "Unsaved changes…",
+    saving: "Saving…",
+    saved: lastSavedAt ? `Saved ${relTime(lastSavedAt)}` : "Saved",
+    error: "Save failed — retry",
+  };
+  return (
+    <span className={`text-[11px] px-2 py-0.5 rounded-full border ${styles[status]} font-medium tabular-nums whitespace-nowrap`}>
+      {status === "saving" && <span className="inline-block size-2 rounded-full bg-current mr-1 animate-pulse" />}
+      {labels[status]}
+    </span>
+  );
+}
+
+function relTime(d: Date): string {
+  const s = Math.max(0, Math.round((Date.now() - d.getTime()) / 1000));
+  if (s < 5) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
 function GliderPicker({ gliders, registration, onSelect, onChangeText, onCreated }: {
   gliders: Glider[]; registration: string;
   onSelect: (g: Glider | null) => void; onChangeText: (t: string) => void;
