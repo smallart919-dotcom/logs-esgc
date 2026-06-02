@@ -1183,6 +1183,11 @@ function FlightDialog({
     return members.find((m) => (m.membership_number || "").trim().toLowerCase() === k) ?? null;
   };
 
+  // Autosave state — only active for existing flights (edit mode).
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error" | "dirty">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const lastPayloadRef = useRef<string>("");
+
   const save = async () => {
     // GFE pilots still need a name recorded (the passenger flying the
     // experience). Previously the name input was hidden for GFE — make it
