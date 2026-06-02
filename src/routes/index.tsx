@@ -1271,8 +1271,82 @@ function FlightDialog({
     // Auto-tick matching daily_gfes rows when a GFE was flown.
     await autoTickDailyGfes(payload, dailyGfes);
     toast.success("Saved");
+    setSaveStatus("saved");
+    setLastSavedAt(new Date());
     onSaved(payload.flight_date);
   };
+
+  // ---- Autosave (edit mode only) ----
+  // Build the payload from the current form and persist it silently when the
+  // user pauses typing. Skips when validation would fail; preserves drafts in
+  // sessionStorage so a reload / network blip doesn't lose work.
+  const buildAutosavePayload = useCallback(() => {
+    if (!flight?.id) return null;
+    const p1k = (form.p1_kind ?? "member") as PilotKind;
+    const p2k = (form.p2_kind ?? "member") as PilotKind;
+    // Skip silent autosave if a required GFE name is still missing — let the
+    // user finish typing. The explicit Save button will surface the error.
+    if (p1k === "gfe" && !(form.p1_name || "").trim()) return null;
+    if (p2k === "gfe" && !(form.p2_name || "").trim()) return null;
+    return {
+      flight_date: form.flight_date || date,
+      glider_id: form.glider_id || null,
+      glider_registration: form.glider_registration || null,
+      flarm_id: form.flarm_id || null,
+      takeoff_time: form.takeoff_time || null,
+      landing_time: form.landing_time || null,
+      p1_kind: p1k,
+      p1_name: form.p1_name || null,
+      p1_membership: p1k === "member" ? (form.p1_membership || null) : null,
+      p1_charge: !!form.p1_charge,
+      p2_kind: p2k,
+      p2_name: form.p2_name || null,
+      p2_membership: p2k === "member" ? (form.p2_membership || null) : null,
+      p2_charge: !!form.p2_charge,
+      launch_type: form.launch_type || null,
+      aerotow_height_ft: form.launch_type === "aerotow" ? (form.aerotow_height_ft ?? null) : null,
+      manual: !!form.manual,
+      notes: (form.notes ?? "").trim() || null,
+      logged_by: form.logged_by || null,
+    };
+  }, [flight?.id, form, date]);
+
+  // Persist a local draft as the user types so an accidental close / reload
+  // doesn't lose their changes.
+  useEffect(() => {
+    if (!open || !flight?.id) return;
+    try { sessionStorage.setItem(`flight-draft:${flight.id}`, JSON.stringify(form)); } catch { /* quota */ }
+  }, [open, flight?.id, form]);
+
+  // Debounced autosave for edit mode.
+  useEffect(() => {
+    if (!open || !flight?.id) return;
+    const payload = buildAutosavePayload();
+    if (!payload) return;
+    const serialized = JSON.stringify(payload);
+    if (serialized === lastPayloadRef.current) return;
+    setSaveStatus("dirty");
+    const t = setTimeout(async () => {
+      setSaveStatus("saving");
+      const { error } = await supabase.from("flights").update(payload).eq("id", flight.id);
+      if (error) { setSaveStatus("error"); return; }
+      lastPayloadRef.current = serialized;
+      setSaveStatus("saved");
+      setLastSavedAt(new Date());
+      // Auto-tick GFEs + fleet upserts run silently too.
+      void autoTickDailyGfes(payload, dailyGfes);
+      try { sessionStorage.removeItem(`flight-draft:${flight.id}`); } catch { /* noop */ }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [open, flight?.id, buildAutosavePayload, dailyGfes]);
+
+  // Reset autosave baseline whenever a different flight is opened.
+  useEffect(() => {
+    if (!open) return;
+    lastPayloadRef.current = "";
+    setSaveStatus("idle");
+    setLastSavedAt(null);
+  }, [open, flight?.id]);
 
   // Edit times in UK local (Europe/London) — handles BST/GMT automatically.
   // Apply the day's clock offset so the editor matches what's shown on the log.
