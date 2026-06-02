@@ -624,7 +624,7 @@ function FlightsPage() {
       }
 
       // Fallback (desktop / browsers without file-share): download locally
-      // and open WhatsApp's chat picker (no phone number = pick any chat/group).
+      // and open WhatsApp Web's chat picker so the user can drag-drop the file.
       const dlUrl = URL.createObjectURL(blob);
       const dl = document.createElement("a");
       dl.href = dlUrl;
@@ -632,15 +632,32 @@ function FlightsPage() {
       document.body.appendChild(dl);
       dl.click();
       dl.remove();
-      setTimeout(() => URL.revokeObjectURL(dlUrl), 10_000);
+      setTimeout(() => URL.revokeObjectURL(dlUrl), 30_000);
 
-      const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      // Copy the message to the clipboard so the user can paste it in WhatsApp.
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(message);
+          copied = true;
+        }
+      } catch { /* clipboard not available */ }
+
+      // Open WhatsApp Web's chat picker (no phone number = pick any chat/group).
+      // web.whatsapp.com works better than wa.me on desktop because it doesn't
+      // bounce through the mobile app prompt.
+      const waUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, "_blank", "noopener,noreferrer");
 
-      toast.success("WhatsApp opened — pick a chat & attach the file", {
+      toast.success("WhatsApp opened — attach the file you just downloaded", {
         id: t,
-        description: `Saved ${filename} to your downloads.`,
-        duration: 6000,
+        description: [
+          `1. Pick the chat in WhatsApp`,
+          `2. Click the 📎 attach button → Document`,
+          `3. Choose "${filename}" from your Downloads`,
+          copied ? `Message copied to clipboard.` : "",
+        ].filter(Boolean).join("\n"),
+        duration: 12_000,
       });
     } catch (err: any) {
       console.error(err);
