@@ -1228,6 +1228,8 @@ function FlightDialog({
     ]);
     // Auto-sync glider type/callsign into fleet so it auto-fills next time
     await maybeUpsertFleet(gliders, payload.glider_registration, gliderType, gliderCallsign, payload.flarm_id);
+    // Auto-tick matching daily_gfes rows when a GFE was flown.
+    await autoTickDailyGfes(payload, dailyGfes);
     toast.success("Saved");
     onSaved(payload.flight_date);
   };
