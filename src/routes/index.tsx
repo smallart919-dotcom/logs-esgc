@@ -101,6 +101,41 @@ async function maybeAddMember(existing: Member[], kind: PilotKind | null | undef
   await supabase.from("club_members").insert({ full_name: n, membership_number: m });
 }
 
+/** Normalize a name for fuzzy matching: lowercase, alpha-only, collapse spaces. */
+function normName(s: string | null | undefined): string {
+  return (s || "").toLowerCase().replace(/[^a-z\s]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/** When a flight is saved with a GFE pilot, tick the matching daily_gfes row. */
+async function autoTickDailyGfes(
+  payload: { flight_date: string; glider_registration: string | null; p1_kind: PilotKind | null; p1_name: string | null; p2_kind: PilotKind | null; p2_name: string | null },
+  dailyGfes: { id: string; passenger_name: string | null; source: string; checked: boolean }[],
+) {
+  const reg = (payload.glider_registration || "").toUpperCase().trim();
+  const expectedSource = reg === "G-KIAU" ? "cng-tmg" : "cng";
+  const gfeNames: string[] = [];
+  if (payload.p1_kind === "gfe" && payload.p1_name) gfeNames.push(payload.p1_name);
+  if (payload.p2_kind === "gfe" && payload.p2_name) gfeNames.push(payload.p2_name);
+  if (gfeNames.length === 0) return;
+  const candidates = dailyGfes.filter((g) => !g.checked && g.source === expectedSource && g.passenger_name);
+  const idsToTick: string[] = [];
+  for (const name of gfeNames) {
+    const norm = normName(name);
+    if (!norm) continue;
+    const match = candidates.find((c) => {
+      const cn = normName(c.passenger_name);
+      if (!cn) return false;
+      return cn === norm || cn.includes(norm) || norm.includes(cn);
+    });
+    if (match && !idsToTick.includes(match.id)) idsToTick.push(match.id);
+  }
+  if (idsToTick.length === 0) return;
+  await supabase
+    .from("daily_gfes")
+    .update({ checked: true, checked_at: new Date().toISOString() })
+    .in("id", idsToTick);
+}
+
 async function maybeUpsertFleet(
   gliders: Glider[],
   registration: string | null,
@@ -589,7 +624,7 @@ function FlightsPage() {
       }
 
       // Fallback (desktop / browsers without file-share): download locally
-      // and open WhatsApp's chat picker (no phone number = pick any chat/group).
+      // and open WhatsApp Web's chat picker so the user can drag-drop the file.
       const dlUrl = URL.createObjectURL(blob);
       const dl = document.createElement("a");
       dl.href = dlUrl;
@@ -597,15 +632,32 @@ function FlightsPage() {
       document.body.appendChild(dl);
       dl.click();
       dl.remove();
-      setTimeout(() => URL.revokeObjectURL(dlUrl), 10_000);
+      setTimeout(() => URL.revokeObjectURL(dlUrl), 30_000);
 
-      const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      // Copy the message to the clipboard so the user can paste it in WhatsApp.
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(message);
+          copied = true;
+        }
+      } catch { /* clipboard not available */ }
+
+      // Open WhatsApp Web's chat picker (no phone number = pick any chat/group).
+      // web.whatsapp.com works better than wa.me on desktop because it doesn't
+      // bounce through the mobile app prompt.
+      const waUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, "_blank", "noopener,noreferrer");
 
-      toast.success("WhatsApp opened — pick a chat & attach the file", {
+      toast.success("WhatsApp opened — attach the file you just downloaded", {
         id: t,
-        description: `Saved ${filename} to your downloads.`,
-        duration: 6000,
+        description: [
+          `1. Pick the chat in WhatsApp`,
+          `2. Click the 📎 attach button → Document`,
+          `3. Choose "${filename}" from your Downloads`,
+          copied ? `Message copied to clipboard.` : "",
+        ].filter(Boolean).join("\n"),
+        duration: 12_000,
       });
     } catch (err: any) {
       console.error(err);
@@ -799,6 +851,7 @@ function FlightsPage() {
         members={members}
         offsetSec={offsetSec}
         dayFlights={flights}
+        dailyGfes={dailyGfes}
         previousInitials={Array.from(new Set(flights.map((f) => (f.logged_by || "").trim()).filter(Boolean))).sort()}
         onSaved={async (savedDate) => {
           setEditing(null);
@@ -1080,13 +1133,16 @@ function PilotCell({ name, membership, kind }: { name: string | null; membership
   return <div><div>{name}</div><div className="text-xs text-muted-foreground">{membership}</div></div>;
 }
 
+type DailyGfeLite = { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null };
+
 function FlightDialog({
-  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, offsetSec = 0, dayFlights = [],
+  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, offsetSec = 0, dayFlights = [], dailyGfes = [],
 }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   flight: Flight | null; manual: boolean; date: string;
   gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void; offsetSec?: number;
   dayFlights?: Flight[];
+  dailyGfes?: DailyGfeLite[];
 }) {
   const [form, setForm] = useState<Partial<Flight>>({});
   const [gliderType, setGliderType] = useState("");
@@ -1143,6 +1199,11 @@ function FlightDialog({
     if (!k) return null;
     return members.find((m) => (m.membership_number || "").trim().toLowerCase() === k) ?? null;
   };
+
+  // Autosave state — only active for existing flights (edit mode).
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error" | "dirty">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const lastPayloadRef = useRef<string>("");
 
   const save = async () => {
     // GFE pilots still need a name recorded (the passenger flying the
@@ -1224,9 +1285,85 @@ function FlightDialog({
     ]);
     // Auto-sync glider type/callsign into fleet so it auto-fills next time
     await maybeUpsertFleet(gliders, payload.glider_registration, gliderType, gliderCallsign, payload.flarm_id);
+    // Auto-tick matching daily_gfes rows when a GFE was flown.
+    await autoTickDailyGfes(payload, dailyGfes);
     toast.success("Saved");
+    setSaveStatus("saved");
+    setLastSavedAt(new Date());
     onSaved(payload.flight_date);
   };
+
+  // ---- Autosave (edit mode only) ----
+  // Build the payload from the current form and persist it silently when the
+  // user pauses typing. Skips when validation would fail; preserves drafts in
+  // sessionStorage so a reload / network blip doesn't lose work.
+  const buildAutosavePayload = useCallback(() => {
+    if (!flight?.id) return null;
+    const p1k = (form.p1_kind ?? "member") as PilotKind;
+    const p2k = (form.p2_kind ?? "member") as PilotKind;
+    // Skip silent autosave if a required GFE name is still missing — let the
+    // user finish typing. The explicit Save button will surface the error.
+    if (p1k === "gfe" && !(form.p1_name || "").trim()) return null;
+    if (p2k === "gfe" && !(form.p2_name || "").trim()) return null;
+    return {
+      flight_date: form.flight_date || date,
+      glider_id: form.glider_id || null,
+      glider_registration: form.glider_registration || null,
+      flarm_id: form.flarm_id || null,
+      takeoff_time: form.takeoff_time || null,
+      landing_time: form.landing_time || null,
+      p1_kind: p1k,
+      p1_name: form.p1_name || null,
+      p1_membership: p1k === "member" ? (form.p1_membership || null) : null,
+      p1_charge: !!form.p1_charge,
+      p2_kind: p2k,
+      p2_name: form.p2_name || null,
+      p2_membership: p2k === "member" ? (form.p2_membership || null) : null,
+      p2_charge: !!form.p2_charge,
+      launch_type: form.launch_type || null,
+      aerotow_height_ft: form.launch_type === "aerotow" ? (form.aerotow_height_ft ?? null) : null,
+      manual: !!form.manual,
+      notes: (form.notes ?? "").trim() || null,
+      logged_by: form.logged_by || null,
+    };
+  }, [flight?.id, form, date]);
+
+  // Persist a local draft as the user types so an accidental close / reload
+  // doesn't lose their changes.
+  useEffect(() => {
+    if (!open || !flight?.id) return;
+    try { sessionStorage.setItem(`flight-draft:${flight.id}`, JSON.stringify(form)); } catch { /* quota */ }
+  }, [open, flight?.id, form]);
+
+  // Debounced autosave for edit mode.
+  useEffect(() => {
+    if (!open || !flight?.id) return;
+    const payload = buildAutosavePayload();
+    if (!payload) return;
+    const serialized = JSON.stringify(payload);
+    if (serialized === lastPayloadRef.current) return;
+    setSaveStatus("dirty");
+    const t = setTimeout(async () => {
+      setSaveStatus("saving");
+      const { error } = await supabase.from("flights").update(payload).eq("id", flight.id);
+      if (error) { setSaveStatus("error"); return; }
+      lastPayloadRef.current = serialized;
+      setSaveStatus("saved");
+      setLastSavedAt(new Date());
+      // Auto-tick GFEs + fleet upserts run silently too.
+      void autoTickDailyGfes(payload, dailyGfes);
+      try { sessionStorage.removeItem(`flight-draft:${flight.id}`); } catch { /* noop */ }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [open, flight?.id, buildAutosavePayload, dailyGfes]);
+
+  // Reset autosave baseline whenever a different flight is opened.
+  useEffect(() => {
+    if (!open) return;
+    lastPayloadRef.current = "";
+    setSaveStatus("idle");
+    setLastSavedAt(null);
+  }, [open, flight?.id]);
 
   // Edit times in UK local (Europe/London) — handles BST/GMT automatically.
   // Apply the day's clock offset so the editor matches what's shown on the log.
@@ -1266,6 +1403,12 @@ function FlightDialog({
     const setKind = (k: PilotKind) => setForm((f) => ({ ...f, [`p${which}_kind`]: k }));
     const preferredNames = which === 1 ? perGlider.p1Names : [];
     const preferredMems = which === 1 ? perGlider.p1Mems : [];
+    // GFE-specific suggestions sourced from Click n' Glide (today's bookings).
+    const gfeSourceWanted = currentReg === "G-KIAU" ? "cng-tmg" : "cng";
+    const gfeSuggestions = dailyGfes
+      .filter((g) => g.source === gfeSourceWanted && !g.checked && g.passenger_name)
+      .map((g) => g.passenger_name!.trim())
+      .filter(Boolean);
     return (
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
@@ -1283,13 +1426,34 @@ function FlightDialog({
             onText={(t) => setForm({ ...form, [`p${which}_name`]: t })} />
         )}
         {kind === "gfe" && (
-          <div>
+          <div className="md:col-span-1">
             <Label>GFE passenger name <span className="text-destructive">*</span></Label>
             <Input
+              list={`gfe-suggest-${which}`}
               value={name}
-              placeholder="Voucher passenger name"
+              placeholder={gfeSuggestions.length ? `e.g. ${gfeSuggestions[0]}` : "Voucher passenger name"}
               onChange={(e) => setForm({ ...form, [`p${which}_name`]: e.target.value })}
             />
+            {gfeSuggestions.length > 0 && (
+              <>
+                <datalist id={`gfe-suggest-${which}`}>
+                  {gfeSuggestions.map((n) => <option key={n} value={n} />)}
+                </datalist>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {gfeSuggestions.slice(0, 6).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setForm({ ...form, [`p${which}_name`]: n })}
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-background hover:bg-primary hover:text-primary-foreground border border-border transition"
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">From C&amp;G ({gfeSourceWanted === "cng-tmg" ? "TMG" : "glider"} bookings)</p>
+              </>
+            )}
           </div>
         )}
         {kind === "member" && (
@@ -1311,7 +1475,12 @@ function FlightDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{flight ? "Edit flight" : "Add manual flight"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <DialogTitle>{flight ? "Edit flight" : "Add manual flight"}</DialogTitle>
+            {flight?.id && <SaveStatusPill status={saveStatus} lastSavedAt={lastSavedAt} />}
+          </div>
+        </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <Label>Glider</Label>
@@ -1408,6 +1577,44 @@ function FlightDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function SaveStatusPill({ status, lastSavedAt }: { status: "idle" | "saving" | "saved" | "error" | "dirty"; lastSavedAt: Date | null }) {
+  const [, force] = useState(0);
+  // Re-render every 30s so "Saved Xs ago" stays fresh.
+  useEffect(() => {
+    const i = setInterval(() => force((x) => x + 1), 30_000);
+    return () => clearInterval(i);
+  }, []);
+  const styles: Record<typeof status, string> = {
+    idle: "bg-muted text-muted-foreground",
+    dirty: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    saving: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
+    saved: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+    error: "bg-destructive/15 text-destructive border-destructive/30",
+  };
+  const labels: Record<typeof status, string> = {
+    idle: "Autosave ready",
+    dirty: "Unsaved changes…",
+    saving: "Saving…",
+    saved: lastSavedAt ? `Saved ${relTime(lastSavedAt)}` : "Saved",
+    error: "Save failed — retry",
+  };
+  return (
+    <span className={`text-[11px] px-2 py-0.5 rounded-full border ${styles[status]} font-medium tabular-nums whitespace-nowrap`}>
+      {status === "saving" && <span className="inline-block size-2 rounded-full bg-current mr-1 animate-pulse" />}
+      {labels[status]}
+    </span>
+  );
+}
+
+function relTime(d: Date): string {
+  const s = Math.max(0, Math.round((Date.now() - d.getTime()) / 1000));
+  if (s < 5) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
 function GliderPicker({ gliders, registration, onSelect, onChangeText, onCreated }: {

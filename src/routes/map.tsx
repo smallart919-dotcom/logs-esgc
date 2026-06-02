@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
 import { requireAuth } from "@/lib/auth-guard";
-import { AIRSPACE_GEOJSON } from "@/lib/airspace-ukrin";
+import { AIRSPACE_GEOJSON, type AirspaceFeatureProperties } from "@/lib/airspace-ukrin";
+import { AIRFIELD, AIRFIELD_LATLON } from "@/lib/airfield";
 
 export const Route = createFileRoute("/map")({
   beforeLoad: requireAuth,
@@ -17,10 +18,6 @@ export const Route = createFileRoute("/map")({
   }),
   component: MapPage,
 });
-
-const AIRFIELD_NAME = "East Sussex Gliding Club";
-const AIRFIELD_CENTRE: [number, number] = [50.8920, 0.2333];
-const AIRFIELD_ELEV_FT = 130;
 
 // OGN bounding box — East Sussex + full soaring range
 // Format: a=0 (separator), b=N max, c=S min, d=E max, e=W min
@@ -223,7 +220,7 @@ function MapPage() {
   return (
     <div style={{ position: "relative", height: "calc(100vh - 11rem)", minHeight: "500px" }}>
       <MapContainer
-        center={AIRFIELD_CENTRE}
+        center={AIRFIELD_LATLON}
         zoom={11}
         style={{ height: "100%", width: "100%", borderRadius: "12px", overflow: "hidden" }}
         zoomControl={false}
@@ -241,44 +238,52 @@ function MapPage() {
             key="airspace"
             data={AIRSPACE_GEOJSON}
             style={(feature) => {
-              const p = feature?.properties as { colour?: string; fill?: number; class?: string } | undefined;
+              const p = feature?.properties as Partial<AirspaceFeatureProperties> | undefined;
+              const cls = p?.class;
+              const isCtrl = cls === "CTR" || cls === "CTA" || cls === "TMA";
               return {
                 color: p?.colour ?? "#888",
-                weight: 2,
+                weight: cls === "CTR" ? 2.5 : 2,
                 opacity: 0.9,
                 fillColor: p?.colour ?? "#888",
                 fillOpacity: p?.fill ?? 0.07,
-                dashArray: p?.class === "CTR" ? undefined : "6 4",
+                dashArray: isCtrl ? undefined : "6 4",
+                lineJoin: "round",
               };
             }}
             onEachFeature={(feature, layer) => {
-              const p = feature.properties as { name?: string; class?: string; lower?: string; upper?: string };
+              const p = feature.properties as AirspaceFeatureProperties;
               layer.bindTooltip(
-                `<strong>${p.name ?? ""}</strong><br/>${p.class ?? ""} · ${p.lower ?? ""} – ${p.upper ?? ""}`,
-                { sticky: true, className: "leaflet-tooltip-airspace" },
+                `<strong>${p.name}</strong> <span style="opacity:.7">${p.ident ?? ""}</span><br/>` +
+                `<span style="color:${p.colour};font-weight:600">${p.class}</span> · ${p.lower} – ${p.upper}` +
+                (p.frequency ? `<br/><span style="opacity:.8">📻 ${p.frequency}</span>` : "") +
+                (p.notes ? `<br/><span style="opacity:.6;font-size:11px">${p.notes}</span>` : ""),
+                { sticky: true, className: "leaflet-tooltip-airspace", direction: "top" },
               );
             }}
           />
         )}
 
-        <Marker position={AIRFIELD_CENTRE} icon={airfieldIcon}>
+        {showAirspace && <AirspaceLabels />}
+
+        <Marker position={AIRFIELD_LATLON} icon={airfieldIcon}>
           <Tooltip permanent direction="right" offset={[14, 0]} className="leaflet-tooltip-airfield">
-            <b>ESGC · UKRIN</b><br />
-            <span style={{ fontSize: "10px" }}>Ringmer Gliding · Grass</span>
+            <b>ESGC · {AIRFIELD.icao}</b><br />
+            <span style={{ fontSize: "10px" }}>Ringmer Gliding · {AIRFIELD.surface}</span>
           </Tooltip>
           <Popup>
             <div style={{ fontFamily: "system-ui,sans-serif", fontSize: "13px" }}>
-              <b style={{ fontSize: "15px" }}>{AIRFIELD_NAME}</b><br />
+              <b style={{ fontSize: "15px" }}>{AIRFIELD.name}</b><br />
               <div style={{ color: "#6b7280", lineHeight: 1.7, marginTop: "4px", fontSize: "12px" }}>
-                ICAO: UKRIN<br />
-                Kitson Field, The Broyle<br />
-                Ringmer, Lewes BN8 5AP<br />
-                Elev: {AIRFIELD_ELEV_FT}ft AMSL<br />
-                <span style={{ color: "#9ca3af" }}>Gliding airfield · Grass strip</span>
+                ICAO: {AIRFIELD.icao}<br />
+                {AIRFIELD.address}<br />
+                Elev: {AIRFIELD.elevationFt}ft AMSL<br />
+                <span style={{ color: "#9ca3af" }}>{AIRFIELD.notes}</span>
               </div>
             </div>
           </Popup>
         </Marker>
+
 
         {visible.map((a) => (
           <Marker
@@ -439,3 +444,42 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
     iconAnchor: [16, 16],
   });
 }
+
+/** Permanent airspace name labels rendered at appropriate zoom levels.
+ *  Decluttered: only shown at zoom >= 10. */
+function AirspaceLabels() {
+  const map = useMap();
+  const [zoom, setZoom] = useState<number>(map.getZoom());
+  useEffect(() => {
+    const onZoom = () => setZoom(map.getZoom());
+    map.on("zoomend", onZoom);
+    return () => { map.off("zoomend", onZoom); };
+  }, [map]);
+  if (zoom < 10) return null;
+  return (
+    <>
+      {AIRSPACE_GEOJSON.features.map((f) => {
+        const p = f.properties as AirspaceFeatureProperties;
+        const pos = p.labelAt;
+        if (!pos) return null;
+        return (
+          <Marker
+            key={p.name}
+            position={pos}
+            interactive={false}
+            icon={L.divIcon({
+              className: "",
+              html: `<div class="airspace-label" style="--asp:${p.colour}">
+                <div class="airspace-label-name">${p.name}</div>
+                <div class="airspace-label-meta">${p.class} · ${p.lower}–${p.upper}</div>
+              </div>`,
+              iconSize: [120, 30],
+              iconAnchor: [60, 15],
+            })}
+          />
+        );
+      })}
+    </>
+  );
+}
+
