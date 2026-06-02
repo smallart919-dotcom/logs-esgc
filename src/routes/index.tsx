@@ -799,6 +799,7 @@ function FlightsPage() {
         members={members}
         offsetSec={offsetSec}
         dayFlights={flights}
+        dailyGfes={dailyGfes}
         previousInitials={Array.from(new Set(flights.map((f) => (f.logged_by || "").trim()).filter(Boolean))).sort()}
         onSaved={async (savedDate) => {
           setEditing(null);
