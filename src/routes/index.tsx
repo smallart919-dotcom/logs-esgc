@@ -1458,7 +1458,12 @@ function FlightDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{flight ? "Edit flight" : "Add manual flight"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <DialogTitle>{flight ? "Edit flight" : "Add manual flight"}</DialogTitle>
+            {flight?.id && <SaveStatusPill status={saveStatus} lastSavedAt={lastSavedAt} />}
+          </div>
+        </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <Label>Glider</Label>
