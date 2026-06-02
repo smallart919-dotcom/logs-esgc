@@ -1307,6 +1307,12 @@ function FlightDialog({
     const setKind = (k: PilotKind) => setForm((f) => ({ ...f, [`p${which}_kind`]: k }));
     const preferredNames = which === 1 ? perGlider.p1Names : [];
     const preferredMems = which === 1 ? perGlider.p1Mems : [];
+    // GFE-specific suggestions sourced from Click n' Glide (today's bookings).
+    const gfeSourceWanted = currentReg === "G-KIAU" ? "cng-tmg" : "cng";
+    const gfeSuggestions = dailyGfes
+      .filter((g) => g.source === gfeSourceWanted && !g.checked && g.passenger_name)
+      .map((g) => g.passenger_name!.trim())
+      .filter(Boolean);
     return (
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
@@ -1324,13 +1330,34 @@ function FlightDialog({
             onText={(t) => setForm({ ...form, [`p${which}_name`]: t })} />
         )}
         {kind === "gfe" && (
-          <div>
+          <div className="md:col-span-1">
             <Label>GFE passenger name <span className="text-destructive">*</span></Label>
             <Input
+              list={`gfe-suggest-${which}`}
               value={name}
-              placeholder="Voucher passenger name"
+              placeholder={gfeSuggestions.length ? `e.g. ${gfeSuggestions[0]}` : "Voucher passenger name"}
               onChange={(e) => setForm({ ...form, [`p${which}_name`]: e.target.value })}
             />
+            {gfeSuggestions.length > 0 && (
+              <>
+                <datalist id={`gfe-suggest-${which}`}>
+                  {gfeSuggestions.map((n) => <option key={n} value={n} />)}
+                </datalist>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {gfeSuggestions.slice(0, 6).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setForm({ ...form, [`p${which}_name`]: n })}
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-background hover:bg-primary hover:text-primary-foreground border border-border transition"
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">From C&amp;G ({gfeSourceWanted === "cng-tmg" ? "TMG" : "glider"} bookings)</p>
+              </>
+            )}
           </div>
         )}
         {kind === "member" && (
