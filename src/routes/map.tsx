@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
 import { requireAuth } from "@/lib/auth-guard";
-import { AIRSPACE_GEOJSON } from "@/lib/airspace-ukrin";
+import { AIRSPACE_GEOJSON, type AirspaceFeatureProperties } from "@/lib/airspace-ukrin";
+import { AIRFIELD, AIRFIELD_LATLON } from "@/lib/airfield";
 
 export const Route = createFileRoute("/map")({
   beforeLoad: requireAuth,
@@ -17,10 +18,6 @@ export const Route = createFileRoute("/map")({
   }),
   component: MapPage,
 });
-
-const AIRFIELD_NAME = "East Sussex Gliding Club";
-const AIRFIELD_CENTRE: [number, number] = [50.8920, 0.2333];
-const AIRFIELD_ELEV_FT = 130;
 
 // OGN bounding box — East Sussex + full soaring range
 // Format: a=0 (separator), b=N max, c=S min, d=E max, e=W min
