@@ -444,3 +444,42 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
     iconAnchor: [16, 16],
   });
 }
+
+/** Permanent airspace name labels rendered at appropriate zoom levels.
+ *  Decluttered: only shown at zoom >= 10. */
+function AirspaceLabels() {
+  const map = useMap();
+  const [zoom, setZoom] = useState<number>(map.getZoom());
+  useEffect(() => {
+    const onZoom = () => setZoom(map.getZoom());
+    map.on("zoomend", onZoom);
+    return () => { map.off("zoomend", onZoom); };
+  }, [map]);
+  if (zoom < 10) return null;
+  return (
+    <>
+      {AIRSPACE_GEOJSON.features.map((f) => {
+        const p = f.properties as AirspaceFeatureProperties;
+        const pos = p.labelAt;
+        if (!pos) return null;
+        return (
+          <Marker
+            key={p.name}
+            position={pos}
+            interactive={false}
+            icon={L.divIcon({
+              className: "",
+              html: `<div class="airspace-label" style="--asp:${p.colour}">
+                <div class="airspace-label-name">${p.name}</div>
+                <div class="airspace-label-meta">${p.class} · ${p.lower}–${p.upper}</div>
+              </div>`,
+              iconSize: [120, 30],
+              iconAnchor: [60, 15],
+            })}
+          />
+        );
+      })}
+    </>
+  );
+}
+
