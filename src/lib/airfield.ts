@@ -7,12 +7,12 @@ export const AIRFIELD = {
   name: "East Sussex Gliding Club",
   shortName: "ESGC · Ringmer",
   address: "Kitson Field, The Broyle, Ringmer, Lewes BN8 5AP",
-  // Kitson Field (gliding strip just NE of Ringmer village).
-  lat: 50.8867,
-  lon: 0.0581,
-  elevationFt: 130,
+  // Kitson Field — verified: 50°54'27"N 0°6'17"E.
+  lat: 50.9075,
+  lon: 0.104722,
+  elevationFt: 89, // 27 m MSL
   surface: "Grass",
-  notes: "Gliding airfield · Grass strip",
+  notes: "Gliding airfield · Grass strip · 27m MSL",
 } as const;
 
 export const AIRFIELD_LATLON: [number, number] = [AIRFIELD.lat, AIRFIELD.lon];

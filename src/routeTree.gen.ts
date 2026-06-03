@@ -22,7 +22,6 @@ import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as GfesTmgRouteImport } from './routes/gfes.tmg'
 import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/hooks/ogn-sync'
 import { Route as ApiPublicHooksCngSyncRouteImport } from './routes/api/public/hooks/cng-sync'
 import { Route as ApiPublicHooksAutoSendLogsRouteImport } from './routes/api/public/hooks/auto-send-logs'
@@ -92,11 +91,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GfesTmgRoute = GfesTmgRouteImport.update({
-  id: '/gfes/tmg',
-  path: '/gfes/tmg',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicHooksOgnSyncRoute = ApiPublicHooksOgnSyncRouteImport.update({
   id: '/api/public/hooks/ogn-sync',
   path: '/api/public/hooks/ogn-sync',
@@ -128,7 +122,6 @@ export interface FileRoutesByFullPath {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
-  '/gfes/tmg': typeof GfesTmgRoute
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
@@ -147,7 +140,6 @@ export interface FileRoutesByTo {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
-  '/gfes/tmg': typeof GfesTmgRoute
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
@@ -167,7 +159,6 @@ export interface FileRoutesById {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
-  '/gfes/tmg': typeof GfesTmgRoute
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
@@ -188,7 +179,6 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
-    | '/gfes/tmg'
     | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
@@ -207,7 +197,6 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
-    | '/gfes/tmg'
     | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
@@ -226,7 +215,6 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
-    | '/gfes/tmg'
     | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
@@ -246,7 +234,6 @@ export interface RootRouteChildren {
   MembersRoute: typeof MembersRoute
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
-  GfesTmgRoute: typeof GfesTmgRoute
   ApiPublicHooksAutoSendLogsRoute: typeof ApiPublicHooksAutoSendLogsRoute
   ApiPublicHooksCngSyncRoute: typeof ApiPublicHooksCngSyncRoute
   ApiPublicHooksOgnSyncRoute: typeof ApiPublicHooksOgnSyncRoute
@@ -345,13 +332,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/gfes/tmg': {
-      id: '/gfes/tmg'
-      path: '/gfes/tmg'
-      fullPath: '/gfes/tmg'
-      preLoaderRoute: typeof GfesTmgRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/hooks/ogn-sync': {
       id: '/api/public/hooks/ogn-sync'
       path: '/api/public/hooks/ogn-sync'
@@ -390,7 +370,6 @@ const rootRouteChildren: RootRouteChildren = {
   MembersRoute: MembersRoute,
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
-  GfesTmgRoute: GfesTmgRoute,
   ApiPublicHooksAutoSendLogsRoute: ApiPublicHooksAutoSendLogsRoute,
   ApiPublicHooksCngSyncRoute: ApiPublicHooksCngSyncRoute,
   ApiPublicHooksOgnSyncRoute: ApiPublicHooksOgnSyncRoute,
@@ -398,3 +377,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
