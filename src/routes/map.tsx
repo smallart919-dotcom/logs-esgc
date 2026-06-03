@@ -509,7 +509,7 @@ function LiveAirspace() {
       style={(feature) => {
         const p = feature?.properties as Partial<AirspaceFeatureProperties> | undefined;
         const cls = p?.class;
-        const isCtrl = cls === "CTR" || cls === "CTA" || cls === "TMA" || cls === "D" || cls === "C";
+        const isCtrl = cls === "CTR" || cls === "CTA" || cls === "TMA" || cls === ("D" as typeof cls) || cls === ("C" as typeof cls);
         return {
           color: p?.colour ?? "#888",
           weight: cls === "CTR" ? 2.5 : 2,
