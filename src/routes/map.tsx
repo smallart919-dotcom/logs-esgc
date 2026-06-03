@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { requireAuth } from "@/lib/auth-guard";
 import { AIRSPACE_GEOJSON, type AirspaceFeatureProperties } from "@/lib/airspace-ukrin";
 import { AIRFIELD, AIRFIELD_LATLON } from "@/lib/airfield";
+import { getAirspaceForBbox } from "@/lib/openaip.functions";
 
 export const Route = createFileRoute("/map")({
   beforeLoad: requireAuth,
@@ -233,36 +234,7 @@ function MapPage() {
           maxZoom={19}
         />
 
-        {showAirspace && (
-          <GeoJSON
-            key="airspace"
-            data={AIRSPACE_GEOJSON}
-            style={(feature) => {
-              const p = feature?.properties as Partial<AirspaceFeatureProperties> | undefined;
-              const cls = p?.class;
-              const isCtrl = cls === "CTR" || cls === "CTA" || cls === "TMA";
-              return {
-                color: p?.colour ?? "#888",
-                weight: cls === "CTR" ? 2.5 : 2,
-                opacity: 0.9,
-                fillColor: p?.colour ?? "#888",
-                fillOpacity: p?.fill ?? 0.07,
-                dashArray: isCtrl ? undefined : "6 4",
-                lineJoin: "round",
-              };
-            }}
-            onEachFeature={(feature, layer) => {
-              const p = feature.properties as AirspaceFeatureProperties;
-              layer.bindTooltip(
-                `<strong>${p.name}</strong> <span style="opacity:.7">${p.ident ?? ""}</span><br/>` +
-                `<span style="color:${p.colour};font-weight:600">${p.class}</span> · ${p.lower} – ${p.upper}` +
-                (p.frequency ? `<br/><span style="opacity:.8">📻 ${p.frequency}</span>` : "") +
-                (p.notes ? `<br/><span style="opacity:.6;font-size:11px">${p.notes}</span>` : ""),
-                { sticky: true, className: "leaflet-tooltip-airspace", direction: "top" },
-              );
-            }}
-          />
-        )}
+        {showAirspace && <LiveAirspace />}
 
         {showAirspace && <AirspaceLabels />}
 
@@ -482,4 +454,84 @@ function AirspaceLabels() {
     </>
   );
 }
+
+/** Fetch live airspace from OpenAIP for the current viewport (debounced).
+ *  Falls back to hand-drawn AIRSPACE_GEOJSON if OpenAIP returns no features / errors. */
+function LiveAirspace() {
+  const map = useMap();
+  const [features, setFeatures] = useState<GeoJSON.Feature[] | null>(null);
+  const [usedFallback, setUsedFallback] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const refresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const b = map.getBounds();
+        const res = await getAirspaceForBbox({
+          data: {
+            south: b.getSouth(),
+            west: b.getWest(),
+            north: b.getNorth(),
+            east: b.getEast(),
+          },
+        }).catch(() => null);
+        if (cancelled) return;
+        if (!res || res.error || res.features.length === 0) {
+          setFeatures(null);
+          setUsedFallback(true);
+        } else {
+          setFeatures(res.features as unknown as GeoJSON.Feature[]);
+          setUsedFallback(false);
+        }
+      }, 400);
+    };
+
+    refresh();
+    map.on("moveend", refresh);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      map.off("moveend", refresh);
+    };
+  }, [map]);
+
+  const data: GeoJSON.FeatureCollection = usedFallback || !features
+    ? (AIRSPACE_GEOJSON as unknown as GeoJSON.FeatureCollection)
+    : { type: "FeatureCollection", features };
+
+  return (
+    <GeoJSON
+      key={usedFallback ? "fallback" : `live-${features?.length ?? 0}`}
+      data={data}
+      style={(feature) => {
+        const p = feature?.properties as Partial<AirspaceFeatureProperties> | undefined;
+        const cls = p?.class;
+        const isCtrl = cls === "CTR" || cls === "CTA" || cls === "TMA" || cls === ("D" as typeof cls) || cls === ("C" as typeof cls);
+        return {
+          color: p?.colour ?? "#888",
+          weight: cls === "CTR" ? 2.5 : 2,
+          opacity: 0.9,
+          fillColor: p?.colour ?? "#888",
+          fillOpacity: p?.fill ?? 0.07,
+          dashArray: isCtrl ? undefined : "6 4",
+          lineJoin: "round",
+        };
+      }}
+      onEachFeature={(feature, layer) => {
+        const p = feature.properties as AirspaceFeatureProperties;
+        layer.bindTooltip(
+          `<strong>${p.name}</strong> <span style="opacity:.7">${p.ident ?? ""}</span><br/>` +
+          `<span style="color:${p.colour};font-weight:600">${p.class}</span> · ${p.lower} – ${p.upper}` +
+          (p.frequency ? `<br/><span style="opacity:.8">📻 ${p.frequency}</span>` : "") +
+          (p.notes ? `<br/><span style="opacity:.6;font-size:11px">${p.notes}</span>` : ""),
+          { sticky: true, className: "leaflet-tooltip-airspace", direction: "top" },
+        );
+      }}
+    />
+  );
+}
+
 
