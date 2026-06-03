@@ -1,9 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+type Coord = number | Coord[];
+
+
 type AirspaceFeature = {
   type: "Feature";
-  geometry: { type: string; coordinates: unknown[] };
+  geometry: { type: string; coordinates: Coord };
   properties: {
     id?: string;
     name: string;
@@ -39,7 +42,7 @@ type OpenAipAirspace = {
   frequency?: { value?: string; name?: string }[];
   upperLimit?: { value?: number; unit?: number; referenceDatum?: number };
   lowerLimit?: { value?: number; unit?: number; referenceDatum?: number };
-  geometry?: { type: string; coordinates: unknown };
+  geometry?: { type: string; coordinates: Coord };
 };
 
 // Map OpenAIP icaoClass enum (0=A,1=B,2=C,3=D,4=E,5=F,6=G) to label
