@@ -1,8 +1,26 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-// Simple in-memory cache (per worker instance). Keyed by rounded bbox.
-const cache = new Map<string, { ts: number; data: unknown }>();
+type AirspaceFeature = {
+  type: "Feature";
+  geometry: { type: string; coordinates: unknown };
+  properties: {
+    id?: string;
+    name: string;
+    ident: string;
+    class: string;
+    upper: string;
+    lower: string;
+    frequency?: string;
+    colour: string;
+    fill: number;
+    notes?: string;
+  };
+};
+
+type Result = { features: AirspaceFeature[]; error: string | null; cached?: boolean };
+
+const cache = new Map<string, { ts: number; data: AirspaceFeature[] }>();
 const TTL_MS = 1000 * 60 * 30; // 30 min
 
 const BboxSchema = z.object({
