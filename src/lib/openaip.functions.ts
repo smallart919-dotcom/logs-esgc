@@ -70,21 +70,19 @@ function colourFor(typeLabel: string, cls: string): string {
 
 export const getAirspaceForBbox = createServerFn({ method: "POST" })
   .inputValidator((input) => BboxSchema.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<Result> => {
     const apiKey = process.env.OPENAIP_API_KEY;
     if (!apiKey) {
-      return { features: [] as unknown[], error: "OPENAIP_API_KEY not configured" };
+      return { features: [], error: "OPENAIP_API_KEY not configured" };
     }
-    // Round bbox to 1 decimal place to reuse cache across small pans
     const r = (n: number) => Math.round(n * 10) / 10;
     const key = `${r(data.south)},${r(data.west)},${r(data.north)},${r(data.east)}`;
     const now = Date.now();
     const cached = cache.get(key);
     if (cached && now - cached.ts < TTL_MS) {
-      return { features: cached.data as unknown[], error: null, cached: true };
+      return { features: cached.data, error: null, cached: true };
     }
 
-    // OpenAIP Core API: GET /api/airspaces?bbox=west,south,east,north
     const url = new URL("https://api.core.openaip.net/api/airspaces");
     url.searchParams.set("bbox", `${data.west},${data.south},${data.east},${data.north}`);
     url.searchParams.set("limit", "1000");
@@ -96,40 +94,41 @@ export const getAirspaceForBbox = createServerFn({ method: "POST" })
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        return { features: [] as unknown[], error: `OpenAIP ${res.status}: ${text.slice(0, 200)}` };
+        return { features: [], error: `OpenAIP ${res.status}: ${text.slice(0, 200)}` };
       }
       const json = (await res.json()) as { items?: OpenAipAirspace[] };
       const items = json.items ?? [];
 
-      const features = items
-        .filter((a) => a.geometry && a.geometry.coordinates)
-        .map((a) => {
-          const cls = ICAO_CLASS_LABEL[a.icaoClass ?? -1] ?? "";
-          const typeLabel = TYPE_LABEL[a.type ?? 0] ?? "OTHER";
-          const upper = fmtLimit(a.upperLimit);
-          const lower = fmtLimit(a.lowerLimit);
-          const freq = a.frequency?.[0]?.value;
-          return {
-            type: "Feature" as const,
-            geometry: a.geometry,
-            properties: {
-              id: a._id,
-              name: a.name ?? "Unknown",
-              ident: typeLabel,
-              class: cls || typeLabel,
-              upper: upper || "—",
-              lower: lower || "—",
-              frequency: freq,
-              colour: colourFor(typeLabel, cls),
-              fill: typeLabel === "PROHIBITED" || typeLabel === "RESTRICTED" || typeLabel === "DANGER" ? 0.12 : 0.06,
-              notes: a.country,
-            },
-          };
+      const features: AirspaceFeature[] = [];
+      for (const a of items) {
+        if (!a.geometry || !a.geometry.coordinates) continue;
+        const cls = ICAO_CLASS_LABEL[a.icaoClass ?? -1] ?? "";
+        const typeLabel = TYPE_LABEL[a.type ?? 0] ?? "OTHER";
+        const upper = fmtLimit(a.upperLimit);
+        const lower = fmtLimit(a.lowerLimit);
+        const freq = a.frequency?.[0]?.value;
+        features.push({
+          type: "Feature",
+          geometry: { type: a.geometry.type, coordinates: a.geometry.coordinates },
+          properties: {
+            id: a._id,
+            name: a.name ?? "Unknown",
+            ident: typeLabel,
+            class: cls || typeLabel,
+            upper: upper || "—",
+            lower: lower || "—",
+            frequency: freq,
+            colour: colourFor(typeLabel, cls),
+            fill: typeLabel === "PROHIBITED" || typeLabel === "RESTRICTED" || typeLabel === "DANGER" ? 0.12 : 0.06,
+            notes: a.country,
+          },
         });
+      }
 
       cache.set(key, { ts: now, data: features });
       return { features, error: null, cached: false };
     } catch (err) {
-      return { features: [] as unknown[], error: err instanceof Error ? err.message : "Fetch failed" };
+      return { features: [], error: err instanceof Error ? err.message : "Fetch failed" };
     }
   });
+
