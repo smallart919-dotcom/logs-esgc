@@ -3,7 +3,7 @@ import { z } from "zod";
 
 type AirspaceFeature = {
   type: "Feature";
-  geometry: { type: string; coordinates: unknown };
+  geometry: { type: string; coordinates: unknown[] };
   properties: {
     id?: string;
     name: string;
