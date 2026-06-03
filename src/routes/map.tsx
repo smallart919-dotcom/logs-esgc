@@ -234,36 +234,7 @@ function MapPage() {
           maxZoom={19}
         />
 
-        {showAirspace && (
-          <GeoJSON
-            key="airspace"
-            data={AIRSPACE_GEOJSON}
-            style={(feature) => {
-              const p = feature?.properties as Partial<AirspaceFeatureProperties> | undefined;
-              const cls = p?.class;
-              const isCtrl = cls === "CTR" || cls === "CTA" || cls === "TMA";
-              return {
-                color: p?.colour ?? "#888",
-                weight: cls === "CTR" ? 2.5 : 2,
-                opacity: 0.9,
-                fillColor: p?.colour ?? "#888",
-                fillOpacity: p?.fill ?? 0.07,
-                dashArray: isCtrl ? undefined : "6 4",
-                lineJoin: "round",
-              };
-            }}
-            onEachFeature={(feature, layer) => {
-              const p = feature.properties as AirspaceFeatureProperties;
-              layer.bindTooltip(
-                `<strong>${p.name}</strong> <span style="opacity:.7">${p.ident ?? ""}</span><br/>` +
-                `<span style="color:${p.colour};font-weight:600">${p.class}</span> · ${p.lower} – ${p.upper}` +
-                (p.frequency ? `<br/><span style="opacity:.8">📻 ${p.frequency}</span>` : "") +
-                (p.notes ? `<br/><span style="opacity:.6;font-size:11px">${p.notes}</span>` : ""),
-                { sticky: true, className: "leaflet-tooltip-airspace", direction: "top" },
-              );
-            }}
-          />
-        )}
+        {showAirspace && <LiveAirspace />}
 
         {showAirspace && <AirspaceLabels />}
 
