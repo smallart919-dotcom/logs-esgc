@@ -137,9 +137,9 @@ function MapPage() {
     const fetchOgn = async () => parseOgn();
 
     const fetchAdsb = async (): Promise<LiveAircraft[]> => {
-      const json = proxied?.adsb as { ac?: unknown[]; now?: number } | null;
+      const json = proxied?.adsb as { ac?: unknown[]; aircraft?: unknown[]; now?: number } | null;
       if (!json) return [];
-      const list = json.ac ?? [];
+      const list = json.aircraft ?? json.ac ?? [];
       const serverNow = json.now ?? nowSec;
       const mapped: (LiveAircraft | null)[] = list.map((raw) => {
         const a = raw as Record<string, unknown>;
