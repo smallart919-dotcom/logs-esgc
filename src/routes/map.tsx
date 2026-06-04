@@ -90,6 +90,7 @@ function MapPage() {
   const inboundRef = useRef<Map<string, number>>(new Map());
   // Per-aircraft trail history (full session, capped to last 2 hours)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
+  const failCountRef = useRef(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -136,8 +137,15 @@ function MapPage() {
         const altM = parseFloat(String(a.altitude ?? 0)) || 0;
         const lat = parseFloat(String(a.lat));
         const lon = parseFloat(String(a.lng));
-        // Filter ground stations (type 2) — only show airborne traffic
-        const type = Number(a.type);
+        // OGN/GlideAndSeek type codes: 1 glider · 2 towplane · 3 helicopter
+        // 4 parachute · 5 dropplane · 6 hangglider · 7 paraglider · 8 powered
+        // 9 jet · 11 balloon · 12 airship · 13 UAV · 14 static (ground stn)
+        const kind = Number(a.type);
+        let mapped: AircraftType = "glider";
+        if (kind === 3) mapped = "helicopter";
+        else if (kind === 2 || kind === 5 || kind === 8 || kind === 9 || kind === 13) mapped = "powered";
+        else if (kind === 1 || kind === 6 || kind === 7) mapped = "glider";
+        else if (kind === 11 || kind === 12) mapped = "unknown";
         return {
           id: flarm || `ogn-${lat}-${lon}`,
           lat,
@@ -148,15 +156,15 @@ function MapPage() {
           course: parseFloat(String(a.track ?? 0)) || 0,
           climbMs: parseFloat(String(a.vario ?? 0)) || 0,
           reg,
-          type: "glider" as AircraftType,
+          type: mapped,
           category: String(a.model ?? ""),
           source: "ogn" as const,
           isOwnFleet: flarmSet.has(flarm) || regSet.has(normReg),
           isStale: nowSec - ts > 60,
           ts,
-          _kind: type,
+          _kind: kind,
         } as LiveAircraft & { _kind: number };
-      }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon) && a._kind !== 2);
+      }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon) && a._kind !== 14);
     };
     const fetchOgn = async () => parseOgn();
 
@@ -174,9 +182,11 @@ function MapPage() {
         const lon = parseFloat(String(a.lon));
         if (isNaN(lat) || isNaN(lon)) return null;
         if (lat < 50.4 || lat > 51.4 || lon < -0.6 || lon > 1.8) return null;
+        // ADS-B category codes: A1-A5 powered, A7 rotorcraft, B1 glider
+        const catU = cat.toUpperCase();
         let type: AircraftType = "powered";
-        if (/^A[67]|glider/i.test(cat)) type = "glider";
-        else if (/^A[34]|heli/i.test(cat)) type = "helicopter";
+        if (/^B1/.test(catU) || /GLIDER/.test(catU)) type = "glider";
+        else if (/^A7/.test(catU) || /HELI|ROTOR/.test(catU)) type = "helicopter";
         return {
           id: String(a.hex ?? a.icao ?? `${lat}-${lon}`).toUpperCase(),
           lat,
@@ -213,9 +223,18 @@ function MapPage() {
       }),
     ];
 
+    // Don't flap on transient empty responses — keep last data and only
+    // surface "No data" after several consecutive empty fetches.
+    const failed = !proxied || (merged.length === 0);
+    if (failed) {
+      failCountRef.current += 1;
+      if (failCountRef.current >= 8) setFetchError("No data");
+      return;
+    }
+    failCountRef.current = 0;
     setAircraft(merged);
     setLastUpdate(new Date());
-    setFetchError(merged.length === 0 && ogn.length === 0 && adsb.length === 0 ? "No data" : null);
+    setFetchError(null);
 
     // Append trail points (full session — capped to last 2 hours)
     const cutoff = nowSec - 7200;
