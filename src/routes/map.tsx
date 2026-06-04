@@ -608,6 +608,7 @@ function MapPage() {
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly],
             ["Hide stale (>60s)", hideStale, setHideStale],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled],
+            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef); }],
           ] as [string, boolean, (v: boolean) => void][]).map(([label, state, setter]) => (
             <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "5px" }}>
               <input
