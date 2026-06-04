@@ -533,7 +533,12 @@ function MapPage() {
         ])}
 
 
-        {visible.map((a) => (
+        {visible.map((a) => {
+          const trail = trailsRef.current.get(a.id);
+          const start = trail && trail.length ? trail[0] : null;
+          const dep = start ? nearestAirfield(start.lat, start.lon, 6) : null;
+          const photo = photoCache.get(a.id) ?? null;
+          return (
           <Marker
             key={a.id}
             position={[a.lat, a.lon]}
@@ -541,17 +546,30 @@ function MapPage() {
             zIndexOffset={a.isOwnFleet ? 1000 : a.type === "glider" ? 500 : 0}
           >
             <Popup>
-              <div style={{ fontFamily: "system-ui,sans-serif", fontSize: "13px", minWidth: "190px" }}>
+              <div style={{ fontFamily: "system-ui,sans-serif", fontSize: "13px", minWidth: "220px" }}>
                 <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
                   {a.reg || a.id || "Unknown"}
                   {a.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: "11px" }}>⚡ ESGC</span>}
                 </div>
+                {photo && (
+                  <a href={photo.link} target="_blank" rel="noreferrer noopener" style={{ display: "block", marginBottom: "6px" }}>
+                    <img src={photo.url} alt={a.reg || a.id} style={{ width: "100%", height: "auto", borderRadius: "6px", display: "block" }} />
+                    {photo.photographer && (
+                      <div style={{ fontSize: "9px", color: "#9ca3af", textAlign: "right", marginTop: "2px" }}>© {photo.photographer} · planespotters.net</div>
+                    )}
+                  </a>
+                )}
                 <div style={{ color: "#6b7280", lineHeight: 1.7, fontSize: "12px" }}>
                   <div>Alt: <b>{a.altFt.toLocaleString()}ft</b> ({a.altM}m)</div>
                   <div>Speed: <b>{a.speedKph} km/h</b> · {Math.round(a.speedKph / 1.852)} kts</div>
                   <div>{a.climbMs >= 0 ? "↑" : "↓"} <b>{Math.abs(a.climbMs).toFixed(1)} m/s</b> · Course: {Math.round(a.course)}°</div>
                   {a.category && <div>Type: {a.category}</div>}
                   {a.squawk && <div>Squawk: {a.squawk}</div>}
+                  {dep && (
+                    <div style={{ marginTop: "2px" }}>
+                      Departed: <b style={{ color: "#38bdf8" }}>{dep.icao ? `${dep.icao} ` : ""}{dep.name}</b>
+                    </div>
+                  )}
                   <div style={{ marginTop: "4px", color: "#9ca3af" }}>
                     Source: {a.source === "ogn" ? "OGN/FLARM" : "ADS-B"}<br />
                     {a.isStale ? "⚠ Position may be stale" : `Updated ${Math.max(0, Math.round(Date.now() / 1000 - a.ts))}s ago`}
@@ -560,8 +578,10 @@ function MapPage() {
               </div>
             </Popup>
           </Marker>
-        ))}
+          );
+        })}
       </MapContainer>
+
 
       {/* Control panel */}
       <div className="absolute top-4 right-4 z-[1000]" style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "14px 16px", minWidth: "230px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "13px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
