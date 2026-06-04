@@ -79,8 +79,11 @@ function MapPage() {
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
+  const [audioChime, setAudioChime] = useState(false);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
   const [trailsTick, setTrailsTick] = useState(0);
+  const [photoCache, setPhotoCache] = useState<Map<string, { url: string; photographer?: string; link?: string } | null>>(new Map());
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
