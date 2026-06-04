@@ -97,39 +97,49 @@ function MapPage() {
     const proxied = await getLiveTraffic().catch(() => null);
 
     const parseOgn = (): LiveAircraft[] => {
-      const json = proxied?.ogn as { aircraft?: unknown[][] } | null;
-      if (!json?.aircraft) return [];
-      return json.aircraft.map((a) => {
-        const flarm = String(a[0] ?? "").toUpperCase();
-        const reg = String(a[8] ?? "");
+      // GlideAndSeek shape: { success, message: [{ lat, lng, altitude(m),
+      //   speed(kph), track, vario(m/s), registration, flarmID, displayName,
+      //   timestamp(ms), type, model }] }
+      const json = proxied?.ogn as { message?: Record<string, unknown>[] } | null;
+      const list = json?.message;
+      if (!Array.isArray(list)) return [];
+      return list.map((a) => {
+        const flarm = String(a.flarmID ?? "").toUpperCase();
+        const reg = String(a.registration ?? a.displayName ?? "");
         const normReg = reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
-        const ts = parseInt(String(a[9])) || 0;
-        const altM = parseFloat(String(a[3])) || 0;
+        const tsMs = parseFloat(String(a.timestamp ?? 0)) || 0;
+        const ts = Math.round(tsMs / 1000);
+        const altM = parseFloat(String(a.altitude ?? 0)) || 0;
+        const lat = parseFloat(String(a.lat));
+        const lon = parseFloat(String(a.lng));
+        // Filter ground stations (type 2) — only show airborne traffic
+        const type = Number(a.type);
         return {
-          id: flarm || `ogn-${a[1]}-${a[2]}`,
-          lat: parseFloat(String(a[1])),
-          lon: parseFloat(String(a[2])),
+          id: flarm || `ogn-${lat}-${lon}`,
+          lat,
+          lon,
           altM,
           altFt: Math.round(altM * 3.281),
-          speedKph: parseFloat(String(a[4])) || 0,
-          course: parseFloat(String(a[5])) || 0,
-          climbMs: parseFloat(String(a[6])) || 0,
+          speedKph: parseFloat(String(a.speed ?? 0)) || 0,
+          course: parseFloat(String(a.track ?? 0)) || 0,
+          climbMs: parseFloat(String(a.vario ?? 0)) || 0,
           reg,
           type: "glider" as AircraftType,
-          category: "",
+          category: String(a.model ?? ""),
           source: "ogn" as const,
           isOwnFleet: flarmSet.has(flarm) || regSet.has(normReg),
           isStale: nowSec - ts > 60,
           ts,
-        };
-      }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon));
+          _kind: type,
+        } as LiveAircraft & { _kind: number };
+      }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon) && a._kind !== 2);
     };
     const fetchOgn = async () => parseOgn();
 
     const fetchAdsb = async (): Promise<LiveAircraft[]> => {
-      const json = proxied?.adsb as { ac?: unknown[]; now?: number } | null;
+      const json = proxied?.adsb as { ac?: unknown[]; aircraft?: unknown[]; now?: number } | null;
       if (!json) return [];
-      const list = json.ac ?? [];
+      const list = json.aircraft ?? json.ac ?? [];
       const serverNow = json.now ?? nowSec;
       const mapped: (LiveAircraft | null)[] = list.map((raw) => {
         const a = raw as Record<string, unknown>;
