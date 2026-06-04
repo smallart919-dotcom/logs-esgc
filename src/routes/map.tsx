@@ -430,6 +430,42 @@ function MapPage() {
   const countLive = (pred: (a: LiveAircraft) => boolean) =>
     aircraft.filter((a) => !a.isStale && pred(a)).length;
 
+  // Mini-stats: busiest hour, max altitude today, approx fleet distance
+  const miniStats = useMemo(() => {
+    void trailsTick;
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayStartSec = todayStart.getTime() / 1000;
+    const hourBuckets = new Array(24).fill(0).map(() => new Set<string>());
+    let maxAlt = 0;
+    let maxAltReg = "";
+    let fleetKm = 0;
+    for (const [id, arr] of trailsRef.current.entries()) {
+      const todayArr = arr.filter((p) => p.ts >= todayStartSec);
+      if (!todayArr.length) continue;
+      for (const p of todayArr) {
+        const h = new Date(p.ts * 1000).getHours();
+        hourBuckets[h].add(id);
+        if (p.altFt > maxAlt) {
+          maxAlt = p.altFt;
+          const a = aircraft.find((x) => x.id === id);
+          maxAltReg = a?.reg || id;
+        }
+      }
+      const a = aircraft.find((x) => x.id === id);
+      if (a?.isOwnFleet) {
+        for (let i = 1; i < todayArr.length; i++) {
+          const p0 = todayArr[i - 1], p1 = todayArr[i];
+          fleetKm += distanceNm(p0.lat, p0.lon, p1.lat, p1.lon) * 1.852;
+        }
+      }
+    }
+    let busiestHour = -1; let busiestCount = 0;
+    for (let h = 0; h < 24; h++) {
+      if (hourBuckets[h].size > busiestCount) { busiestCount = hourBuckets[h].size; busiestHour = h; }
+    }
+    return { busiestHour, busiestCount, maxAlt, maxAltReg, fleetKm };
+  }, [aircraft, trailsTick]);
+
   return (
     <div style={{ position: "relative", height: "calc(100vh - 11rem)", minHeight: "500px" }}>
       <MapContainer
