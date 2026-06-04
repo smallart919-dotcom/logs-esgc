@@ -64,6 +64,8 @@ type LiveAircraft = {
   squawk?: string;
 };
 
+type TrailPoint = { lat: number; lon: number; altFt: number; ts: number; course: number; speedKph: number };
+
 function MapPage() {
   const [aircraft, setAircraft] = useState<LiveAircraft[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -75,8 +77,15 @@ function MapPage() {
   const [notifyEnabled, setNotifyEnabled] = useState(true);
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
+  const [showTrails, setShowTrails] = useState(true);
+  const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
+  const [trailsTick, setTrailsTick] = useState(0);
+  const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
+  const inboundRef = useRef<Map<string, number>>(new Map());
+  // Per-aircraft trail history (full session, capped to last 2 hours)
+  const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
