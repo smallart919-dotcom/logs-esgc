@@ -10,6 +10,7 @@ import { AIRSPACE_GEOJSON, type AirspaceFeatureProperties } from "@/lib/airspace
 import { AIRFIELD, AIRFIELD_LATLON } from "@/lib/airfield";
 import { getAirspaceForBbox } from "@/lib/openaip.functions";
 import { getLiveTraffic } from "@/lib/live-traffic.functions";
+import { nearestAirfield, distanceNm } from "@/lib/nearby-airfields";
 
 export const Route = createFileRoute("/map")({
   beforeLoad: requireAuth,
