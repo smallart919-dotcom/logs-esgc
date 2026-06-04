@@ -672,39 +672,13 @@ function MapPage() {
           {fetchError
             ? <span style={{ color: "#f87171" }}>⚠ {fetchError}</span>
             : <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#4ade80", marginRight: 6, boxShadow: "0 0 6px #4ade80", animation: "pulse 1.5s ease-in-out infinite" }} />LIVE · {lastUpdate ? lastUpdate.toLocaleTimeString("en-GB") : "connecting…"}</span>}
-          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 3s refresh</div>
-        </div>
-      </div>
-
-      {/* Mini-stats footer */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]" style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "8px 14px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "12px", display: "flex", gap: "18px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
-        <div>
-          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Busiest hour</div>
-          <div style={{ fontWeight: 700 }}>
-            {miniStats.busiestHour >= 0 ? `${String(miniStats.busiestHour).padStart(2, "0")}:00` : "—"}
-            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>
-              {miniStats.busiestHour >= 0 ? `${miniStats.busiestCount} a/c` : ""}
-            </span>
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Max altitude</div>
-          <div style={{ fontWeight: 700 }}>
-            {miniStats.maxAlt > 0 ? `${miniStats.maxAlt.toLocaleString()}ft` : "—"}
-            {miniStats.maxAltReg && <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>{miniStats.maxAltReg}</span>}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Fleet distance</div>
-          <div style={{ fontWeight: 700 }}>
-            {miniStats.fleetKm > 0 ? `${miniStats.fleetKm.toFixed(0)} km` : "—"}
-            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>today</span>
-          </div>
+          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 0.5s refresh</div>
         </div>
       </div>
     </div>
   );
 }
+
 
 /** Short two-tone chime via WebAudio. Lazily creates a shared AudioContext. */
 function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
