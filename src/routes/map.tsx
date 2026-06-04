@@ -719,6 +719,20 @@ function MapPage() {
 }
 
 
+
+/** Pans the map to keep the selected aircraft centred as its position updates. */
+function FollowSelected({ selectedId, aircraft }: { selectedId: string | null; aircraft: LiveAircraft[] }) {
+  const map = useMap();
+  const target = selectedId ? aircraft.find((a) => a.id === selectedId) : null;
+  const lat = target?.lat;
+  const lon = target?.lon;
+  useEffect(() => {
+    if (lat == null || lon == null) return;
+    map.panTo([lat, lon], { animate: true, duration: 0.4 });
+  }, [lat, lon, map]);
+  return null;
+}
+
 /** Short two-tone chime via WebAudio. Lazily creates a shared AudioContext. */
 function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
   try {
