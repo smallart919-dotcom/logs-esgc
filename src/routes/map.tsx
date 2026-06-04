@@ -278,7 +278,7 @@ function MapPage() {
       const dLon = toRad(a.lon - alon);
       const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(alat)) * Math.cos(toRad(a.lat)) * Math.sin(dLon / 2) ** 2;
       const distNm = (2 * 6371 * Math.asin(Math.sqrt(h))) / 1.852;
-      if (distNm <= proximityNm) {
+      if (distNm <= proximityNm && a.altFt <= 2200) {
         seen.add(a.id);
         const prev = insideZoneRef.current.get(a.id);
         // Debounce re-entry — only re-alert after 5 min outside
