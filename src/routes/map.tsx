@@ -8,6 +8,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { AIRSPACE_GEOJSON, type AirspaceFeatureProperties } from "@/lib/airspace-ukrin";
 import { AIRFIELD, AIRFIELD_LATLON } from "@/lib/airfield";
 import { getAirspaceForBbox } from "@/lib/openaip.functions";
+import { getLiveTraffic } from "@/lib/live-traffic.functions";
 
 export const Route = createFileRoute("/map")({
   beforeLoad: requireAuth,
