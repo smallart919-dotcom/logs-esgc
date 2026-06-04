@@ -72,7 +72,10 @@ function MapPage() {
   const [showAirspace, setShowAirspace] = useState(true);
   const [ownFleetOnly, setOwnFleetOnly] = useState(false);
   const [hideStale, setHideStale] = useState(true);
+  const [notifyEnabled, setNotifyEnabled] = useState(true);
+  const [proximityNm, setProximityNm] = useState(5);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
+  const insideZoneRef = useRef<Map<string, number>>(new Map());
 
   // Load fleet for "own fleet" highlighting
   useEffect(() => {
