@@ -521,7 +521,11 @@ function MapPage() {
         {visible.map((a) => {
           const trail = trailsRef.current.get(a.id);
           const start = trail && trail.length ? trail[0] : null;
-          const dep = start ? nearestAirfield(start.lat, start.lon, 6) : null;
+          // Only call it a "departure" if first trail point is low (likely
+          // on-airfield/just-after-takeoff) AND within 2.5nm of a known field.
+          // Otherwise we just saw the aircraft mid-flight — show "first seen".
+          const dep = start && start.altFt <= 1500 ? nearestAirfield(start.lat, start.lon, 2.5) : null;
+          const firstSeenAirfield = !dep && start ? nearestAirfield(start.lat, start.lon, 8) : null;
           const photo = photoCache.get(a.id) ?? null;
           return (
           <Marker
@@ -529,12 +533,17 @@ function MapPage() {
             position={[a.lat, a.lon]}
             icon={aircraftIcon(a)}
             zIndexOffset={a.isOwnFleet ? 1000 : a.type === "glider" ? 500 : 0}
+            eventHandlers={{
+              click: () => setSelectedId(a.id),
+              popupclose: () => setSelectedId((cur) => (cur === a.id ? null : cur)),
+            }}
           >
             <Popup>
               <div style={{ fontFamily: "system-ui,sans-serif", fontSize: "13px", minWidth: "220px" }}>
                 <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
                   {a.reg || a.id || "Unknown"}
                   {a.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: "11px" }}>⚡ ESGC</span>}
+                  {selectedId === a.id && <span style={{ color: "#4ade80", fontSize: "10px", marginLeft: "auto" }}>● TRACKING</span>}
                 </div>
                 {photo && (
                   <a href={photo.link} target="_blank" rel="noreferrer noopener" style={{ display: "block", marginBottom: "6px" }}>
@@ -550,11 +559,19 @@ function MapPage() {
                   <div>{a.climbMs >= 0 ? "↑" : "↓"} <b>{Math.abs(a.climbMs).toFixed(1)} m/s</b> · Course: {Math.round(a.course)}°</div>
                   {a.category && <div>Type: {a.category}</div>}
                   {a.squawk && <div>Squawk: {a.squawk}</div>}
-                  {dep && (
+                  {dep ? (
                     <div style={{ marginTop: "2px" }}>
                       Departed: <b style={{ color: "#38bdf8" }}>{dep.icao ? `${dep.icao} ` : ""}{dep.name}</b>
                     </div>
-                  )}
+                  ) : firstSeenAirfield ? (
+                    <div style={{ marginTop: "2px", color: "#9ca3af" }}>
+                      First seen near: {firstSeenAirfield.icao ? `${firstSeenAirfield.icao} ` : ""}{firstSeenAirfield.name} @ {start!.altFt.toLocaleString()}ft
+                    </div>
+                  ) : start ? (
+                    <div style={{ marginTop: "2px", color: "#9ca3af" }}>
+                      First seen: {start.lat.toFixed(2)}°,{start.lon.toFixed(2)}° @ {start.altFt.toLocaleString()}ft
+                    </div>
+                  ) : null}
                   <div style={{ marginTop: "4px", color: "#9ca3af" }}>
                     Source: {a.source === "ogn" ? "OGN/FLARM" : "ADS-B"}<br />
                     {a.isStale ? "⚠ Position may be stale" : `Updated ${Math.max(0, Math.round(Date.now() / 1000 - a.ts))}s ago`}
@@ -565,6 +582,8 @@ function MapPage() {
           </Marker>
           );
         })}
+        <FollowSelected selectedId={selectedId} aircraft={visible} />
+
       </MapContainer>
 
 
