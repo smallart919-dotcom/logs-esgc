@@ -10,6 +10,7 @@ import { AIRSPACE_GEOJSON, type AirspaceFeatureProperties } from "@/lib/airspace
 import { AIRFIELD, AIRFIELD_LATLON } from "@/lib/airfield";
 import { getAirspaceForBbox } from "@/lib/openaip.functions";
 import { getLiveTraffic } from "@/lib/live-traffic.functions";
+import { nearestAirfield, distanceNm } from "@/lib/nearby-airfields";
 
 export const Route = createFileRoute("/map")({
   beforeLoad: requireAuth,
@@ -78,8 +79,11 @@ function MapPage() {
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
+  const [audioChime, setAudioChime] = useState(false);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
   const [trailsTick, setTrailsTick] = useState(0);
+  const [photoCache, setPhotoCache] = useState<Map<string, { url: string; photographer?: string; link?: string } | null>>(new Map());
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
@@ -285,6 +289,7 @@ function MapPage() {
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
             try { new Notification("Aircraft near Ringmer", { body: msg, tag: a.id }); } catch { /* noop */ }
           }
+          if (audioChime) playChime(audioCtxRef);
         }
         insideZoneRef.current.set(a.id, nowSec);
       }
@@ -295,7 +300,7 @@ function MapPage() {
         insideZoneRef.current.delete(id);
       }
     }
-  }, [aircraft, notifyEnabled, proximityNm]);
+  }, [aircraft, notifyEnabled, proximityNm, audioChime]);
 
   // Inbound detection — aircraft tracking towards Ringmer at <15nm
   useEffect(() => {
@@ -325,6 +330,38 @@ function MapPage() {
       }
     }
   }, [aircraft, notifyEnabled]);
+
+  // Photo fetch — planespotters.net public API (CORS-enabled) for ADS-B hex IDs
+  useEffect(() => {
+    let cancelled = false;
+    const toFetch = aircraft
+      .filter((a) => a.source === "adsb" && !a.isStale && /^[A-F0-9]{6}$/.test(a.id) && !photoCache.has(a.id))
+      .slice(0, 8);
+    if (toFetch.length === 0) return;
+    (async () => {
+      const updates: Array<[string, { url: string; photographer?: string; link?: string } | null]> = [];
+      for (const a of toFetch) {
+        try {
+          const r = await fetch(`https://api.planespotters.net/pub/photos/hex/${a.id}`);
+          if (!r.ok) { updates.push([a.id, null]); continue; }
+          const j = await r.json() as { photos?: Array<{ thumbnail_large?: { src: string }; photographer?: string; link?: string }> };
+          const p = j.photos?.[0];
+          if (p?.thumbnail_large?.src) {
+            updates.push([a.id, { url: p.thumbnail_large.src, photographer: p.photographer, link: p.link }]);
+          } else {
+            updates.push([a.id, null]);
+          }
+        } catch { updates.push([a.id, null]); }
+      }
+      if (cancelled || updates.length === 0) return;
+      setPhotoCache((prev) => {
+        const next = new Map(prev);
+        for (const [k, v] of updates) next.set(k, v);
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [aircraft, photoCache]);
 
   // METAR — refresh every 10 min (NOAA aviationweather.gov, CORS-enabled)
   useEffect(() => {
@@ -393,6 +430,42 @@ function MapPage() {
   const countLive = (pred: (a: LiveAircraft) => boolean) =>
     aircraft.filter((a) => !a.isStale && pred(a)).length;
 
+  // Mini-stats: busiest hour, max altitude today, approx fleet distance
+  const miniStats = useMemo(() => {
+    void trailsTick;
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayStartSec = todayStart.getTime() / 1000;
+    const hourBuckets = new Array(24).fill(0).map(() => new Set<string>());
+    let maxAlt = 0;
+    let maxAltReg = "";
+    let fleetKm = 0;
+    for (const [id, arr] of trailsRef.current.entries()) {
+      const todayArr = arr.filter((p) => p.ts >= todayStartSec);
+      if (!todayArr.length) continue;
+      for (const p of todayArr) {
+        const h = new Date(p.ts * 1000).getHours();
+        hourBuckets[h].add(id);
+        if (p.altFt > maxAlt) {
+          maxAlt = p.altFt;
+          const a = aircraft.find((x) => x.id === id);
+          maxAltReg = a?.reg || id;
+        }
+      }
+      const a = aircraft.find((x) => x.id === id);
+      if (a?.isOwnFleet) {
+        for (let i = 1; i < todayArr.length; i++) {
+          const p0 = todayArr[i - 1], p1 = todayArr[i];
+          fleetKm += distanceNm(p0.lat, p0.lon, p1.lat, p1.lon) * 1.852;
+        }
+      }
+    }
+    let busiestHour = -1; let busiestCount = 0;
+    for (let h = 0; h < 24; h++) {
+      if (hourBuckets[h].size > busiestCount) { busiestCount = hourBuckets[h].size; busiestHour = h; }
+    }
+    return { busiestHour, busiestCount, maxAlt, maxAltReg, fleetKm };
+  }, [aircraft, trailsTick]);
+
   return (
     <div style={{ position: "relative", height: "calc(100vh - 11rem)", minHeight: "500px" }}>
       <MapContainer
@@ -460,7 +533,12 @@ function MapPage() {
         ])}
 
 
-        {visible.map((a) => (
+        {visible.map((a) => {
+          const trail = trailsRef.current.get(a.id);
+          const start = trail && trail.length ? trail[0] : null;
+          const dep = start ? nearestAirfield(start.lat, start.lon, 6) : null;
+          const photo = photoCache.get(a.id) ?? null;
+          return (
           <Marker
             key={a.id}
             position={[a.lat, a.lon]}
@@ -468,17 +546,30 @@ function MapPage() {
             zIndexOffset={a.isOwnFleet ? 1000 : a.type === "glider" ? 500 : 0}
           >
             <Popup>
-              <div style={{ fontFamily: "system-ui,sans-serif", fontSize: "13px", minWidth: "190px" }}>
+              <div style={{ fontFamily: "system-ui,sans-serif", fontSize: "13px", minWidth: "220px" }}>
                 <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
                   {a.reg || a.id || "Unknown"}
                   {a.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: "11px" }}>⚡ ESGC</span>}
                 </div>
+                {photo && (
+                  <a href={photo.link} target="_blank" rel="noreferrer noopener" style={{ display: "block", marginBottom: "6px" }}>
+                    <img src={photo.url} alt={a.reg || a.id} style={{ width: "100%", height: "auto", borderRadius: "6px", display: "block" }} />
+                    {photo.photographer && (
+                      <div style={{ fontSize: "9px", color: "#9ca3af", textAlign: "right", marginTop: "2px" }}>© {photo.photographer} · planespotters.net</div>
+                    )}
+                  </a>
+                )}
                 <div style={{ color: "#6b7280", lineHeight: 1.7, fontSize: "12px" }}>
                   <div>Alt: <b>{a.altFt.toLocaleString()}ft</b> ({a.altM}m)</div>
                   <div>Speed: <b>{a.speedKph} km/h</b> · {Math.round(a.speedKph / 1.852)} kts</div>
                   <div>{a.climbMs >= 0 ? "↑" : "↓"} <b>{Math.abs(a.climbMs).toFixed(1)} m/s</b> · Course: {Math.round(a.course)}°</div>
                   {a.category && <div>Type: {a.category}</div>}
                   {a.squawk && <div>Squawk: {a.squawk}</div>}
+                  {dep && (
+                    <div style={{ marginTop: "2px" }}>
+                      Departed: <b style={{ color: "#38bdf8" }}>{dep.icao ? `${dep.icao} ` : ""}{dep.name}</b>
+                    </div>
+                  )}
                   <div style={{ marginTop: "4px", color: "#9ca3af" }}>
                     Source: {a.source === "ogn" ? "OGN/FLARM" : "ADS-B"}<br />
                     {a.isStale ? "⚠ Position may be stale" : `Updated ${Math.max(0, Math.round(Date.now() / 1000 - a.ts))}s ago`}
@@ -487,8 +578,10 @@ function MapPage() {
               </div>
             </Popup>
           </Marker>
-        ))}
+          );
+        })}
       </MapContainer>
+
 
       {/* Control panel */}
       <div className="absolute top-4 right-4 z-[1000]" style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "14px 16px", minWidth: "230px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "13px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
@@ -535,6 +628,7 @@ function MapPage() {
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly],
             ["Hide stale (>60s)", hideStale, setHideStale],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled],
+            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef); }],
           ] as [string, boolean, (v: boolean) => void][]).map(([label, state, setter]) => (
             <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "5px" }}>
               <input
@@ -616,9 +710,64 @@ function MapPage() {
           <div style={{ marginTop: "3px" }}>OGN + ADS-B · 3s refresh</div>
         </div>
       </div>
+
+      {/* Mini-stats footer */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]" style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "8px 14px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "12px", display: "flex", gap: "18px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+        <div>
+          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Busiest hour</div>
+          <div style={{ fontWeight: 700 }}>
+            {miniStats.busiestHour >= 0 ? `${String(miniStats.busiestHour).padStart(2, "0")}:00` : "—"}
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>
+              {miniStats.busiestHour >= 0 ? `${miniStats.busiestCount} a/c` : ""}
+            </span>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Max altitude</div>
+          <div style={{ fontWeight: 700 }}>
+            {miniStats.maxAlt > 0 ? `${miniStats.maxAlt.toLocaleString()}ft` : "—"}
+            {miniStats.maxAltReg && <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>{miniStats.maxAltReg}</span>}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Fleet distance</div>
+          <div style={{ fontWeight: 700 }}>
+            {miniStats.fleetKm > 0 ? `${miniStats.fleetKm.toFixed(0)} km` : "—"}
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>today</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
+/** Short two-tone chime via WebAudio. Lazily creates a shared AudioContext. */
+function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
+  try {
+    if (typeof window === "undefined") return;
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return;
+    if (!ctxRef.current) ctxRef.current = new AC();
+    const ctx = ctxRef.current;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const now = ctx.currentTime;
+    const beep = (freq: number, start: number, dur: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + start);
+      gain.gain.linearRampToValueAtTime(0.25, now + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.05);
+    };
+    beep(880, 0, 0.18);
+    beep(1320, 0.18, 0.22);
+  } catch { /* noop */ }
+}
+
 
 const airfieldIcon = L.divIcon({
   className: "",
