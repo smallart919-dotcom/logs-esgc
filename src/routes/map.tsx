@@ -239,7 +239,7 @@ function MapPage() {
     setTrailsTick((t) => t + 1);
   }, [flarmSet, regSet]);
 
-  // Live constant updates: 3s when visible, 15s in background
+  // Live updates: 500ms when visible, 15s in background
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -248,7 +248,7 @@ function MapPage() {
       const visible = typeof document !== "undefined" && document.visibilityState === "visible";
       fetchLive().finally(() => {
         if (cancelled) return;
-        timer = setTimeout(tick, visible ? 3_000 : 15_000);
+        timer = setTimeout(tick, visible ? 500 : 15_000);
       });
     };
     tick();
