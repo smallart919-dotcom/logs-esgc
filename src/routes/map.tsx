@@ -21,9 +21,8 @@ export const Route = createFileRoute("/map")({
   component: MapPage,
 });
 
-// OGN bounding box — East Sussex + full soaring range
-// Format: a=0 (separator), b=N max, c=S min, d=E max, e=W min
-const OGN_URL = "https://live.glidernet.org/api/0/aircraft?a=0&b=51.4&c=50.4&d=1.8&e=-0.6";
+// OGN bounding box — East Sussex + full soaring range (proxied server-side
+// in src/lib/live-traffic.functions.ts to avoid CORS).
 
 type TileKey = "dark" | "light" | "satellite";
 const TILES: Record<TileKey, { label: string; url: string; attribution: string }> = {
