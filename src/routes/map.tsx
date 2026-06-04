@@ -73,9 +73,16 @@ function MapPage() {
   const [ownFleetOnly, setOwnFleetOnly] = useState(false);
   const [hideStale, setHideStale] = useState(true);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
-  const [proximityNm, setProximityNm] = useState(5);
+  const [proximityNm, setProximityNm] = useState(1);
+  const [isOffice, setIsOffice] = useState(false);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsOffice((data.user?.email || "").toLowerCase() === "office@esgc.local");
+    });
+  }, []);
 
   // Load fleet for "own fleet" highlighting
   useEffect(() => {
