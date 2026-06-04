@@ -239,7 +239,7 @@ function MapPage() {
     setTrailsTick((t) => t + 1);
   }, [flarmSet, regSet]);
 
-  // Live constant updates: 3s when visible, 15s in background
+  // Live updates: 500ms when visible, 15s in background
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -248,7 +248,7 @@ function MapPage() {
       const visible = typeof document !== "undefined" && document.visibilityState === "visible";
       fetchLive().finally(() => {
         if (cancelled) return;
-        timer = setTimeout(tick, visible ? 3_000 : 15_000);
+        timer = setTimeout(tick, visible ? 500 : 15_000);
       });
     };
     tick();
@@ -278,7 +278,7 @@ function MapPage() {
       const dLon = toRad(a.lon - alon);
       const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(alat)) * Math.cos(toRad(a.lat)) * Math.sin(dLon / 2) ** 2;
       const distNm = (2 * 6371 * Math.asin(Math.sqrt(h))) / 1.852;
-      if (distNm <= proximityNm) {
+      if (distNm <= proximityNm && a.altFt <= 2200) {
         seen.add(a.id);
         const prev = insideZoneRef.current.get(a.id);
         // Debounce re-entry — only re-alert after 5 min outside
@@ -430,41 +430,6 @@ function MapPage() {
   const countLive = (pred: (a: LiveAircraft) => boolean) =>
     aircraft.filter((a) => !a.isStale && pred(a)).length;
 
-  // Mini-stats: busiest hour, max altitude today, approx fleet distance
-  const miniStats = useMemo(() => {
-    void trailsTick;
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-    const todayStartSec = todayStart.getTime() / 1000;
-    const hourBuckets = new Array(24).fill(0).map(() => new Set<string>());
-    let maxAlt = 0;
-    let maxAltReg = "";
-    let fleetKm = 0;
-    for (const [id, arr] of trailsRef.current.entries()) {
-      const todayArr = arr.filter((p) => p.ts >= todayStartSec);
-      if (!todayArr.length) continue;
-      for (const p of todayArr) {
-        const h = new Date(p.ts * 1000).getHours();
-        hourBuckets[h].add(id);
-        if (p.altFt > maxAlt) {
-          maxAlt = p.altFt;
-          const a = aircraft.find((x) => x.id === id);
-          maxAltReg = a?.reg || id;
-        }
-      }
-      const a = aircraft.find((x) => x.id === id);
-      if (a?.isOwnFleet) {
-        for (let i = 1; i < todayArr.length; i++) {
-          const p0 = todayArr[i - 1], p1 = todayArr[i];
-          fleetKm += distanceNm(p0.lat, p0.lon, p1.lat, p1.lon) * 1.852;
-        }
-      }
-    }
-    let busiestHour = -1; let busiestCount = 0;
-    for (let h = 0; h < 24; h++) {
-      if (hourBuckets[h].size > busiestCount) { busiestCount = hourBuckets[h].size; busiestHour = h; }
-    }
-    return { busiestHour, busiestCount, maxAlt, maxAltReg, fleetKm };
-  }, [aircraft, trailsTick]);
 
   return (
     <div style={{ position: "relative", height: "calc(100vh - 11rem)", minHeight: "500px" }}>
@@ -707,39 +672,13 @@ function MapPage() {
           {fetchError
             ? <span style={{ color: "#f87171" }}>⚠ {fetchError}</span>
             : <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#4ade80", marginRight: 6, boxShadow: "0 0 6px #4ade80", animation: "pulse 1.5s ease-in-out infinite" }} />LIVE · {lastUpdate ? lastUpdate.toLocaleTimeString("en-GB") : "connecting…"}</span>}
-          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 3s refresh</div>
-        </div>
-      </div>
-
-      {/* Mini-stats footer */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]" style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "8px 14px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "12px", display: "flex", gap: "18px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
-        <div>
-          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Busiest hour</div>
-          <div style={{ fontWeight: 700 }}>
-            {miniStats.busiestHour >= 0 ? `${String(miniStats.busiestHour).padStart(2, "0")}:00` : "—"}
-            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>
-              {miniStats.busiestHour >= 0 ? `${miniStats.busiestCount} a/c` : ""}
-            </span>
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Max altitude</div>
-          <div style={{ fontWeight: 700 }}>
-            {miniStats.maxAlt > 0 ? `${miniStats.maxAlt.toLocaleString()}ft` : "—"}
-            {miniStats.maxAltReg && <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>{miniStats.maxAltReg}</span>}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Fleet distance</div>
-          <div style={{ fontWeight: 700 }}>
-            {miniStats.fleetKm > 0 ? `${miniStats.fleetKm.toFixed(0)} km` : "—"}
-            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>today</span>
-          </div>
+          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 0.5s refresh</div>
         </div>
       </div>
     </div>
   );
 }
+
 
 /** Short two-tone chime via WebAudio. Lazily creates a shared AudioContext. */
 function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
