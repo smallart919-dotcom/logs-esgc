@@ -1553,6 +1553,36 @@ function FlightDialog({
                 </span>
               )}
             </Label>
+            {form.launch_type === "winch" && (
+              <div className="flex gap-2 mb-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const tag = "Launch Failure";
+                    const cur = form.notes ?? "";
+                    if (cur.includes(tag)) return;
+                    setForm({ ...form, notes: cur ? `${cur.trim()} · ${tag}` : tag });
+                  }}
+                >
+                  ⚠ Launch Failure
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const tag = "Sim Launch";
+                    const cur = form.notes ?? "";
+                    if (cur.includes(tag)) return;
+                    setForm({ ...form, notes: cur ? `${cur.trim()} · ${tag}` : tag });
+                  }}
+                >
+                  🛠 Sim Launch
+                </Button>
+              </div>
+            )}
             <Textarea
               rows={3}
               placeholder={gfeChargedNeedsVoucher ? "Voucher ID required, e.g. 1234" : "Add any comments about this flight…"}

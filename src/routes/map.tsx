@@ -8,6 +8,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { AIRSPACE_GEOJSON, type AirspaceFeatureProperties } from "@/lib/airspace-ukrin";
 import { AIRFIELD, AIRFIELD_LATLON } from "@/lib/airfield";
 import { getAirspaceForBbox } from "@/lib/openaip.functions";
+import { getLiveTraffic } from "@/lib/live-traffic.functions";
 
 export const Route = createFileRoute("/map")({
   beforeLoad: requireAuth,
@@ -20,9 +21,8 @@ export const Route = createFileRoute("/map")({
   component: MapPage,
 });
 
-// OGN bounding box — East Sussex + full soaring range
-// Format: a=0 (separator), b=N max, c=S min, d=E max, e=W min
-const OGN_URL = "https://live.glidernet.org/api/0/aircraft?a=0&b=51.4&c=50.4&d=1.8&e=-0.6";
+// OGN bounding box — East Sussex + full soaring range (proxied server-side
+// in src/lib/live-traffic.functions.ts to avoid CORS).
 
 type TileKey = "dark" | "light" | "satellite";
 const TILES: Record<TileKey, { label: string; url: string; attribution: string }> = {
@@ -93,88 +93,76 @@ function MapPage() {
   const fetchLive = useCallback(async () => {
     const nowSec = Date.now() / 1000;
 
-    const fetchOgn = async (): Promise<LiveAircraft[]> => {
-      try {
-        const res = await fetch(OGN_URL);
-        if (!res.ok) return [];
-        const json: { aircraft?: unknown[][] } = await res.json();
-        return (json.aircraft ?? []).map((a) => {
-          const flarm = String(a[0] ?? "").toUpperCase();
-          const reg = String(a[8] ?? "");
-          const normReg = reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
-          const ts = parseInt(String(a[9])) || 0;
-          const altM = parseFloat(String(a[3])) || 0;
-          return {
-            id: flarm || `ogn-${a[1]}-${a[2]}`,
-            lat: parseFloat(String(a[1])),
-            lon: parseFloat(String(a[2])),
-            altM,
-            altFt: Math.round(altM * 3.281),
-            speedKph: parseFloat(String(a[4])) || 0,
-            course: parseFloat(String(a[5])) || 0,
-            climbMs: parseFloat(String(a[6])) || 0,
-            reg,
-            type: "glider" as AircraftType,
-            category: "",
-            source: "ogn" as const,
-            isOwnFleet: flarmSet.has(flarm) || regSet.has(normReg),
-            isStale: nowSec - ts > 60,
-            ts,
-          };
-        }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon));
-      } catch {
-        return [];
-      }
+    // Single proxied call — both feeds blocked by CORS in the browser.
+    const proxied = await getLiveTraffic().catch(() => null);
+
+    const parseOgn = (): LiveAircraft[] => {
+      const json = proxied?.ogn as { aircraft?: unknown[][] } | null;
+      if (!json?.aircraft) return [];
+      return json.aircraft.map((a) => {
+        const flarm = String(a[0] ?? "").toUpperCase();
+        const reg = String(a[8] ?? "");
+        const normReg = reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const ts = parseInt(String(a[9])) || 0;
+        const altM = parseFloat(String(a[3])) || 0;
+        return {
+          id: flarm || `ogn-${a[1]}-${a[2]}`,
+          lat: parseFloat(String(a[1])),
+          lon: parseFloat(String(a[2])),
+          altM,
+          altFt: Math.round(altM * 3.281),
+          speedKph: parseFloat(String(a[4])) || 0,
+          course: parseFloat(String(a[5])) || 0,
+          climbMs: parseFloat(String(a[6])) || 0,
+          reg,
+          type: "glider" as AircraftType,
+          category: "",
+          source: "ogn" as const,
+          isOwnFleet: flarmSet.has(flarm) || regSet.has(normReg),
+          isStale: nowSec - ts > 60,
+          ts,
+        };
+      }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon));
     };
+    const fetchOgn = async () => parseOgn();
 
     const fetchAdsb = async (): Promise<LiveAircraft[]> => {
-      try {
-        // Public ADS-B Exchange endpoint — no key required, rate limited.
-        const res = await fetch("https://globe.adsbexchange.com/data/aircraft.json", {
-          headers: { Accept: "application/json" },
-        });
-        if (!res.ok) return [];
-        const json: { ac?: unknown[]; now?: number } = await res.json();
-        const list = json.ac ?? [];
-        const serverNow = json.now ?? Date.now() / 1000;
-        const mapped: (LiveAircraft | null)[] = list.map((raw) => {
-          const a = raw as Record<string, unknown>;
-          const cat = String(a.category ?? a.t ?? "");
-          const altFt = parseFloat(String(a.alt_baro ?? a.altitude ?? a.alt ?? 0)) || 0;
-          const seen = parseFloat(String(a.seen_pos ?? a.seen ?? 0)) || 0;
-          const lat = parseFloat(String(a.lat));
-          const lon = parseFloat(String(a.lon));
-          if (isNaN(lat) || isNaN(lon)) return null;
-          // Clip to our region
-          if (lat < 50.4 || lat > 51.4 || lon < -0.6 || lon > 1.8) return null;
-          let type: AircraftType = "powered";
-          if (/^A[67]|glider/i.test(cat)) type = "glider";
-          else if (/^A[34]|heli/i.test(cat)) type = "helicopter";
-          const ac: LiveAircraft = {
-            id: String(a.hex ?? a.icao ?? `${lat}-${lon}`).toUpperCase(),
-            lat,
-            lon,
-            altM: Math.round(altFt * 0.3048),
-            altFt: Math.round(altFt),
-            speedKph: Math.round((parseFloat(String(a.gs ?? a.spd ?? 0)) || 0) * 1.852),
-            course: parseFloat(String(a.track ?? a.hdg ?? 0)) || 0,
-            climbMs: (parseFloat(String(a.baro_rate ?? a.vsi ?? 0)) || 0) * 0.00508,
-            reg: String(a.flight ?? a.r ?? a.registration ?? "").trim(),
-            type,
-            category: cat,
-            squawk: a.squawk ? String(a.squawk) : undefined,
-            source: "adsb",
-            isOwnFleet: false,
-            isStale: seen > 60,
-            ts: serverNow - seen,
-          };
-          return ac;
-        });
-        return mapped.filter((a): a is LiveAircraft => a !== null);
-
-      } catch {
-        return [];
-      }
+      const json = proxied?.adsb as { ac?: unknown[]; now?: number } | null;
+      if (!json) return [];
+      const list = json.ac ?? [];
+      const serverNow = json.now ?? nowSec;
+      const mapped: (LiveAircraft | null)[] = list.map((raw) => {
+        const a = raw as Record<string, unknown>;
+        const cat = String(a.category ?? a.t ?? "");
+        const altFt = parseFloat(String(a.alt_baro ?? a.altitude ?? a.alt ?? 0)) || 0;
+        const seen = parseFloat(String(a.seen_pos ?? a.seen ?? 0)) || 0;
+        const lat = parseFloat(String(a.lat));
+        const lon = parseFloat(String(a.lon));
+        if (isNaN(lat) || isNaN(lon)) return null;
+        if (lat < 50.4 || lat > 51.4 || lon < -0.6 || lon > 1.8) return null;
+        let type: AircraftType = "powered";
+        if (/^A[67]|glider/i.test(cat)) type = "glider";
+        else if (/^A[34]|heli/i.test(cat)) type = "helicopter";
+        return {
+          id: String(a.hex ?? a.icao ?? `${lat}-${lon}`).toUpperCase(),
+          lat,
+          lon,
+          altM: Math.round(altFt * 0.3048),
+          altFt: Math.round(altFt),
+          speedKph: Math.round((parseFloat(String(a.gs ?? a.spd ?? 0)) || 0) * 1.852),
+          course: parseFloat(String(a.track ?? a.hdg ?? 0)) || 0,
+          climbMs: (parseFloat(String(a.baro_rate ?? a.vsi ?? 0)) || 0) * 0.00508,
+          reg: String(a.flight ?? a.r ?? a.registration ?? "").trim(),
+          type,
+          category: cat,
+          squawk: a.squawk ? String(a.squawk) : undefined,
+          source: "adsb",
+          isOwnFleet: false,
+          isStale: seen > 60,
+          ts: serverNow - seen,
+        };
+      });
+      return mapped.filter((a): a is LiveAircraft => a !== null);
     };
 
     const [ognR, adsbR] = await Promise.allSettled([fetchOgn(), fetchAdsb()]);
