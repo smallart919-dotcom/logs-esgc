@@ -90,6 +90,7 @@ function MapPage() {
   const inboundRef = useRef<Map<string, number>>(new Map());
   // Per-aircraft trail history (full session, capped to last 2 hours)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
+  const failCountRef = useRef(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
