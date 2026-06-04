@@ -408,19 +408,26 @@ function MapPage() {
           {notifyEnabled && (
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
               <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>Radius</span>
-              <input
-                type="range"
-                min={1}
-                max={20}
-                step={1}
-                value={proximityNm}
-                onChange={(e) => setProximityNm(parseInt(e.target.value, 10))}
-                style={{ flex: 1, accentColor: "#38bdf8" }}
-              />
+              {isOffice ? (
+                <input
+                  type="range"
+                  min={1}
+                  max={20}
+                  step={1}
+                  value={proximityNm}
+                  onChange={(e) => setProximityNm(parseInt(e.target.value, 10))}
+                  style={{ flex: 1, accentColor: "#38bdf8" }}
+                />
+              ) : (
+                <span style={{ flex: 1, fontSize: "10px", color: "rgba(255,255,255,0.35)", fontStyle: "italic" }}>
+                  office only
+                </span>
+              )}
               <span style={{ fontSize: "11px", width: "32px", textAlign: "right" }}>{proximityNm}nm</span>
             </div>
           )}
         </div>
+
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "8px", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>
           {fetchError
