@@ -136,8 +136,15 @@ function MapPage() {
         const altM = parseFloat(String(a.altitude ?? 0)) || 0;
         const lat = parseFloat(String(a.lat));
         const lon = parseFloat(String(a.lng));
-        // Filter ground stations (type 2) — only show airborne traffic
-        const type = Number(a.type);
+        // OGN/GlideAndSeek type codes: 1 glider · 2 towplane · 3 helicopter
+        // 4 parachute · 5 dropplane · 6 hangglider · 7 paraglider · 8 powered
+        // 9 jet · 11 balloon · 12 airship · 13 UAV · 14 static (ground stn)
+        const kind = Number(a.type);
+        let mapped: AircraftType = "glider";
+        if (kind === 3) mapped = "helicopter";
+        else if (kind === 2 || kind === 5 || kind === 8 || kind === 9 || kind === 13) mapped = "powered";
+        else if (kind === 1 || kind === 6 || kind === 7) mapped = "glider";
+        else if (kind === 11 || kind === 12) mapped = "unknown";
         return {
           id: flarm || `ogn-${lat}-${lon}`,
           lat,
@@ -148,15 +155,15 @@ function MapPage() {
           course: parseFloat(String(a.track ?? 0)) || 0,
           climbMs: parseFloat(String(a.vario ?? 0)) || 0,
           reg,
-          type: "glider" as AircraftType,
+          type: mapped,
           category: String(a.model ?? ""),
           source: "ogn" as const,
           isOwnFleet: flarmSet.has(flarm) || regSet.has(normReg),
           isStale: nowSec - ts > 60,
           ts,
-          _kind: type,
+          _kind: kind,
         } as LiveAircraft & { _kind: number };
-      }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon) && a._kind !== 2);
+      }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon) && a._kind !== 14);
     };
     const fetchOgn = async () => parseOgn();
 
