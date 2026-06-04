@@ -386,6 +386,7 @@ function MapPage() {
             ["Airspace overlay", showAirspace, setShowAirspace],
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly],
             ["Hide stale (>60s)", hideStale, setHideStale],
+            [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled],
           ] as [string, boolean, (v: boolean) => void][]).map(([label, state, setter]) => (
             <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "5px" }}>
               <input
@@ -397,13 +398,28 @@ function MapPage() {
               {label}
             </label>
           ))}
+          {notifyEnabled && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>Radius</span>
+              <input
+                type="range"
+                min={1}
+                max={20}
+                step={1}
+                value={proximityNm}
+                onChange={(e) => setProximityNm(parseInt(e.target.value, 10))}
+                style={{ flex: 1, accentColor: "#38bdf8" }}
+              />
+              <span style={{ fontSize: "11px", width: "32px", textAlign: "right" }}>{proximityNm}nm</span>
+            </div>
+          )}
         </div>
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "8px", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>
           {fetchError
             ? <span style={{ color: "#f87171" }}>⚠ {fetchError}</span>
-            : lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString("en-GB")}` : "Connecting…"}
-          <div style={{ marginTop: "3px" }}>OGN + ADS-B Exchange</div>
+            : <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#4ade80", marginRight: 6, boxShadow: "0 0 6px #4ade80", animation: "pulse 1.5s ease-in-out infinite" }} />LIVE · {lastUpdate ? lastUpdate.toLocaleTimeString("en-GB") : "connecting…"}</span>}
+          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 3s refresh</div>
         </div>
       </div>
     </div>
