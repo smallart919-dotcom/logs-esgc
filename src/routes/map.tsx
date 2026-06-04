@@ -300,7 +300,7 @@ function MapPage() {
         insideZoneRef.current.delete(id);
       }
     }
-  }, [aircraft, notifyEnabled, proximityNm]);
+  }, [aircraft, notifyEnabled, proximityNm, audioChime]);
 
   // Inbound detection — aircraft tracking towards Ringmer at <15nm
   useEffect(() => {
