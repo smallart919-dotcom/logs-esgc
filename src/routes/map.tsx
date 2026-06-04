@@ -465,23 +465,27 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
 
   const stroke = "#0b0f19";
 
-  // Clearer, larger silhouettes on a high-contrast halo so they read on any tile.
+  // Top-down silhouettes (north-up; rotated by heading). Generic shapes.
+  // Glider: very long thin wings, narrow fuselage, small T-tail.
   const gliderShape = `
-    <ellipse cx="24" cy="24" rx="22" ry="3" fill="${colour}" stroke="${stroke}" stroke-width="1.4" opacity="${opacity}"/>
-    <rect x="22.5" y="10" width="3" height="28" rx="1.2" fill="${colour}" stroke="${stroke}" stroke-width="1.2" opacity="${opacity}"/>
-    <ellipse cx="24" cy="37" rx="7" ry="1.8" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity * 0.9}"/>
-    <circle cx="24" cy="24" r="3.4" fill="${stroke}" opacity="${opacity}"/>
+    <path d="M24 4 C25.6 4 26.4 6 26.6 10 L27 22 L46 25 L46 27 L27 26 L27 36 L31 38 L31 40 L24 39 L17 40 L17 38 L21 36 L21 26 L2 27 L2 25 L21 22 L21.4 10 C21.6 6 22.4 4 24 4 Z"
+      fill="${colour}" stroke="${stroke}" stroke-width="1.2" stroke-linejoin="round" opacity="${opacity}"/>
   `;
+  // Powered: classic airliner top-down — swept wings, tail, engines.
   const poweredShape = `
-    <path d="M22 4 L26 4 L27 18 L44 22 L44 26 L27 24 L27 36 L33 40 L33 43 L24 41 L15 43 L15 40 L21 36 L21 24 L4 26 L4 22 L21 18 Z"
-      fill="${colour}" stroke="${stroke}" stroke-width="1.4" stroke-linejoin="round" opacity="${opacity}"/>
+    <path d="M24 3 C26 3 27 5 27.4 9 L28 20 L44 26 L44 29 L28 26.5 L28 34 L33 38 L33 40 L24 38 L15 40 L15 38 L20 34 L20 26.5 L4 29 L4 26 L20 20 L20.6 9 C21 5 22 3 24 3 Z"
+      fill="${colour}" stroke="${stroke}" stroke-width="1.2" stroke-linejoin="round" opacity="${opacity}"/>
+    <ellipse cx="14" cy="24" rx="1.6" ry="2.4" fill="${stroke}" opacity="${opacity * 0.85}"/>
+    <ellipse cx="34" cy="24" rx="1.6" ry="2.4" fill="${stroke}" opacity="${opacity * 0.85}"/>
   `;
+  // Helicopter: fuselage + spinning rotor disc.
   const heliShape = `
-    <rect x="2" y="22" width="44" height="3" rx="1.2" fill="${colour}" stroke="${stroke}" stroke-width="1.1" opacity="${opacity * 0.9}"/>
-    <rect x="2" y="6" width="44" height="2.4" rx="1" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity * 0.55}"/>
-    <ellipse cx="24" cy="24" rx="9" ry="6.5" fill="${colour}" stroke="${stroke}" stroke-width="1.4" opacity="${opacity}"/>
-    <rect x="22.5" y="30" width="3" height="11" rx="1" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity}"/>
-    <rect x="17" y="40" width="14" height="2.5" rx="1" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity * 0.9}"/>
+    <ellipse cx="24" cy="24" rx="6" ry="11" fill="${colour}" stroke="${stroke}" stroke-width="1.2" opacity="${opacity}"/>
+    <circle cx="24" cy="24" r="20" fill="none" stroke="${colour}" stroke-width="1.2" opacity="${opacity * 0.35}"/>
+    <line x1="6" y1="14" x2="42" y2="34" stroke="${colour}" stroke-width="1.6" opacity="${opacity * 0.55}"/>
+    <line x1="6" y1="34" x2="42" y2="14" stroke="${colour}" stroke-width="1.6" opacity="${opacity * 0.55}"/>
+    <rect x="22.5" y="36" width="3" height="6" rx="1" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity}"/>
+    <rect x="18" y="41" width="12" height="2" rx="1" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity * 0.9}"/>
   `;
 
   const shape = a.type === "glider" ? gliderShape
