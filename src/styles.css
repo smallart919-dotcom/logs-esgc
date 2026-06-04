@@ -822,3 +822,15 @@ table thead th {
   opacity: 0.85;
   font-variant-numeric: tabular-nums;
 }
+
+/* Live map — aircraft icon halo + LIVE indicator */
+@keyframes ping {
+  0% { transform: scale(1); opacity: .7; }
+  70% { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+.aircraft-icon { overflow: visible !important; }

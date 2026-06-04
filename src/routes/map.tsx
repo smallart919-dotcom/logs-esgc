@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, useMap } from "react-leaflet";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,7 +72,10 @@ function MapPage() {
   const [showAirspace, setShowAirspace] = useState(true);
   const [ownFleetOnly, setOwnFleetOnly] = useState(false);
   const [hideStale, setHideStale] = useState(true);
+  const [notifyEnabled, setNotifyEnabled] = useState(true);
+  const [proximityNm, setProximityNm] = useState(5);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
+  const insideZoneRef = useRef<Map<string, number>>(new Map());
 
   // Load fleet for "own fleet" highlighting
   useEffect(() => {
@@ -194,7 +198,7 @@ function MapPage() {
     setFetchError(merged.length === 0 && ogn.length === 0 && adsb.length === 0 ? "No data" : null);
   }, [flarmSet, regSet]);
 
-  // Initial + poll every 10s when visible, 30s when hidden
+  // Live constant updates: 3s when visible, 15s in background
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -203,12 +207,58 @@ function MapPage() {
       const visible = typeof document !== "undefined" && document.visibilityState === "visible";
       fetchLive().finally(() => {
         if (cancelled) return;
-        timer = setTimeout(tick, visible ? 10_000 : 30_000);
+        timer = setTimeout(tick, visible ? 3_000 : 15_000);
       });
     };
     tick();
-    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+    const onVis = () => { if (document.visibilityState === "visible" && timer) { clearTimeout(timer); tick(); } };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
   }, [fetchLive]);
+
+  // Ask for browser notification permission once
+  useEffect(() => {
+    if (notifyEnabled && typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, [notifyEnabled]);
+
+  // Proximity detection — fire notification when aircraft enters zone around Ringmer
+  useEffect(() => {
+    if (!notifyEnabled) return;
+    const [alat, alon] = AIRFIELD_LATLON;
+    const nowSec = Date.now() / 1000;
+    const seen = new Set<string>();
+    for (const a of aircraft) {
+      if (a.isStale) continue;
+      // Haversine distance in nm
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const dLat = toRad(a.lat - alat);
+      const dLon = toRad(a.lon - alon);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(alat)) * Math.cos(toRad(a.lat)) * Math.sin(dLon / 2) ** 2;
+      const distNm = (2 * 6371 * Math.asin(Math.sqrt(h))) / 1.852;
+      if (distNm <= proximityNm) {
+        seen.add(a.id);
+        const prev = insideZoneRef.current.get(a.id);
+        // Debounce re-entry — only re-alert after 5 min outside
+        if (!prev || nowSec - prev > 300) {
+          const label = a.reg || a.id;
+          const msg = `${label} · ${a.altFt.toLocaleString()}ft · ${distNm.toFixed(1)}nm`;
+          toast(`✈ Aircraft near Ringmer`, { description: msg });
+          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+            try { new Notification("Aircraft near Ringmer", { body: msg, tag: a.id }); } catch { /* noop */ }
+          }
+        }
+        insideZoneRef.current.set(a.id, nowSec);
+      }
+    }
+    // Expire entries no longer present
+    for (const id of Array.from(insideZoneRef.current.keys())) {
+      if (!seen.has(id) && nowSec - (insideZoneRef.current.get(id) ?? 0) > 600) {
+        insideZoneRef.current.delete(id);
+      }
+    }
+  }, [aircraft, notifyEnabled, proximityNm]);
 
   const visible = (ownFleetOnly ? aircraft.filter((a) => a.isOwnFleet) : aircraft)
     .filter((a) => !hideStale || !a.isStale);
@@ -235,6 +285,14 @@ function MapPage() {
         {showAirspace && <LiveAirspace />}
 
         {showAirspace && <AirspaceLabels />}
+
+        {notifyEnabled && (
+          <Circle
+            center={AIRFIELD_LATLON}
+            radius={proximityNm * 1852}
+            pathOptions={{ color: "#38bdf8", weight: 1.5, opacity: 0.6, fillColor: "#38bdf8", fillOpacity: 0.04, dashArray: "4 6" }}
+          />
+        )}
 
         <Marker position={AIRFIELD_LATLON} icon={airfieldIcon}>
           <Tooltip permanent direction="right" offset={[14, 0]} className="leaflet-tooltip-airfield">
@@ -328,6 +386,7 @@ function MapPage() {
             ["Airspace overlay", showAirspace, setShowAirspace],
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly],
             ["Hide stale (>60s)", hideStale, setHideStale],
+            [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled],
           ] as [string, boolean, (v: boolean) => void][]).map(([label, state, setter]) => (
             <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "5px" }}>
               <input
@@ -339,13 +398,28 @@ function MapPage() {
               {label}
             </label>
           ))}
+          {notifyEnabled && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>Radius</span>
+              <input
+                type="range"
+                min={1}
+                max={20}
+                step={1}
+                value={proximityNm}
+                onChange={(e) => setProximityNm(parseInt(e.target.value, 10))}
+                style={{ flex: 1, accentColor: "#38bdf8" }}
+              />
+              <span style={{ fontSize: "11px", width: "32px", textAlign: "right" }}>{proximityNm}nm</span>
+            </div>
+          )}
         </div>
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "8px", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>
           {fetchError
             ? <span style={{ color: "#f87171" }}>⚠ {fetchError}</span>
-            : lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString("en-GB")}` : "Connecting…"}
-          <div style={{ marginTop: "3px" }}>OGN + ADS-B Exchange</div>
+            : <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#4ade80", marginRight: 6, boxShadow: "0 0 6px #4ade80", animation: "pulse 1.5s ease-in-out infinite" }} />LIVE · {lastUpdate ? lastUpdate.toLocaleTimeString("en-GB") : "connecting…"}</span>}
+          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 3s refresh</div>
         </div>
       </div>
     </div>
@@ -367,51 +441,60 @@ const airfieldIcon = L.divIcon({
 function aircraftIcon(a: LiveAircraft): L.DivIcon {
   const isOwn = a.isOwnFleet;
   const stale = a.isStale;
-  const opacity = stale ? 0.4 : 1;
+  const opacity = stale ? 0.45 : 1;
 
   const colour = isOwn ? "#38bdf8"
     : a.type === "glider" ? "#a3e635"
     : a.type === "helicopter" ? "#fb923c"
-    : stale ? "#4b5563"
-    : "#f1f5f9";
+    : stale ? "#6b7280"
+    : "#f8fafc";
 
-  const stroke = isOwn ? "#0284c7"
-    : a.type === "glider" ? "#4d7c0f"
-    : a.type === "helicopter" ? "#9a3412"
-    : "#374151";
+  const stroke = "#0b0f19";
 
+  // Clearer, larger silhouettes on a high-contrast halo so they read on any tile.
   const gliderShape = `
-    <rect x="15" y="4" width="2" height="24" rx="1" fill="${colour}" opacity="${opacity}"/>
-    <ellipse cx="16" cy="14" rx="14" ry="2.2" fill="${colour}" opacity="${opacity}"/>
-    <ellipse cx="16" cy="25" rx="5" ry="1.3" fill="${colour}" opacity="${opacity * 0.75}"/>
-    ${isOwn ? `<circle cx="16" cy="16" r="14" fill="none" stroke="${colour}" stroke-width="1.5" opacity="0.35"/>` : ""}
+    <ellipse cx="24" cy="24" rx="22" ry="3" fill="${colour}" stroke="${stroke}" stroke-width="1.4" opacity="${opacity}"/>
+    <rect x="22.5" y="10" width="3" height="28" rx="1.2" fill="${colour}" stroke="${stroke}" stroke-width="1.2" opacity="${opacity}"/>
+    <ellipse cx="24" cy="37" rx="7" ry="1.8" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity * 0.9}"/>
+    <circle cx="24" cy="24" r="3.4" fill="${stroke}" opacity="${opacity}"/>
   `;
-
   const poweredShape = `
-    <path d="M15 3 L17 3 L18 14 L22 12 L22 14 L18 16 L18 26 L16 28 L14 26 L14 16 L10 14 L10 12 L14 14 Z"
-      fill="${colour}" stroke="${stroke}" stroke-width="0.8" opacity="${opacity}"/>
+    <path d="M22 4 L26 4 L27 18 L44 22 L44 26 L27 24 L27 36 L33 40 L33 43 L24 41 L15 43 L15 40 L21 36 L21 24 L4 26 L4 22 L21 18 Z"
+      fill="${colour}" stroke="${stroke}" stroke-width="1.4" stroke-linejoin="round" opacity="${opacity}"/>
   `;
-
   const heliShape = `
-    <circle cx="16" cy="13" r="5" fill="${colour}" opacity="${opacity}"/>
-    <rect x="4" y="12" width="24" height="2" rx="1" fill="${colour}" opacity="${opacity * 0.8}"/>
-    <rect x="14" y="18" width="4" height="8" rx="1" fill="${colour}" opacity="${opacity}"/>
-    <rect x="10" y="25" width="10" height="1.5" rx="0.5" fill="${colour}" opacity="${opacity * 0.7}"/>
+    <rect x="2" y="22" width="44" height="3" rx="1.2" fill="${colour}" stroke="${stroke}" stroke-width="1.1" opacity="${opacity * 0.9}"/>
+    <rect x="2" y="6" width="44" height="2.4" rx="1" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity * 0.55}"/>
+    <ellipse cx="24" cy="24" rx="9" ry="6.5" fill="${colour}" stroke="${stroke}" stroke-width="1.4" opacity="${opacity}"/>
+    <rect x="22.5" y="30" width="3" height="11" rx="1" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity}"/>
+    <rect x="17" y="40" width="14" height="2.5" rx="1" fill="${colour}" stroke="${stroke}" stroke-width="1" opacity="${opacity * 0.9}"/>
   `;
 
   const shape = a.type === "glider" ? gliderShape
     : a.type === "helicopter" ? heliShape
     : poweredShape;
 
+  const label = (a.reg || a.id || "").toString().toUpperCase().slice(0, 8);
+  const altLine = `${a.altFt.toLocaleString()}ft`;
+  const ringHtml = isOwn
+    ? `<div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid #38bdf8;box-shadow:0 0 14px #38bdf8aa;animation:ping 2s ease-out infinite"></div>`
+    : "";
+
   return L.divIcon({
-    className: "",
-    html: `<div style="transform:rotate(${a.course}deg);width:32px;height:32px">
-      <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-        ${shape}
-      </svg>
-    </div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    className: "aircraft-icon",
+    html: `
+      <div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center">
+        ${ringHtml}
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(${a.course}deg);transform-origin:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.65))">
+          <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">${shape}</svg>
+        </div>
+        <div style="position:absolute;top:46px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(10,14,22,.85);border:1px solid ${colour};border-radius:6px;padding:1px 5px;font:600 10px/1.2 system-ui,sans-serif;color:${colour};box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none;text-align:center">
+          ${label || "—"}<div style="color:#cbd5e1;font-weight:500;font-size:9px">${altLine}</div>
+        </div>
+      </div>
+    `,
+    iconSize: [48, 48],
+    iconAnchor: [24, 24],
   });
 }
 
