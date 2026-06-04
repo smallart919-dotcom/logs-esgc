@@ -297,8 +297,98 @@ function MapPage() {
     }
   }, [aircraft, notifyEnabled, proximityNm]);
 
-  const visible = (ownFleetOnly ? aircraft.filter((a) => a.isOwnFleet) : aircraft)
+  // Inbound detection — aircraft tracking towards Ringmer at <15nm
+  useEffect(() => {
+    if (!notifyEnabled) return;
+    const [alat, alon] = AIRFIELD_LATLON;
+    const nowSec = Date.now() / 1000;
+    for (const a of aircraft) {
+      if (a.isStale || a.speedKph < 40) continue;
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const dLat = toRad(a.lat - alat);
+      const dLon = toRad(a.lon - alon);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(alat)) * Math.cos(toRad(a.lat)) * Math.sin(dLon / 2) ** 2;
+      const distNm = (2 * 6371 * Math.asin(Math.sqrt(h))) / 1.852;
+      if (distNm > 15 || distNm < 2) continue;
+      // Bearing FROM aircraft TO airfield
+      const y = Math.sin(toRad(alon - a.lon)) * Math.cos(toRad(alat));
+      const x = Math.cos(toRad(a.lat)) * Math.sin(toRad(alat)) -
+        Math.sin(toRad(a.lat)) * Math.cos(toRad(alat)) * Math.cos(toRad(alon - a.lon));
+      const bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+      const diff = Math.abs(((a.course - bearing + 540) % 360) - 180);
+      if (diff < 30) {
+        const prev = inboundRef.current.get(a.id);
+        if (!prev || nowSec - prev > 600) {
+          toast(`🎯 Inbound to Ringmer`, { description: `${a.reg || a.id} · ${distNm.toFixed(1)}nm · ${a.altFt.toLocaleString()}ft` });
+          inboundRef.current.set(a.id, nowSec);
+        }
+      }
+    }
+  }, [aircraft, notifyEnabled]);
+
+  // METAR — refresh every 10 min (NOAA aviationweather.gov, CORS-enabled)
+  useEffect(() => {
+    let cancelled = false;
+    const fetchMetar = async () => {
+      try {
+        const r = await fetch("https://aviationweather.gov/api/data/metar?ids=EGKB,EGKA,EGMD&format=json&hours=2");
+        if (!r.ok) return;
+        const json = await r.json() as Array<{ icaoId: string; rawOb: string; reportTime: string }>;
+        if (cancelled || !Array.isArray(json)) return;
+        // Latest per ICAO
+        const latest = new Map<string, { id: string; raw: string; obs: string }>();
+        for (const m of json) {
+          if (!latest.has(m.icaoId)) latest.set(m.icaoId, { id: m.icaoId, raw: m.rawOb, obs: m.reportTime });
+        }
+        setMetar(Array.from(latest.values()));
+      } catch { /* noop */ }
+    };
+    fetchMetar();
+    const id = setInterval(fetchMetar, 10 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  // Replay: when offset != 0, derive display positions from trail history
+  const isReplay = replayOffsetSec < 0;
+  const replayTargetTs = Date.now() / 1000 + replayOffsetSec;
+  const displayAircraft = useMemo<LiveAircraft[]>(() => {
+    if (!isReplay) return aircraft;
+    void trailsTick;
+    const out: LiveAircraft[] = [];
+    for (const a of aircraft) {
+      const arr = trailsRef.current.get(a.id);
+      if (!arr || !arr.length) continue;
+      // Find point closest to (but not after) replayTargetTs
+      let pick: TrailPoint | null = null;
+      for (let i = arr.length - 1; i >= 0; i--) {
+        if (arr[i].ts <= replayTargetTs) { pick = arr[i]; break; }
+      }
+      if (!pick) continue;
+      out.push({ ...a, lat: pick.lat, lon: pick.lon, altFt: pick.altFt, course: pick.course, speedKph: pick.speedKph, ts: pick.ts, isStale: false });
+    }
+    return out;
+  }, [aircraft, isReplay, replayTargetTs, trailsTick]);
+
+  const visible = (ownFleetOnly ? displayAircraft.filter((a) => a.isOwnFleet) : displayAircraft)
     .filter((a) => !hideStale || !a.isStale);
+
+  // Build trail polylines for visible aircraft
+  const trailPolylines = useMemo(() => {
+    if (!showTrails) return [];
+    void trailsTick;
+    const cutoff = isReplay ? replayTargetTs : Infinity;
+    return visible.map((a) => {
+      const arr = trailsRef.current.get(a.id);
+      if (!arr || arr.length < 2) return null;
+      const pts = arr.filter((p) => p.ts <= cutoff).map((p) => [p.lat, p.lon] as [number, number]);
+      if (pts.length < 2) return null;
+      const colour = a.isOwnFleet ? "#38bdf8"
+        : a.type === "glider" ? "#a3e635"
+        : a.type === "helicopter" ? "#fb923c"
+        : "#f8fafc";
+      return { id: a.id, pts, colour, isOwn: a.isOwnFleet };
+    }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean } => x !== null);
+  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs]);
 
   const countLive = (pred: (a: LiveAircraft) => boolean) =>
     aircraft.filter((a) => !a.isStale && pred(a)).length;
