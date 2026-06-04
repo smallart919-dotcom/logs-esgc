@@ -198,7 +198,7 @@ function MapPage() {
     setFetchError(merged.length === 0 && ogn.length === 0 && adsb.length === 0 ? "No data" : null);
   }, [flarmSet, regSet]);
 
-  // Initial + poll every 10s when visible, 30s when hidden
+  // Live constant updates: 3s when visible, 15s in background
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -207,12 +207,58 @@ function MapPage() {
       const visible = typeof document !== "undefined" && document.visibilityState === "visible";
       fetchLive().finally(() => {
         if (cancelled) return;
-        timer = setTimeout(tick, visible ? 10_000 : 30_000);
+        timer = setTimeout(tick, visible ? 3_000 : 15_000);
       });
     };
     tick();
-    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+    const onVis = () => { if (document.visibilityState === "visible" && timer) { clearTimeout(timer); tick(); } };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
   }, [fetchLive]);
+
+  // Ask for browser notification permission once
+  useEffect(() => {
+    if (notifyEnabled && typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, [notifyEnabled]);
+
+  // Proximity detection — fire notification when aircraft enters zone around Ringmer
+  useEffect(() => {
+    if (!notifyEnabled) return;
+    const [alat, alon] = AIRFIELD_LATLON;
+    const nowSec = Date.now() / 1000;
+    const seen = new Set<string>();
+    for (const a of aircraft) {
+      if (a.isStale) continue;
+      // Haversine distance in nm
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const dLat = toRad(a.lat - alat);
+      const dLon = toRad(a.lon - alon);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(alat)) * Math.cos(toRad(a.lat)) * Math.sin(dLon / 2) ** 2;
+      const distNm = (2 * 6371 * Math.asin(Math.sqrt(h))) / 1.852;
+      if (distNm <= proximityNm) {
+        seen.add(a.id);
+        const prev = insideZoneRef.current.get(a.id);
+        // Debounce re-entry — only re-alert after 5 min outside
+        if (!prev || nowSec - prev > 300) {
+          const label = a.reg || a.id;
+          const msg = `${label} · ${a.altFt.toLocaleString()}ft · ${distNm.toFixed(1)}nm`;
+          toast(`✈ Aircraft near Ringmer`, { description: msg });
+          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+            try { new Notification("Aircraft near Ringmer", { body: msg, tag: a.id }); } catch { /* noop */ }
+          }
+        }
+        insideZoneRef.current.set(a.id, nowSec);
+      }
+    }
+    // Expire entries no longer present
+    for (const id of Array.from(insideZoneRef.current.keys())) {
+      if (!seen.has(id) && nowSec - (insideZoneRef.current.get(id) ?? 0) > 600) {
+        insideZoneRef.current.delete(id);
+      }
+    }
+  }, [aircraft, notifyEnabled, proximityNm]);
 
   const visible = (ownFleetOnly ? aircraft.filter((a) => a.isOwnFleet) : aircraft)
     .filter((a) => !hideStale || !a.isStale);
