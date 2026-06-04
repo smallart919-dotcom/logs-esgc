@@ -212,6 +212,27 @@ function MapPage() {
     setAircraft(merged);
     setLastUpdate(new Date());
     setFetchError(merged.length === 0 && ogn.length === 0 && adsb.length === 0 ? "No data" : null);
+
+    // Append trail points (full session — capped to last 2 hours)
+    const cutoff = nowSec - 7200;
+    for (const a of merged) {
+      if (a.isStale) continue;
+      const arr = trailsRef.current.get(a.id) ?? [];
+      const last = arr[arr.length - 1];
+      // Only append if position has actually moved or 5s elapsed
+      if (!last || last.ts !== a.ts) {
+        arr.push({ lat: a.lat, lon: a.lon, altFt: a.altFt, ts: a.ts, course: a.course, speedKph: a.speedKph });
+      }
+      // Trim by age
+      while (arr.length && arr[0].ts < cutoff) arr.shift();
+      trailsRef.current.set(a.id, arr);
+    }
+    // GC ids not seen for >30 min
+    for (const id of Array.from(trailsRef.current.keys())) {
+      const arr = trailsRef.current.get(id)!;
+      if (!arr.length || nowSec - arr[arr.length - 1].ts > 1800) trailsRef.current.delete(id);
+    }
+    setTrailsTick((t) => t + 1);
   }, [flarmSet, regSet]);
 
   // Live constant updates: 3s when visible, 15s in background
