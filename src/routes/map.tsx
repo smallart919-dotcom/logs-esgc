@@ -82,6 +82,7 @@ function MapPage() {
   const [audioChime, setAudioChime] = useState(false);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
   const [trailsTick, setTrailsTick] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [photoCache, setPhotoCache] = useState<Map<string, { url: string; photographer?: string; link?: string } | null>>(new Map());
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
