@@ -181,9 +181,11 @@ function MapPage() {
         const lon = parseFloat(String(a.lon));
         if (isNaN(lat) || isNaN(lon)) return null;
         if (lat < 50.4 || lat > 51.4 || lon < -0.6 || lon > 1.8) return null;
+        // ADS-B category codes: A1-A5 powered, A7 rotorcraft, B1 glider
+        const catU = cat.toUpperCase();
         let type: AircraftType = "powered";
-        if (/^A[67]|glider/i.test(cat)) type = "glider";
-        else if (/^A[34]|heli/i.test(cat)) type = "helicopter";
+        if (/^B1/.test(catU) || /GLIDER/.test(catU)) type = "glider";
+        else if (/^A7/.test(catU) || /HELI|ROTOR/.test(catU)) type = "helicopter";
         return {
           id: String(a.hex ?? a.icao ?? `${lat}-${lon}`).toUpperCase(),
           lat,
