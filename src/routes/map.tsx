@@ -710,9 +710,64 @@ function MapPage() {
           <div style={{ marginTop: "3px" }}>OGN + ADS-B · 3s refresh</div>
         </div>
       </div>
+
+      {/* Mini-stats footer */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]" style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "8px 14px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "12px", display: "flex", gap: "18px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+        <div>
+          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Busiest hour</div>
+          <div style={{ fontWeight: 700 }}>
+            {miniStats.busiestHour >= 0 ? `${String(miniStats.busiestHour).padStart(2, "0")}:00` : "—"}
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>
+              {miniStats.busiestHour >= 0 ? `${miniStats.busiestCount} a/c` : ""}
+            </span>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Max altitude</div>
+          <div style={{ fontWeight: 700 }}>
+            {miniStats.maxAlt > 0 ? `${miniStats.maxAlt.toLocaleString()}ft` : "—"}
+            {miniStats.maxAltReg && <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>{miniStats.maxAltReg}</span>}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Fleet distance</div>
+          <div style={{ fontWeight: 700 }}>
+            {miniStats.fleetKm > 0 ? `${miniStats.fleetKm.toFixed(0)} km` : "—"}
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", marginLeft: "4px" }}>today</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
+/** Short two-tone chime via WebAudio. Lazily creates a shared AudioContext. */
+function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
+  try {
+    if (typeof window === "undefined") return;
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return;
+    if (!ctxRef.current) ctxRef.current = new AC();
+    const ctx = ctxRef.current;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const now = ctx.currentTime;
+    const beep = (freq: number, start: number, dur: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + start);
+      gain.gain.linearRampToValueAtTime(0.25, now + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.05);
+    };
+    beep(880, 0, 0.18);
+    beep(1320, 0.18, 0.22);
+  } catch { /* noop */ }
+}
+
 
 const airfieldIcon = L.divIcon({
   className: "",
