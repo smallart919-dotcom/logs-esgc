@@ -439,6 +439,28 @@ function MapPage() {
           </Popup>
         </Marker>
 
+        {/* Trails — from where each aircraft was first seen */}
+        {trailPolylines.map((t) => (
+          <>
+            <Polyline
+              key={`trail-${t.id}`}
+              positions={t.pts}
+              pathOptions={{ color: t.colour, weight: t.isOwn ? 3 : 2, opacity: 0.55, lineCap: "round", lineJoin: "round" }}
+            />
+            <Marker
+              key={`start-${t.id}`}
+              position={t.pts[0]}
+              interactive={false}
+              icon={L.divIcon({
+                className: "",
+                html: `<div style="width:10px;height:10px;border-radius:50%;background:${t.colour};border:2px solid #0b0f19;box-shadow:0 0 6px ${t.colour}aa"></div>`,
+                iconSize: [10, 10],
+                iconAnchor: [5, 5],
+              })}
+            />
+          </>
+        ))}
+
 
         {visible.map((a) => (
           <Marker
