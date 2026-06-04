@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,6 +64,8 @@ type LiveAircraft = {
   squawk?: string;
 };
 
+type TrailPoint = { lat: number; lon: number; altFt: number; ts: number; course: number; speedKph: number };
+
 function MapPage() {
   const [aircraft, setAircraft] = useState<LiveAircraft[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -75,8 +77,15 @@ function MapPage() {
   const [notifyEnabled, setNotifyEnabled] = useState(true);
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
+  const [showTrails, setShowTrails] = useState(true);
+  const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
+  const [trailsTick, setTrailsTick] = useState(0);
+  const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
+  const inboundRef = useRef<Map<string, number>>(new Map());
+  // Per-aircraft trail history (full session, capped to last 2 hours)
+  const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -203,6 +212,27 @@ function MapPage() {
     setAircraft(merged);
     setLastUpdate(new Date());
     setFetchError(merged.length === 0 && ogn.length === 0 && adsb.length === 0 ? "No data" : null);
+
+    // Append trail points (full session — capped to last 2 hours)
+    const cutoff = nowSec - 7200;
+    for (const a of merged) {
+      if (a.isStale) continue;
+      const arr = trailsRef.current.get(a.id) ?? [];
+      const last = arr[arr.length - 1];
+      // Only append if position has actually moved or 5s elapsed
+      if (!last || last.ts !== a.ts) {
+        arr.push({ lat: a.lat, lon: a.lon, altFt: a.altFt, ts: a.ts, course: a.course, speedKph: a.speedKph });
+      }
+      // Trim by age
+      while (arr.length && arr[0].ts < cutoff) arr.shift();
+      trailsRef.current.set(a.id, arr);
+    }
+    // GC ids not seen for >30 min
+    for (const id of Array.from(trailsRef.current.keys())) {
+      const arr = trailsRef.current.get(id)!;
+      if (!arr.length || nowSec - arr[arr.length - 1].ts > 1800) trailsRef.current.delete(id);
+    }
+    setTrailsTick((t) => t + 1);
   }, [flarmSet, regSet]);
 
   // Live constant updates: 3s when visible, 15s in background
@@ -267,8 +297,98 @@ function MapPage() {
     }
   }, [aircraft, notifyEnabled, proximityNm]);
 
-  const visible = (ownFleetOnly ? aircraft.filter((a) => a.isOwnFleet) : aircraft)
+  // Inbound detection — aircraft tracking towards Ringmer at <15nm
+  useEffect(() => {
+    if (!notifyEnabled) return;
+    const [alat, alon] = AIRFIELD_LATLON;
+    const nowSec = Date.now() / 1000;
+    for (const a of aircraft) {
+      if (a.isStale || a.speedKph < 40) continue;
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const dLat = toRad(a.lat - alat);
+      const dLon = toRad(a.lon - alon);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(alat)) * Math.cos(toRad(a.lat)) * Math.sin(dLon / 2) ** 2;
+      const distNm = (2 * 6371 * Math.asin(Math.sqrt(h))) / 1.852;
+      if (distNm > 15 || distNm < 2) continue;
+      // Bearing FROM aircraft TO airfield
+      const y = Math.sin(toRad(alon - a.lon)) * Math.cos(toRad(alat));
+      const x = Math.cos(toRad(a.lat)) * Math.sin(toRad(alat)) -
+        Math.sin(toRad(a.lat)) * Math.cos(toRad(alat)) * Math.cos(toRad(alon - a.lon));
+      const bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+      const diff = Math.abs(((a.course - bearing + 540) % 360) - 180);
+      if (diff < 30) {
+        const prev = inboundRef.current.get(a.id);
+        if (!prev || nowSec - prev > 600) {
+          toast(`🎯 Inbound to Ringmer`, { description: `${a.reg || a.id} · ${distNm.toFixed(1)}nm · ${a.altFt.toLocaleString()}ft` });
+          inboundRef.current.set(a.id, nowSec);
+        }
+      }
+    }
+  }, [aircraft, notifyEnabled]);
+
+  // METAR — refresh every 10 min (NOAA aviationweather.gov, CORS-enabled)
+  useEffect(() => {
+    let cancelled = false;
+    const fetchMetar = async () => {
+      try {
+        const r = await fetch("https://aviationweather.gov/api/data/metar?ids=EGKB,EGKA,EGMD&format=json&hours=2");
+        if (!r.ok) return;
+        const json = await r.json() as Array<{ icaoId: string; rawOb: string; reportTime: string }>;
+        if (cancelled || !Array.isArray(json)) return;
+        // Latest per ICAO
+        const latest = new Map<string, { id: string; raw: string; obs: string }>();
+        for (const m of json) {
+          if (!latest.has(m.icaoId)) latest.set(m.icaoId, { id: m.icaoId, raw: m.rawOb, obs: m.reportTime });
+        }
+        setMetar(Array.from(latest.values()));
+      } catch { /* noop */ }
+    };
+    fetchMetar();
+    const id = setInterval(fetchMetar, 10 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  // Replay: when offset != 0, derive display positions from trail history
+  const isReplay = replayOffsetSec < 0;
+  const replayTargetTs = Date.now() / 1000 + replayOffsetSec;
+  const displayAircraft = useMemo<LiveAircraft[]>(() => {
+    if (!isReplay) return aircraft;
+    void trailsTick;
+    const out: LiveAircraft[] = [];
+    for (const a of aircraft) {
+      const arr = trailsRef.current.get(a.id);
+      if (!arr || !arr.length) continue;
+      // Find point closest to (but not after) replayTargetTs
+      let pick: TrailPoint | null = null;
+      for (let i = arr.length - 1; i >= 0; i--) {
+        if (arr[i].ts <= replayTargetTs) { pick = arr[i]; break; }
+      }
+      if (!pick) continue;
+      out.push({ ...a, lat: pick.lat, lon: pick.lon, altFt: pick.altFt, course: pick.course, speedKph: pick.speedKph, ts: pick.ts, isStale: false });
+    }
+    return out;
+  }, [aircraft, isReplay, replayTargetTs, trailsTick]);
+
+  const visible = (ownFleetOnly ? displayAircraft.filter((a) => a.isOwnFleet) : displayAircraft)
     .filter((a) => !hideStale || !a.isStale);
+
+  // Build trail polylines for visible aircraft
+  const trailPolylines = useMemo(() => {
+    if (!showTrails) return [];
+    void trailsTick;
+    const cutoff = isReplay ? replayTargetTs : Infinity;
+    return visible.map((a) => {
+      const arr = trailsRef.current.get(a.id);
+      if (!arr || arr.length < 2) return null;
+      const pts = arr.filter((p) => p.ts <= cutoff).map((p) => [p.lat, p.lon] as [number, number]);
+      if (pts.length < 2) return null;
+      const colour = a.isOwnFleet ? "#38bdf8"
+        : a.type === "glider" ? "#a3e635"
+        : a.type === "helicopter" ? "#fb923c"
+        : "#f8fafc";
+      return { id: a.id, pts, colour, isOwn: a.isOwnFleet };
+    }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean } => x !== null);
+  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs]);
 
   const countLive = (pred: (a: LiveAircraft) => boolean) =>
     aircraft.filter((a) => !a.isStale && pred(a)).length;
@@ -318,6 +438,26 @@ function MapPage() {
             </div>
           </Popup>
         </Marker>
+
+        {/* Trails — from where each aircraft was first seen */}
+        {trailPolylines.flatMap((t) => [
+          <Polyline
+            key={`trail-${t.id}`}
+            positions={t.pts}
+            pathOptions={{ color: t.colour, weight: t.isOwn ? 3 : 2, opacity: 0.55, lineCap: "round", lineJoin: "round" }}
+          />,
+          <Marker
+            key={`start-${t.id}`}
+            position={t.pts[0]}
+            interactive={false}
+            icon={L.divIcon({
+              className: "",
+              html: `<div style="width:10px;height:10px;border-radius:50%;background:${t.colour};border:2px solid #0b0f19;box-shadow:0 0 6px ${t.colour}aa"></div>`,
+              iconSize: [10, 10],
+              iconAnchor: [5, 5],
+            })}
+          />,
+        ])}
 
 
         {visible.map((a) => (
@@ -391,6 +531,7 @@ function MapPage() {
 
           {([
             ["Airspace overlay", showAirspace, setShowAirspace],
+            ["Show trails", showTrails, setShowTrails],
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly],
             ["Hide stale (>60s)", hideStale, setHideStale],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled],
@@ -428,6 +569,45 @@ function MapPage() {
           )}
         </div>
 
+        {/* Replay scrubber */}
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+            <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>
+              {isReplay ? `⏪ Replay −${Math.abs(Math.round(replayOffsetSec / 60))}m ${Math.abs(replayOffsetSec) % 60}s` : "▶ LIVE"}
+            </span>
+            {isReplay && (
+              <button
+                onClick={() => setReplayOffsetSec(0)}
+                style={{ background: "#38bdf8", color: "#0b0f19", border: "none", borderRadius: "4px", padding: "2px 7px", fontSize: "10px", fontWeight: 700, cursor: "pointer" }}
+              >
+                LIVE
+              </button>
+            )}
+          </div>
+          <input
+            type="range"
+            min={-7200}
+            max={0}
+            step={5}
+            value={replayOffsetSec}
+            onChange={(e) => setReplayOffsetSec(parseInt(e.target.value, 10))}
+            style={{ width: "100%", accentColor: "#38bdf8" }}
+          />
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "rgba(255,255,255,0.35)" }}>
+            <span>−2h</span><span>now</span>
+          </div>
+        </div>
+
+        {metar.length > 0 && (
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
+            <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, marginBottom: "4px" }}>METAR</div>
+            {metar.map((m) => (
+              <div key={m.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.65)", fontFamily: "ui-monospace,monospace", marginBottom: "3px", lineHeight: 1.35 }}>
+                <span style={{ color: "#38bdf8", fontWeight: 700 }}>{m.id}</span> {m.raw.replace(`${m.id} `, "")}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "8px", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>
           {fetchError
