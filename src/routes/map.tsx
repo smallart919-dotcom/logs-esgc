@@ -531,6 +531,7 @@ function MapPage() {
 
           {([
             ["Airspace overlay", showAirspace, setShowAirspace],
+            ["Show trails", showTrails, setShowTrails],
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly],
             ["Hide stale (>60s)", hideStale, setHideStale],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled],
