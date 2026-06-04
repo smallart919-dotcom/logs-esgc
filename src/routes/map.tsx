@@ -222,9 +222,18 @@ function MapPage() {
       }),
     ];
 
+    // Don't flap on transient empty responses — keep last data and only
+    // surface "No data" after several consecutive empty fetches.
+    const failed = !proxied || (merged.length === 0);
+    if (failed) {
+      failCountRef.current += 1;
+      if (failCountRef.current >= 8) setFetchError("No data");
+      return;
+    }
+    failCountRef.current = 0;
     setAircraft(merged);
     setLastUpdate(new Date());
-    setFetchError(merged.length === 0 && ogn.length === 0 && adsb.length === 0 ? "No data" : null);
+    setFetchError(null);
 
     // Append trail points (full session — capped to last 2 hours)
     const cutoff = nowSec - 7200;
