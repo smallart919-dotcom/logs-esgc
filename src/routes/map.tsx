@@ -286,6 +286,14 @@ function MapPage() {
 
         {showAirspace && <AirspaceLabels />}
 
+        {notifyEnabled && (
+          <Circle
+            center={AIRFIELD_LATLON}
+            radius={proximityNm * 1852}
+            pathOptions={{ color: "#38bdf8", weight: 1.5, opacity: 0.6, fillColor: "#38bdf8", fillOpacity: 0.04, dashArray: "4 6" }}
+          />
+        )}
+
         <Marker position={AIRFIELD_LATLON} icon={airfieldIcon}>
           <Tooltip permanent direction="right" offset={[14, 0]} className="leaflet-tooltip-airfield">
             <b>ESGC · {AIRFIELD.icao}</b><br />
