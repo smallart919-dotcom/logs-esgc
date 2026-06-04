@@ -94,39 +94,38 @@ function MapPage() {
   const fetchLive = useCallback(async () => {
     const nowSec = Date.now() / 1000;
 
-    const fetchOgn = async (): Promise<LiveAircraft[]> => {
-      try {
-        const res = await fetch(OGN_URL);
-        if (!res.ok) return [];
-        const json: { aircraft?: unknown[][] } = await res.json();
-        return (json.aircraft ?? []).map((a) => {
-          const flarm = String(a[0] ?? "").toUpperCase();
-          const reg = String(a[8] ?? "");
-          const normReg = reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
-          const ts = parseInt(String(a[9])) || 0;
-          const altM = parseFloat(String(a[3])) || 0;
-          return {
-            id: flarm || `ogn-${a[1]}-${a[2]}`,
-            lat: parseFloat(String(a[1])),
-            lon: parseFloat(String(a[2])),
-            altM,
-            altFt: Math.round(altM * 3.281),
-            speedKph: parseFloat(String(a[4])) || 0,
-            course: parseFloat(String(a[5])) || 0,
-            climbMs: parseFloat(String(a[6])) || 0,
-            reg,
-            type: "glider" as AircraftType,
-            category: "",
-            source: "ogn" as const,
-            isOwnFleet: flarmSet.has(flarm) || regSet.has(normReg),
-            isStale: nowSec - ts > 60,
-            ts,
-          };
-        }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon));
-      } catch {
-        return [];
-      }
+    // Single proxied call — both feeds blocked by CORS in the browser.
+    const proxied = await getLiveTraffic().catch(() => null);
+
+    const parseOgn = (): LiveAircraft[] => {
+      const json = proxied?.ogn as { aircraft?: unknown[][] } | null;
+      if (!json?.aircraft) return [];
+      return json.aircraft.map((a) => {
+        const flarm = String(a[0] ?? "").toUpperCase();
+        const reg = String(a[8] ?? "");
+        const normReg = reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const ts = parseInt(String(a[9])) || 0;
+        const altM = parseFloat(String(a[3])) || 0;
+        return {
+          id: flarm || `ogn-${a[1]}-${a[2]}`,
+          lat: parseFloat(String(a[1])),
+          lon: parseFloat(String(a[2])),
+          altM,
+          altFt: Math.round(altM * 3.281),
+          speedKph: parseFloat(String(a[4])) || 0,
+          course: parseFloat(String(a[5])) || 0,
+          climbMs: parseFloat(String(a[6])) || 0,
+          reg,
+          type: "glider" as AircraftType,
+          category: "",
+          source: "ogn" as const,
+          isOwnFleet: flarmSet.has(flarm) || regSet.has(normReg),
+          isStale: nowSec - ts > 60,
+          ts,
+        };
+      }).filter((a) => !isNaN(a.lat) && !isNaN(a.lon));
     };
+    const fetchOgn = async () => parseOgn();
 
     const fetchAdsb = async (): Promise<LiveAircraft[]> => {
       try {
