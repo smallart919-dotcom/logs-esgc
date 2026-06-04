@@ -331,6 +331,38 @@ function MapPage() {
     }
   }, [aircraft, notifyEnabled]);
 
+  // Photo fetch — planespotters.net public API (CORS-enabled) for ADS-B hex IDs
+  useEffect(() => {
+    let cancelled = false;
+    const toFetch = aircraft
+      .filter((a) => a.source === "adsb" && !a.isStale && /^[A-F0-9]{6}$/.test(a.id) && !photoCache.has(a.id))
+      .slice(0, 8);
+    if (toFetch.length === 0) return;
+    (async () => {
+      const updates: Array<[string, { url: string; photographer?: string; link?: string } | null]> = [];
+      for (const a of toFetch) {
+        try {
+          const r = await fetch(`https://api.planespotters.net/pub/photos/hex/${a.id}`);
+          if (!r.ok) { updates.push([a.id, null]); continue; }
+          const j = await r.json() as { photos?: Array<{ thumbnail_large?: { src: string }; photographer?: string; link?: string }> };
+          const p = j.photos?.[0];
+          if (p?.thumbnail_large?.src) {
+            updates.push([a.id, { url: p.thumbnail_large.src, photographer: p.photographer, link: p.link }]);
+          } else {
+            updates.push([a.id, null]);
+          }
+        } catch { updates.push([a.id, null]); }
+      }
+      if (cancelled || updates.length === 0) return;
+      setPhotoCache((prev) => {
+        const next = new Map(prev);
+        for (const [k, v] of updates) next.set(k, v);
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [aircraft, photoCache]);
+
   // METAR — refresh every 10 min (NOAA aviationweather.gov, CORS-enabled)
   useEffect(() => {
     let cancelled = false;
