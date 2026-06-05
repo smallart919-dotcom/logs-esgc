@@ -526,12 +526,19 @@ function MapPage() {
           </Popup>
         </Marker>
 
-        {/* Trails — from where each aircraft was first seen */}
+        {/* Trails — from where each aircraft was first seen.
+            Selected aircraft trail is rendered thicker + brighter (FR24-style). */}
         {trailPolylines.flatMap((t) => [
           <Polyline
             key={`trail-${t.id}`}
             positions={t.pts}
-            pathOptions={{ color: t.colour, weight: t.isOwn ? 3 : 2, opacity: 0.55, lineCap: "round", lineJoin: "round" }}
+            pathOptions={{
+              color: t.colour,
+              weight: t.isSelected ? 4 : t.isOwn ? 3 : 2,
+              opacity: t.isSelected ? 0.95 : 0.55,
+              lineCap: "round",
+              lineJoin: "round",
+            }}
           />,
           <Marker
             key={`start-${t.id}`}
@@ -539,9 +546,9 @@ function MapPage() {
             interactive={false}
             icon={L.divIcon({
               className: "",
-              html: `<div style="width:10px;height:10px;border-radius:50%;background:${t.colour};border:2px solid #0b0f19;box-shadow:0 0 6px ${t.colour}aa"></div>`,
-              iconSize: [10, 10],
-              iconAnchor: [5, 5],
+              html: `<div style="width:${t.isSelected ? 12 : 10}px;height:${t.isSelected ? 12 : 10}px;border-radius:50%;background:${t.colour};border:2px solid #0b0f19;box-shadow:0 0 ${t.isSelected ? 10 : 6}px ${t.colour}${t.isSelected ? "" : "aa"}"></div>`,
+              iconSize: [t.isSelected ? 12 : 10, t.isSelected ? 12 : 10],
+              iconAnchor: [t.isSelected ? 6 : 5, t.isSelected ? 6 : 5],
             })}
           />,
         ])}
