@@ -91,8 +91,11 @@ function MapPage() {
   const insideZoneRef = useRef<Map<string, number>>(new Map());
   const [panelOpen, setPanelOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  // Per-aircraft trail history (full session, capped to last 2 hours)
+  // Per-aircraft trail history (full session, kept permanently like FR24)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
+  // Last-known meta per id so we can keep drawing trails after the aircraft
+  // drops off the live feed (FR24-style persistence).
+  const trailMetaRef = useRef<Map<string, { type: AircraftType; isOwnFleet: boolean; reg: string }>>(new Map());
   const failCountRef = useRef(0);
 
   useEffect(() => {
