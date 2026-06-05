@@ -481,12 +481,11 @@ function MapPage() {
   const iconCacheRef = useRef<Map<string, { sig: string; icon: L.DivIcon }>>(new Map());
   const getIcon = useCallback((a: LiveAircraft): L.DivIcon => {
     // Quantize course to 3° so tiny heading wobbles don't rebuild the icon.
-    const courseQ = Math.round(a.course / 3) * 3;
-    const altQ = Math.round(a.altFt / 100) * 100;
-    const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${altQ}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
+    const courseQ = Math.round(a.course / 5) * 5;
+    const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
     const hit = iconCacheRef.current.get(a.id);
     if (hit && hit.sig === sig) return hit.icon;
-    const icon = aircraftIcon({ ...a, course: courseQ, altFt: altQ });
+    const icon = aircraftIcon({ ...a, course: courseQ });
     iconCacheRef.current.set(a.id, { sig, icon });
     return icon;
   }, []);
@@ -869,7 +868,6 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
     : poweredShape;
 
   const label = (a.reg || a.id || "").toString().toUpperCase().slice(0, 8);
-  const altLine = `${a.altFt.toLocaleString()}ft`;
   const ringHtml = isOwn
     ? `<div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid #38bdf8;box-shadow:0 0 14px #38bdf8aa;animation:ping 2s ease-out infinite"></div>`
     : "";
@@ -883,7 +881,7 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
           <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">${shape}</svg>
         </div>
         <div style="position:absolute;top:46px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(10,14,22,.85);border:1px solid ${colour};border-radius:6px;padding:1px 5px;font:600 10px/1.2 system-ui,sans-serif;color:${colour};box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none;text-align:center">
-          ${label || "—"}<div style="color:#cbd5e1;font-weight:500;font-size:9px">${altLine}</div>
+          ${label || "—"}
         </div>
       </div>
     `,
