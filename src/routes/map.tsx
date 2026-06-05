@@ -328,7 +328,7 @@ function MapPage() {
     const [alat, alon] = AIRFIELD_LATLON;
     const nowSec = Date.now() / 1000;
     for (const a of aircraft) {
-      if (a.isStale || a.speedKph < 40) continue;
+      if (a.isStale || a.speedKph < 40 || a.altFt > 2200) continue;
       const toRad = (d: number) => (d * Math.PI) / 180;
       const dLat = toRad(a.lat - alat);
       const dLon = toRad(a.lon - alon);
