@@ -236,9 +236,26 @@ function MapPage() {
       return;
     }
     failCountRef.current = 0;
-    setAircraft(merged);
     setLastUpdate(new Date());
     setFetchError(null);
+    setAircraft((prev) => {
+      if (prev.length > 10 && merged.length < prev.length * 0.3) return prev;
+      const prevMap = new Map(prev.map((a) => [a.id, a]));
+      const next = merged.map((incoming) => {
+        const existing = prevMap.get(incoming.id);
+        if (!existing) return incoming;
+        const latSame = Math.abs(incoming.lat - existing.lat) < 0.00008;
+        const lonSame = Math.abs(incoming.lon - existing.lon) < 0.00008;
+        const altSame = Math.abs(incoming.altFt - existing.altFt) < 10;
+        const crseSame = Math.abs(incoming.course - existing.course) < 2;
+        const staleSame = incoming.isStale === existing.isStale;
+        const typeSame = incoming.type === existing.type;
+        if (latSame && lonSame && altSame && crseSame && staleSame && typeSame) return existing;
+        return incoming;
+      });
+      const cutoffTs = Date.now() / 1000 - 180;
+      return next.filter((a) => a.ts > cutoffTs);
+    });
 
     // Append trail points (full session — capped to last 2 hours)
     const cutoff = nowSec - 7200;
