@@ -482,7 +482,8 @@ function MapPage() {
   const getIcon = useCallback((a: LiveAircraft): L.DivIcon => {
     // Quantize course to 3° so tiny heading wobbles don't rebuild the icon.
     const courseQ = Math.round(a.course / 3) * 3;
-    const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${a.altFt}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
+    const altQ = Math.round(a.altFt / 100) * 100;
+    const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${altQ}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
     const hit = iconCacheRef.current.get(a.id);
     if (hit && hit.sig === sig) return hit.icon;
     const icon = aircraftIcon({ ...a, course: courseQ });
