@@ -476,6 +476,20 @@ function MapPage() {
     }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean } => x !== null);
   }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId]);
 
+  // Icon cache — only rebuild when visual fields change (course/type/reg/alt/
+  // ownFleet/stale). Keeps markers from flashing on every 100ms interp tick.
+  const iconCacheRef = useRef<Map<string, { sig: string; icon: L.DivIcon }>>(new Map());
+  const getIcon = useCallback((a: LiveAircraft): L.DivIcon => {
+    // Quantize course to 3° so tiny heading wobbles don't rebuild the icon.
+    const courseQ = Math.round(a.course / 3) * 3;
+    const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${a.altFt}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
+    const hit = iconCacheRef.current.get(a.id);
+    if (hit && hit.sig === sig) return hit.icon;
+    const icon = aircraftIcon({ ...a, course: courseQ });
+    iconCacheRef.current.set(a.id, { sig, icon });
+    return icon;
+  }, []);
+
   const countLive = (pred: (a: LiveAircraft) => boolean) =>
     aircraft.filter((a) => !a.isStale && pred(a)).length;
 
@@ -567,7 +581,7 @@ function MapPage() {
           <Marker
             key={a.id}
             position={[a.lat, a.lon]}
-            icon={aircraftIcon(a)}
+            icon={getIcon(a)}
             zIndexOffset={a.isOwnFleet ? 1000 : a.type === "glider" ? 500 : 0}
             eventHandlers={{
               click: () => setSelectedId(a.id),
