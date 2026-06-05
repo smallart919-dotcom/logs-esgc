@@ -641,8 +641,20 @@ function MapPage() {
       </MapContainer>
 
 
-      {/* Control panel */}
-      <div className="absolute top-4 right-4 z-[1000]" style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "14px 16px", minWidth: "230px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "13px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+      {/* Control panel — collapsible toggle for mobile */}
+      <button
+        onClick={() => setPanelOpen((v) => !v)}
+        aria-label={panelOpen ? "Hide controls" : "Show controls"}
+        className="absolute top-3 right-3 z-[1001] sm:hidden"
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "8px 12px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}
+      >
+        {panelOpen ? "✕" : "☰"} {!panelOpen && `${countLive(() => true)} live`}
+      </button>
+
+      <div
+        className={`absolute z-[1000] ${panelOpen ? "block" : "hidden"} sm:block top-3 right-3 sm:top-4 sm:right-4`}
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "14px 16px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "13px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", width: "min(260px, calc(100vw - 24px))", maxHeight: "calc(100vh - 14rem)", overflowY: "auto", marginTop: panelOpen ? "44px" : 0 }}
+      >
         <div style={{ marginBottom: "10px", lineHeight: 2 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#38bdf8", display: "inline-block" }} />
