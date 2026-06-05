@@ -90,6 +90,7 @@ function MapPage() {
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
   const [panelOpen, setPanelOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // Per-aircraft trail history (full session, capped to last 2 hours)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const failCountRef = useRef(0);
