@@ -405,26 +405,54 @@ function MapPage() {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  // Replay: when offset != 0, derive display positions from trail history
+  // Smooth interpolation tick — between data fetches we extrapolate positions
+  // from each aircraft's last known speed/course so markers glide instead of
+  // jumping (FR24-style). Runs at ~10fps when visible.
+  const [interpTick, setInterpTick] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    let last = 0;
+    const loop = (t: number) => {
+      if (t - last >= 100) { last = t; setInterpTick((n) => n + 1); }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Replay: when offset != 0, derive display positions from trail history.
+  // Live: extrapolate from last fix using speed + course.
   const isReplay = replayOffsetSec < 0;
   const replayTargetTs = Date.now() / 1000 + replayOffsetSec;
   const displayAircraft = useMemo<LiveAircraft[]>(() => {
-    if (!isReplay) return aircraft;
-    void trailsTick;
-    const out: LiveAircraft[] = [];
-    for (const a of aircraft) {
-      const arr = trailsRef.current.get(a.id);
-      if (!arr || !arr.length) continue;
-      // Find point closest to (but not after) replayTargetTs
-      let pick: TrailPoint | null = null;
-      for (let i = arr.length - 1; i >= 0; i--) {
-        if (arr[i].ts <= replayTargetTs) { pick = arr[i]; break; }
+    void trailsTick; void interpTick;
+    if (isReplay) {
+      const out: LiveAircraft[] = [];
+      for (const a of aircraft) {
+        const arr = trailsRef.current.get(a.id);
+        if (!arr || !arr.length) continue;
+        let pick: TrailPoint | null = null;
+        for (let i = arr.length - 1; i >= 0; i--) {
+          if (arr[i].ts <= replayTargetTs) { pick = arr[i]; break; }
+        }
+        if (!pick) continue;
+        out.push({ ...a, lat: pick.lat, lon: pick.lon, altFt: pick.altFt, course: pick.course, speedKph: pick.speedKph, ts: pick.ts, isStale: false });
       }
-      if (!pick) continue;
-      out.push({ ...a, lat: pick.lat, lon: pick.lon, altFt: pick.altFt, course: pick.course, speedKph: pick.speedKph, ts: pick.ts, isStale: false });
+      return out;
     }
-    return out;
-  }, [aircraft, isReplay, replayTargetTs, trailsTick]);
+    // Live: extrapolate forward from the last known fix.
+    const nowSec = Date.now() / 1000;
+    return aircraft.map((a) => {
+      if (a.isStale || a.speedKph < 5) return a;
+      const elapsed = Math.min(Math.max(0, nowSec - a.ts), 8); // cap 8s
+      if (elapsed < 0.05) return a;
+      const distM = (a.speedKph * 1000 / 3600) * elapsed;
+      const rad = (a.course * Math.PI) / 180;
+      const dLat = (distM * Math.cos(rad)) / 111320;
+      const dLon = (distM * Math.sin(rad)) / (111320 * Math.cos((a.lat * Math.PI) / 180));
+      return { ...a, lat: a.lat + dLat, lon: a.lon + dLon };
+    });
+  }, [aircraft, isReplay, replayTargetTs, trailsTick, interpTick]);
 
   const visible = (ownFleetOnly ? displayAircraft.filter((a) => a.isOwnFleet) : displayAircraft)
     .filter((a) => !hideStale || !a.isStale);
@@ -443,9 +471,10 @@ function MapPage() {
         : a.type === "glider" ? "#a3e635"
         : a.type === "helicopter" ? "#fb923c"
         : "#f8fafc";
-      return { id: a.id, pts, colour, isOwn: a.isOwnFleet };
-    }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean } => x !== null);
-  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs]);
+      const isSelected = selectedId === a.id;
+      return { id: a.id, pts, colour, isOwn: a.isOwnFleet, isSelected };
+    }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean } => x !== null);
+  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId]);
 
   const countLive = (pred: (a: LiveAircraft) => boolean) =>
     aircraft.filter((a) => !a.isStale && pred(a)).length;
