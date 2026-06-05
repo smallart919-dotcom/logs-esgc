@@ -148,7 +148,7 @@ function MapPage() {
         else if (kind === 1 || kind === 6 || kind === 7) mapped = "glider";
         else if (kind === 11 || kind === 12) mapped = "unknown";
         return {
-          id: flarm || `ogn-${lat}-${lon}`,
+          id: normReg || flarm || `ogn-${lat.toFixed(3)}-${lon.toFixed(3)}`,
           lat,
           lon,
           altM,
@@ -178,6 +178,9 @@ function MapPage() {
         const a = raw as Record<string, unknown>;
         const cat = String(a.category ?? a.t ?? "");
         const altFt = parseFloat(String(a.alt_baro ?? a.altitude ?? a.alt ?? 0)) || 0;
+        const reg = String(a.flight ?? a.r ?? a.registration ?? "").trim();
+        const normReg = reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const hex = String(a.hex ?? a.icao ?? "").toUpperCase().replace(/[^A-F0-9]/g, "");
         const seen = parseFloat(String(a.seen_pos ?? a.seen ?? 0)) || 0;
         const lat = parseFloat(String(a.lat));
         const lon = parseFloat(String(a.lon));
@@ -189,7 +192,7 @@ function MapPage() {
         if (/^B1/.test(catU) || /GLIDER/.test(catU)) type = "glider";
         else if (/^A7/.test(catU) || /HELI|ROTOR/.test(catU)) type = "helicopter";
         return {
-          id: String(a.hex ?? a.icao ?? `${lat}-${lon}`).toUpperCase(),
+          id: hex || normReg || `adsb-${lat.toFixed(3)}-${lon.toFixed(3)}`,
           lat,
           lon,
           altM: Math.round(altFt * 0.3048),
@@ -197,7 +200,7 @@ function MapPage() {
           speedKph: Math.round((parseFloat(String(a.gs ?? a.spd ?? 0)) || 0) * 1.852),
           course: parseFloat(String(a.track ?? a.hdg ?? 0)) || 0,
           climbMs: (parseFloat(String(a.baro_rate ?? a.vsi ?? 0)) || 0) * 0.00508,
-          reg: String(a.flight ?? a.r ?? a.registration ?? "").trim(),
+          reg,
           type,
           category: cat,
           squawk: a.squawk ? String(a.squawk) : undefined,
@@ -457,6 +460,18 @@ function MapPage() {
   const visible = (ownFleetOnly ? displayAircraft.filter((a) => a.isOwnFleet) : displayAircraft)
     .filter((a) => !hideStale || !a.isStale);
 
+  // Keep marker DOM stable: heading changes are applied directly to the
+  // existing SVG wrapper instead of rebuilding Leaflet divIcons.
+  useEffect(() => {
+    const courses = new Map(visible.map((a) => [a.id, normalizeCourse(a.course)]));
+    document.querySelectorAll<HTMLElement>("[data-aircraft-rotor]").forEach((el) => {
+      const id = el.dataset.aircraftId;
+      const course = id ? courses.get(id) : undefined;
+      if (course === undefined) return;
+      el.style.transform = `rotate(${course}deg)`;
+    });
+  }, [visible]);
+
   // Build trail polylines for visible aircraft
   const trailPolylines = useMemo(() => {
     if (!showTrails) return [];
@@ -476,16 +491,15 @@ function MapPage() {
     }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean } => x !== null);
   }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId]);
 
-  // Icon cache — only rebuild when visual fields change (course/type/reg/alt/
-  // ownFleet/stale). Keeps markers from flashing on every 100ms interp tick.
+  // Icon cache — only rebuild when the actual silhouette/label state changes.
+  // Altitude and heading are deliberately excluded to prevent Leaflet from
+  // replacing marker DOM during live updates.
   const iconCacheRef = useRef<Map<string, { sig: string; icon: L.DivIcon }>>(new Map());
   const getIcon = useCallback((a: LiveAircraft): L.DivIcon => {
-    // Quantize course to 3° so tiny heading wobbles don't rebuild the icon.
-    const courseQ = Math.round(a.course / 5) * 5;
-    const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
+    const sig = `${a.type}|${a.reg || a.id}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
     const hit = iconCacheRef.current.get(a.id);
     if (hit && hit.sig === sig) return hit.icon;
-    const icon = aircraftIcon({ ...a, course: courseQ });
+    const icon = aircraftIcon(a);
     iconCacheRef.current.set(a.id, { sig, icon });
     return icon;
   }, []);
@@ -823,6 +837,10 @@ const airfieldIcon = L.divIcon({
   iconAnchor: [12, 16],
 });
 
+function normalizeCourse(course: number): number {
+  return ((Math.round(course) % 360) + 360) % 360;
+}
+
 function aircraftIcon(a: LiveAircraft): L.DivIcon {
   const isOwn = a.isOwnFleet;
   const stale = a.isStale;
@@ -877,7 +895,7 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
     html: `
       <div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center">
         ${ringHtml}
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(${a.course}deg);transform-origin:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.65))">
+        <div data-aircraft-rotor data-aircraft-id="${a.id}" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(${normalizeCourse(a.course)}deg);transform-origin:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.65));will-change:transform">
           <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">${shape}</svg>
         </div>
         <div style="position:absolute;top:46px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(10,14,22,.85);border:1px solid ${colour};border-radius:6px;padding:1px 5px;font:600 10px/1.2 system-ui,sans-serif;color:${colour};box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none;text-align:center">
