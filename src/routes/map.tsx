@@ -882,7 +882,7 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
           <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">${shape}</svg>
         </div>
         <div style="position:absolute;top:46px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(10,14,22,.85);border:1px solid ${colour};border-radius:6px;padding:1px 5px;font:600 10px/1.2 system-ui,sans-serif;color:${colour};box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none;text-align:center">
-          ${label || "—"}<div style="color:#cbd5e1;font-weight:500;font-size:9px">${altLine}</div>
+          ${label || "—"}
         </div>
       </div>
     `,
