@@ -148,7 +148,7 @@ function MapPage() {
         else if (kind === 1 || kind === 6 || kind === 7) mapped = "glider";
         else if (kind === 11 || kind === 12) mapped = "unknown";
         return {
-          id: flarm || `ogn-${lat}-${lon}`,
+          id: normReg || flarm || `ogn-${lat.toFixed(3)}-${lon.toFixed(3)}`,
           lat,
           lon,
           altM,
@@ -178,6 +178,9 @@ function MapPage() {
         const a = raw as Record<string, unknown>;
         const cat = String(a.category ?? a.t ?? "");
         const altFt = parseFloat(String(a.alt_baro ?? a.altitude ?? a.alt ?? 0)) || 0;
+        const reg = String(a.flight ?? a.r ?? a.registration ?? "").trim();
+        const normReg = reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const hex = String(a.hex ?? a.icao ?? "").toUpperCase().replace(/[^A-F0-9]/g, "");
         const seen = parseFloat(String(a.seen_pos ?? a.seen ?? 0)) || 0;
         const lat = parseFloat(String(a.lat));
         const lon = parseFloat(String(a.lon));
@@ -189,7 +192,7 @@ function MapPage() {
         if (/^B1/.test(catU) || /GLIDER/.test(catU)) type = "glider";
         else if (/^A7/.test(catU) || /HELI|ROTOR/.test(catU)) type = "helicopter";
         return {
-          id: String(a.hex ?? a.icao ?? `${lat}-${lon}`).toUpperCase(),
+          id: normReg || hex || `adsb-${lat.toFixed(3)}-${lon.toFixed(3)}`,
           lat,
           lon,
           altM: Math.round(altFt * 0.3048),
@@ -197,7 +200,7 @@ function MapPage() {
           speedKph: Math.round((parseFloat(String(a.gs ?? a.spd ?? 0)) || 0) * 1.852),
           course: parseFloat(String(a.track ?? a.hdg ?? 0)) || 0,
           climbMs: (parseFloat(String(a.baro_rate ?? a.vsi ?? 0)) || 0) * 0.00508,
-          reg: String(a.flight ?? a.r ?? a.registration ?? "").trim(),
+          reg,
           type,
           category: cat,
           squawk: a.squawk ? String(a.squawk) : undefined,
