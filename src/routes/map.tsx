@@ -206,7 +206,7 @@ function MapPage() {
           squawk: a.squawk ? String(a.squawk) : undefined,
           source: "adsb",
           isOwnFleet: false,
-          isStale: seen > 60,
+          isStale: seen > 70,
           ts: serverNow - seen,
         };
       });
