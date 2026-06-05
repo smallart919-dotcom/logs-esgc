@@ -834,6 +834,10 @@ const airfieldIcon = L.divIcon({
   iconAnchor: [12, 16],
 });
 
+function normalizeCourse(course: number): number {
+  return ((Math.round(course) % 360) + 360) % 360;
+}
+
 function aircraftIcon(a: LiveAircraft): L.DivIcon {
   const isOwn = a.isOwnFleet;
   const stale = a.isStale;
@@ -888,7 +892,7 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
     html: `
       <div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center">
         ${ringHtml}
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(${a.course}deg);transform-origin:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.65))">
+        <div data-aircraft-rotor data-aircraft-id="${a.id}" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(${normalizeCourse(a.course)}deg);transform-origin:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.65));will-change:transform">
           <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">${shape}</svg>
         </div>
         <div style="position:absolute;top:46px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(10,14,22,.85);border:1px solid ${colour};border-radius:6px;padding:1px 5px;font:600 10px/1.2 system-ui,sans-serif;color:${colour};box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none;text-align:center">
