@@ -330,7 +330,7 @@ function MapPage() {
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
             try { new Notification("Aircraft near Ringmer", { body: msg, tag: a.id }); } catch { /* noop */ }
           }
-          if (audioChime) playChime(audioCtxRef);
+          if (audioChime) playChime(audioCtxRef, chimeVolume);
         }
         insideZoneRef.current.set(a.id, nowSec);
       }
