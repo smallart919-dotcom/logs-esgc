@@ -460,30 +460,33 @@ function MapPage() {
     });
   }, [visible]);
 
-  // Build trail polylines for visible aircraft
+  // Build trail polylines — iterate trail history directly so trails persist
+  // even after an aircraft drops off the live feed (FR24-style).
   const trailPolylines = useMemo(() => {
     if (!showTrails) return [];
     void trailsTick;
     const cutoff = isReplay ? replayTargetTs : Infinity;
-    return visible.map((a) => {
-      const arr = trailsRef.current.get(a.id);
-      if (!arr || arr.length < 2) return null;
+    const visibleIds = new Set(visible.map((a) => a.id));
+    const out: { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean }[] = [];
+    for (const [id, arr] of trailsRef.current.entries()) {
+      if (!arr || arr.length < 2) continue;
+      const meta = trailMetaRef.current.get(id);
+      if (!meta) continue;
+      if (ownFleetOnly && !meta.isOwnFleet && !visibleIds.has(id)) continue;
       const filtered = arr.filter((p) => p.ts <= cutoff);
-      if (filtered.length < 2) return null;
+      if (filtered.length < 2) continue;
       const pts = filtered.map((p) => [p.lat, p.lon] as [number, number]);
-      // If first observed point looks like a takeoff (low + near a known field),
-      // prepend the airfield position so the trail visually starts at departure.
       const first = filtered[0];
       const dep = first.altFt <= 1500 ? nearestAirfield(first.lat, first.lon, 2.5) : null;
       if (dep) pts.unshift([dep.lat, dep.lon]);
-      const colour = a.isOwnFleet ? "#38bdf8"
-        : a.type === "glider" ? "#a3e635"
-        : a.type === "helicopter" ? "#fb923c"
+      const colour = meta.isOwnFleet ? "#38bdf8"
+        : meta.type === "glider" ? "#a3e635"
+        : meta.type === "helicopter" ? "#fb923c"
         : "#f8fafc";
-      const isSelected = selectedId === a.id;
-      return { id: a.id, pts, colour, isOwn: a.isOwnFleet, isSelected };
-    }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean } => x !== null);
-  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId]);
+      out.push({ id, pts, colour, isOwn: meta.isOwnFleet, isSelected: selectedId === id });
+    }
+    return out;
+  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId, ownFleetOnly]);
 
   // Icon cache — only rebuild when the actual silhouette/label state changes.
   // Altitude and heading are deliberately excluded to prevent Leaflet from
