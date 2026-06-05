@@ -314,6 +314,7 @@ function MapPage() {
     const seen = new Set<string>();
     for (const a of aircraft) {
       if (a.isStale) continue;
+      if (a.isOwnFleet) continue; // never alert on our own fleet
       // Haversine distance in nm
       const toRad = (d: number) => (d * Math.PI) / 180;
       const dLat = toRad(a.lat - alat);
