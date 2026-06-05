@@ -777,7 +777,7 @@ function MapPage() {
           {fetchError
             ? <span style={{ color: "#f87171" }}>⚠ {fetchError}</span>
             : <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#4ade80", marginRight: 6, boxShadow: "0 0 6px #4ade80", animation: "pulse 1.5s ease-in-out infinite" }} />LIVE · {lastUpdate ? lastUpdate.toLocaleTimeString("en-GB") : "connecting…"}</span>}
-          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 0.5s refresh</div>
+          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 1.5s refresh</div>
         </div>
       </div>
     </div>
