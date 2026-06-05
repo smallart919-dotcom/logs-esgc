@@ -580,16 +580,7 @@ function MapPage() {
         ])}
 
 
-        {visible.map((a) => {
-          const trail = trailsRef.current.get(a.id);
-          const start = trail && trail.length ? trail[0] : null;
-          // Only call it a "departure" if first trail point is low (likely
-          // on-airfield/just-after-takeoff) AND within 2.5nm of a known field.
-          // Otherwise we just saw the aircraft mid-flight — show "first seen".
-          const dep = start && start.altFt <= 1500 ? nearestAirfield(start.lat, start.lon, 2.5) : null;
-          const firstSeenAirfield = !dep && start ? nearestAirfield(start.lat, start.lon, 8) : null;
-          const photo = photoCache.get(a.id) ?? null;
-          return (
+        {visible.map((a) => (
           <Marker
             key={a.id}
             position={[a.lat, a.lon]}
@@ -599,8 +590,8 @@ function MapPage() {
               click: () => setSelectedId(a.id),
             }}
           />
-          );
-        })}
+        ))}
+
 
         <FollowSelected selectedId={selectedId} aircraft={visible} />
 
