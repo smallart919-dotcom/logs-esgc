@@ -88,7 +88,7 @@ function MapPage() {
   const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
-  const inboundRef = useRef<Map<string, number>>(new Map());
+  const [panelOpen, setPanelOpen] = useState(false);
   // Per-aircraft trail history (full session, capped to last 2 hours)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const failCountRef = useRef(0);
