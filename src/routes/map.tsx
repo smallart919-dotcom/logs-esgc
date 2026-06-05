@@ -693,21 +693,22 @@ function MapPage() {
           </div>
 
           {([
-            ["Airspace overlay", showAirspace, setShowAirspace],
-            ["Show trails", showTrails, setShowTrails],
-            ["Own fleet only", ownFleetOnly, setOwnFleetOnly],
-            ["Hide stale (>60s)", hideStale, setHideStale],
-            [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled],
-            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef); }],
-          ] as [string, boolean, (v: boolean) => void][]).map(([label, state, setter]) => (
-            <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "5px" }}>
+            ["Airspace overlay", showAirspace, setShowAirspace, true],
+            ["Show trails", showTrails, setShowTrails, true],
+            ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
+            ["Hide stale (>60s)", hideStale, setHideStale, true],
+            [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled, true],
+            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef); }, isOffice],
+          ] as [string, boolean, (v: boolean) => void, boolean][]).map(([label, state, setter, enabled]) => (
+            <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: enabled ? "pointer" : "not-allowed", marginBottom: "5px", opacity: enabled ? 1 : 0.5 }}>
               <input
                 type="checkbox"
                 checked={state}
+                disabled={!enabled}
                 onChange={(e) => setter(e.target.checked)}
                 style={{ accentColor: "#38bdf8", width: 15, height: 15 }}
               />
-              {label}
+              {label}{!enabled && label.startsWith("Audio") ? " (office only)" : ""}
             </label>
           ))}
           {notifyEnabled && (
