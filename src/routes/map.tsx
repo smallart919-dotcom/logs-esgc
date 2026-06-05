@@ -80,6 +80,7 @@ function MapPage() {
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
   const [audioChime, setAudioChime] = useState(true);
+  const [chimeVolume, setChimeVolume] = useState(0.9);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
   const [trailsTick, setTrailsTick] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -329,7 +330,7 @@ function MapPage() {
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
             try { new Notification("Aircraft near Ringmer", { body: msg, tag: a.id }); } catch { /* noop */ }
           }
-          if (audioChime) playChime(audioCtxRef);
+          if (audioChime) playChime(audioCtxRef, chimeVolume);
         }
         insideZoneRef.current.set(a.id, nowSec);
       }
@@ -698,7 +699,7 @@ function MapPage() {
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
             ["Hide stale (>60s)", hideStale, setHideStale, true],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled, true],
-            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef); }, isOffice],
+            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef, chimeVolume); }, isOffice],
           ] as [string, boolean, (v: boolean) => void, boolean][]).map(([label, state, setter, enabled]) => (
             <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: enabled ? "pointer" : "not-allowed", marginBottom: "5px", opacity: enabled ? 1 : 0.5 }}>
               <input
@@ -711,6 +712,29 @@ function MapPage() {
               {label}{!enabled && label.startsWith("Audio") ? " (office only)" : ""}
             </label>
           ))}
+          {isOffice && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", marginBottom: "4px" }}>
+              <button
+                type="button"
+                onClick={() => playChime(audioCtxRef, chimeVolume)}
+                style={{ background: "rgba(56,189,248,0.15)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.4)", borderRadius: "4px", padding: "3px 8px", fontSize: "10px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                title="Preview chime"
+              >
+                ▶ Preview
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={chimeVolume}
+                onChange={(e) => setChimeVolume(parseFloat(e.target.value))}
+                style={{ flex: 1, accentColor: "#38bdf8" }}
+                aria-label="Chime volume"
+              />
+              <span style={{ fontSize: "11px", width: "32px", textAlign: "right" }}>{Math.round(chimeVolume * 100)}%</span>
+            </div>
+          )}
           {notifyEnabled && (
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
               <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>Radius</span>
@@ -801,7 +825,7 @@ function FollowSelected({ selectedId, aircraft }: { selectedId: string | null; a
 }
 
 /** Silky-smooth proximity chime: gentle descending two-tone via WebAudio. */
-function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
+function playChime(ctxRef: React.MutableRefObject<AudioContext | null>, volume = 0.9) {
   try {
     if (typeof window === "undefined") return;
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -813,7 +837,7 @@ function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
 
     // Master bus with gentle low-pass for warmth
     const master = ctx.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = Math.max(0, Math.min(1, volume));
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
     lp.frequency.value = 2400;
