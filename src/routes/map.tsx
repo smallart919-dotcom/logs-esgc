@@ -80,6 +80,7 @@ function MapPage() {
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
   const [audioChime, setAudioChime] = useState(true);
+  const [chimeVolume, setChimeVolume] = useState(0.9);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
   const [trailsTick, setTrailsTick] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
