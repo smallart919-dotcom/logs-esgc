@@ -814,7 +814,7 @@ function playChime(ctxRef: React.MutableRefObject<AudioContext | null>, volume =
 
     // Master bus with gentle low-pass for warmth
     const master = ctx.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = Math.max(0, Math.min(1, volume));
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
     lp.frequency.value = 2400;
