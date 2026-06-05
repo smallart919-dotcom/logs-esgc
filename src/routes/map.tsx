@@ -699,7 +699,7 @@ function MapPage() {
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
             ["Hide stale (>60s)", hideStale, setHideStale, true],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled, true],
-            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef); }, isOffice],
+            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef, chimeVolume); }, isOffice],
           ] as [string, boolean, (v: boolean) => void, boolean][]).map(([label, state, setter, enabled]) => (
             <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: enabled ? "pointer" : "not-allowed", marginBottom: "5px", opacity: enabled ? 1 : 0.5 }}>
               <input
@@ -712,6 +712,29 @@ function MapPage() {
               {label}{!enabled && label.startsWith("Audio") ? " (office only)" : ""}
             </label>
           ))}
+          {isOffice && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", marginBottom: "4px" }}>
+              <button
+                type="button"
+                onClick={() => playChime(audioCtxRef, chimeVolume)}
+                style={{ background: "rgba(56,189,248,0.15)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.4)", borderRadius: "4px", padding: "3px 8px", fontSize: "10px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                title="Preview chime"
+              >
+                ▶ Preview
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={chimeVolume}
+                onChange={(e) => setChimeVolume(parseFloat(e.target.value))}
+                style={{ flex: 1, accentColor: "#38bdf8" }}
+                aria-label="Chime volume"
+              />
+              <span style={{ fontSize: "11px", width: "32px", textAlign: "right" }}>{Math.round(chimeVolume * 100)}%</span>
+            </div>
+          )}
           {notifyEnabled && (
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
               <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>Radius</span>
