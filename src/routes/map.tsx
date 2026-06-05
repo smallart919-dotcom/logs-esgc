@@ -869,7 +869,6 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
     : poweredShape;
 
   const label = (a.reg || a.id || "").toString().toUpperCase().slice(0, 8);
-  const altLine = `${a.altFt.toLocaleString()}ft`;
   const ringHtml = isOwn
     ? `<div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid #38bdf8;box-shadow:0 0 14px #38bdf8aa;animation:ping 2s ease-out infinite"></div>`
     : "";
