@@ -405,26 +405,54 @@ function MapPage() {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  // Replay: when offset != 0, derive display positions from trail history
+  // Smooth interpolation tick — between data fetches we extrapolate positions
+  // from each aircraft's last known speed/course so markers glide instead of
+  // jumping (FR24-style). Runs at ~10fps when visible.
+  const [interpTick, setInterpTick] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    let last = 0;
+    const loop = (t: number) => {
+      if (t - last >= 100) { last = t; setInterpTick((n) => n + 1); }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Replay: when offset != 0, derive display positions from trail history.
+  // Live: extrapolate from last fix using speed + course.
   const isReplay = replayOffsetSec < 0;
   const replayTargetTs = Date.now() / 1000 + replayOffsetSec;
   const displayAircraft = useMemo<LiveAircraft[]>(() => {
-    if (!isReplay) return aircraft;
-    void trailsTick;
-    const out: LiveAircraft[] = [];
-    for (const a of aircraft) {
-      const arr = trailsRef.current.get(a.id);
-      if (!arr || !arr.length) continue;
-      // Find point closest to (but not after) replayTargetTs
-      let pick: TrailPoint | null = null;
-      for (let i = arr.length - 1; i >= 0; i--) {
-        if (arr[i].ts <= replayTargetTs) { pick = arr[i]; break; }
+    void trailsTick; void interpTick;
+    if (isReplay) {
+      const out: LiveAircraft[] = [];
+      for (const a of aircraft) {
+        const arr = trailsRef.current.get(a.id);
+        if (!arr || !arr.length) continue;
+        let pick: TrailPoint | null = null;
+        for (let i = arr.length - 1; i >= 0; i--) {
+          if (arr[i].ts <= replayTargetTs) { pick = arr[i]; break; }
+        }
+        if (!pick) continue;
+        out.push({ ...a, lat: pick.lat, lon: pick.lon, altFt: pick.altFt, course: pick.course, speedKph: pick.speedKph, ts: pick.ts, isStale: false });
       }
-      if (!pick) continue;
-      out.push({ ...a, lat: pick.lat, lon: pick.lon, altFt: pick.altFt, course: pick.course, speedKph: pick.speedKph, ts: pick.ts, isStale: false });
+      return out;
     }
-    return out;
-  }, [aircraft, isReplay, replayTargetTs, trailsTick]);
+    // Live: extrapolate forward from the last known fix.
+    const nowSec = Date.now() / 1000;
+    return aircraft.map((a) => {
+      if (a.isStale || a.speedKph < 5) return a;
+      const elapsed = Math.min(Math.max(0, nowSec - a.ts), 8); // cap 8s
+      if (elapsed < 0.05) return a;
+      const distM = (a.speedKph * 1000 / 3600) * elapsed;
+      const rad = (a.course * Math.PI) / 180;
+      const dLat = (distM * Math.cos(rad)) / 111320;
+      const dLon = (distM * Math.sin(rad)) / (111320 * Math.cos((a.lat * Math.PI) / 180));
+      return { ...a, lat: a.lat + dLat, lon: a.lon + dLon };
+    });
+  }, [aircraft, isReplay, replayTargetTs, trailsTick, interpTick]);
 
   const visible = (ownFleetOnly ? displayAircraft.filter((a) => a.isOwnFleet) : displayAircraft)
     .filter((a) => !hideStale || !a.isStale);
@@ -443,9 +471,10 @@ function MapPage() {
         : a.type === "glider" ? "#a3e635"
         : a.type === "helicopter" ? "#fb923c"
         : "#f8fafc";
-      return { id: a.id, pts, colour, isOwn: a.isOwnFleet };
-    }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean } => x !== null);
-  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs]);
+      const isSelected = selectedId === a.id;
+      return { id: a.id, pts, colour, isOwn: a.isOwnFleet, isSelected };
+    }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean } => x !== null);
+  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId]);
 
   const countLive = (pred: (a: LiveAircraft) => boolean) =>
     aircraft.filter((a) => !a.isStale && pred(a)).length;
@@ -497,12 +526,19 @@ function MapPage() {
           </Popup>
         </Marker>
 
-        {/* Trails — from where each aircraft was first seen */}
+        {/* Trails — from where each aircraft was first seen.
+            Selected aircraft trail is rendered thicker + brighter (FR24-style). */}
         {trailPolylines.flatMap((t) => [
           <Polyline
             key={`trail-${t.id}`}
             positions={t.pts}
-            pathOptions={{ color: t.colour, weight: t.isOwn ? 3 : 2, opacity: 0.55, lineCap: "round", lineJoin: "round" }}
+            pathOptions={{
+              color: t.colour,
+              weight: t.isSelected ? 4 : t.isOwn ? 3 : 2,
+              opacity: t.isSelected ? 0.95 : 0.55,
+              lineCap: "round",
+              lineJoin: "round",
+            }}
           />,
           <Marker
             key={`start-${t.id}`}
@@ -510,9 +546,9 @@ function MapPage() {
             interactive={false}
             icon={L.divIcon({
               className: "",
-              html: `<div style="width:10px;height:10px;border-radius:50%;background:${t.colour};border:2px solid #0b0f19;box-shadow:0 0 6px ${t.colour}aa"></div>`,
-              iconSize: [10, 10],
-              iconAnchor: [5, 5],
+              html: `<div style="width:${t.isSelected ? 12 : 10}px;height:${t.isSelected ? 12 : 10}px;border-radius:50%;background:${t.colour};border:2px solid #0b0f19;box-shadow:0 0 ${t.isSelected ? 10 : 6}px ${t.colour}${t.isSelected ? "" : "aa"}"></div>`,
+              iconSize: [t.isSelected ? 12 : 10, t.isSelected ? 12 : 10],
+              iconAnchor: [t.isSelected ? 6 : 5, t.isSelected ? 6 : 5],
             })}
           />,
         ])}
@@ -786,11 +822,15 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
 
   const stroke = "#0b0f19";
 
-  // Top-down silhouettes (north-up; rotated by heading). Generic shapes.
-  // Glider: very long thin wings, narrow fuselage, small T-tail.
+  // Top-down silhouettes (north-up; rotated by heading), FR24-style.
+  // Glider: extremely long slender wings (15m+ span), pencil fuselage, T-tail.
   const gliderShape = `
-    <path d="M24 4 C25.6 4 26.4 6 26.6 10 L27 22 L46 25 L46 27 L27 26 L27 36 L31 38 L31 40 L24 39 L17 40 L17 38 L21 36 L21 26 L2 27 L2 25 L21 22 L21.4 10 C21.6 6 22.4 4 24 4 Z"
-      fill="${colour}" stroke="${stroke}" stroke-width="1.2" stroke-linejoin="round" opacity="${opacity}"/>
+    <ellipse cx="24" cy="24" rx="1.6" ry="17" fill="${colour}" stroke="${stroke}" stroke-width="0.7" opacity="${opacity}"/>
+    <path d="M24 22.5 L46.5 24 L46.5 25.4 L24 25.4 L1.5 25.4 L1.5 24 Z"
+      fill="${colour}" stroke="${stroke}" stroke-width="0.7" stroke-linejoin="round" opacity="${opacity}"/>
+    <path d="M19 39.5 L24 38.4 L29 39.5 L29 40.7 L24 39.9 L19 40.7 Z"
+      fill="${colour}" stroke="${stroke}" stroke-width="0.6" opacity="${opacity}"/>
+    <rect x="23.2" y="38.4" width="1.6" height="2" fill="${stroke}" opacity="${opacity * 0.7}"/>
   `;
   // Powered: classic airliner top-down — swept wings, tail, engines.
   const poweredShape = `
