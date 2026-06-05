@@ -79,7 +79,7 @@ function MapPage() {
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
-  const [audioChime, setAudioChime] = useState(false);
+  const [audioChime, setAudioChime] = useState(true);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
   const [trailsTick, setTrailsTick] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -693,21 +693,22 @@ function MapPage() {
           </div>
 
           {([
-            ["Airspace overlay", showAirspace, setShowAirspace],
-            ["Show trails", showTrails, setShowTrails],
-            ["Own fleet only", ownFleetOnly, setOwnFleetOnly],
-            ["Hide stale (>60s)", hideStale, setHideStale],
-            [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled],
-            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef); }],
-          ] as [string, boolean, (v: boolean) => void][]).map(([label, state, setter]) => (
-            <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "5px" }}>
+            ["Airspace overlay", showAirspace, setShowAirspace, true],
+            ["Show trails", showTrails, setShowTrails, true],
+            ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
+            ["Hide stale (>60s)", hideStale, setHideStale, true],
+            [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled, true],
+            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef); }, isOffice],
+          ] as [string, boolean, (v: boolean) => void, boolean][]).map(([label, state, setter, enabled]) => (
+            <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: enabled ? "pointer" : "not-allowed", marginBottom: "5px", opacity: enabled ? 1 : 0.5 }}>
               <input
                 type="checkbox"
                 checked={state}
+                disabled={!enabled}
                 onChange={(e) => setter(e.target.checked)}
                 style={{ accentColor: "#38bdf8", width: 15, height: 15 }}
               />
-              {label}
+              {label}{!enabled && label.startsWith("Audio") ? " (office only)" : ""}
             </label>
           ))}
           {notifyEnabled && (
@@ -799,7 +800,7 @@ function FollowSelected({ selectedId, aircraft }: { selectedId: string | null; a
   return null;
 }
 
-/** Short two-tone chime via WebAudio. Lazily creates a shared AudioContext. */
+/** Silky-smooth proximity chime: gentle descending two-tone via WebAudio. */
 function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
   try {
     if (typeof window === "undefined") return;
@@ -809,20 +810,42 @@ function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
     const ctx = ctxRef.current;
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
     const now = ctx.currentTime;
-    const beep = (freq: number, start: number, dur: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, now + start);
-      gain.gain.linearRampToValueAtTime(0.25, now + start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(now + start);
-      osc.stop(now + start + dur + 0.05);
+
+    // Master bus with gentle low-pass for warmth
+    const master = ctx.createGain();
+    master.gain.value = 0.9;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 2400;
+    lp.Q.value = 0.4;
+    master.connect(lp).connect(ctx.destination);
+
+    const tone = (freq: number, start: number, dur: number, peak: number) => {
+      // Sine fundamental + soft triangle harmonic for body
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = "sine";
+      osc2.type = "triangle";
+      osc1.frequency.value = freq;
+      osc2.frequency.value = freq * 2;
+      const g = ctx.createGain();
+      const h = ctx.createGain();
+      h.gain.value = 0.08;
+      g.gain.setValueAtTime(0.0001, now + start);
+      g.gain.exponentialRampToValueAtTime(peak, now + start + 0.08); // slow attack
+      g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur); // long tail
+      osc1.connect(g);
+      osc2.connect(h).connect(g);
+      g.connect(master);
+      osc1.start(now + start);
+      osc2.start(now + start);
+      osc1.stop(now + start + dur + 0.1);
+      osc2.stop(now + start + dur + 0.1);
     };
-    beep(880, 0, 0.18);
-    beep(1320, 0.18, 0.22);
+
+    // Major sixth descent (E5 → C5) — calm, pleasant, non-alarming
+    tone(659.25, 0,    1.1, 0.18);
+    tone(523.25, 0.22, 1.3, 0.16);
   } catch { /* noop */ }
 }
 
