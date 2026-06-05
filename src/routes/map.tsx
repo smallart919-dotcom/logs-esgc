@@ -457,6 +457,18 @@ function MapPage() {
   const visible = (ownFleetOnly ? displayAircraft.filter((a) => a.isOwnFleet) : displayAircraft)
     .filter((a) => !hideStale || !a.isStale);
 
+  // Keep marker DOM stable: heading changes are applied directly to the
+  // existing SVG wrapper instead of rebuilding Leaflet divIcons.
+  useEffect(() => {
+    const courses = new Map(visible.map((a) => [a.id, normalizeCourse(a.course)]));
+    document.querySelectorAll<HTMLElement>("[data-aircraft-rotor]").forEach((el) => {
+      const id = el.dataset.aircraftId;
+      const course = id ? courses.get(id) : undefined;
+      if (course === undefined) return;
+      el.style.transform = `rotate(${course}deg)`;
+    });
+  }, [visible]);
+
   // Build trail polylines for visible aircraft
   const trailPolylines = useMemo(() => {
     if (!showTrails) return [];
@@ -476,16 +488,15 @@ function MapPage() {
     }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean } => x !== null);
   }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId]);
 
-  // Icon cache — only rebuild when visual fields change (course/type/reg/alt/
-  // ownFleet/stale). Keeps markers from flashing on every 100ms interp tick.
+  // Icon cache — only rebuild when the actual silhouette/label state changes.
+  // Altitude and heading are deliberately excluded to prevent Leaflet from
+  // replacing marker DOM during live updates.
   const iconCacheRef = useRef<Map<string, { sig: string; icon: L.DivIcon }>>(new Map());
   const getIcon = useCallback((a: LiveAircraft): L.DivIcon => {
-    // Quantize course to 3° so tiny heading wobbles don't rebuild the icon.
-    const courseQ = Math.round(a.course / 5) * 5;
-    const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
+    const sig = `${a.type}|${a.reg || a.id}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
     const hit = iconCacheRef.current.get(a.id);
     if (hit && hit.sig === sig) return hit.icon;
-    const icon = aircraftIcon({ ...a, course: courseQ });
+    const icon = aircraftIcon(a);
     iconCacheRef.current.set(a.id, { sig, icon });
     return icon;
   }, []);
