@@ -91,8 +91,11 @@ function MapPage() {
   const insideZoneRef = useRef<Map<string, number>>(new Map());
   const [panelOpen, setPanelOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  // Per-aircraft trail history (full session, capped to last 2 hours)
+  // Per-aircraft trail history (full session, kept permanently like FR24)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
+  // Last-known meta per id so we can keep drawing trails after the aircraft
+  // drops off the live feed (FR24-style persistence).
+  const trailMetaRef = useRef<Map<string, { type: AircraftType; isOwnFleet: boolean; reg: string }>>(new Map());
   const failCountRef = useRef(0);
 
   useEffect(() => {
@@ -259,24 +262,16 @@ function MapPage() {
       return next.filter((a) => a.ts > cutoffTs);
     });
 
-    // Append trail points (full session — capped to last 2 hours)
-    const cutoff = nowSec - 7200;
+    // Append trail points — kept permanently for the session (FR24-style).
     for (const a of merged) {
       if (a.isStale) continue;
       const arr = trailsRef.current.get(a.id) ?? [];
       const last = arr[arr.length - 1];
-      // Only append if position has actually moved or 5s elapsed
       if (!last || last.ts !== a.ts) {
         arr.push({ lat: a.lat, lon: a.lon, altFt: a.altFt, ts: a.ts, course: a.course, speedKph: a.speedKph });
       }
-      // Trim by age
-      while (arr.length && arr[0].ts < cutoff) arr.shift();
       trailsRef.current.set(a.id, arr);
-    }
-    // GC ids not seen for >30 min
-    for (const id of Array.from(trailsRef.current.keys())) {
-      const arr = trailsRef.current.get(id)!;
-      if (!arr.length || nowSec - arr[arr.length - 1].ts > 1800) trailsRef.current.delete(id);
+      trailMetaRef.current.set(a.id, { type: a.type, isOwnFleet: a.isOwnFleet, reg: a.reg });
     }
     setTrailsTick((t) => t + 1);
   }, [flarmSet, regSet]);
@@ -314,6 +309,7 @@ function MapPage() {
     const seen = new Set<string>();
     for (const a of aircraft) {
       if (a.isStale) continue;
+      if (a.isOwnFleet) continue; // never alert on our own fleet
       // Haversine distance in nm
       const toRad = (d: number) => (d * Math.PI) / 180;
       const dLat = toRad(a.lat - alat);
@@ -464,30 +460,33 @@ function MapPage() {
     });
   }, [visible]);
 
-  // Build trail polylines for visible aircraft
+  // Build trail polylines — iterate trail history directly so trails persist
+  // even after an aircraft drops off the live feed (FR24-style).
   const trailPolylines = useMemo(() => {
     if (!showTrails) return [];
     void trailsTick;
     const cutoff = isReplay ? replayTargetTs : Infinity;
-    return visible.map((a) => {
-      const arr = trailsRef.current.get(a.id);
-      if (!arr || arr.length < 2) return null;
+    const visibleIds = new Set(visible.map((a) => a.id));
+    const out: { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean }[] = [];
+    for (const [id, arr] of trailsRef.current.entries()) {
+      if (!arr || arr.length < 2) continue;
+      const meta = trailMetaRef.current.get(id);
+      if (!meta) continue;
+      if (ownFleetOnly && !meta.isOwnFleet && !visibleIds.has(id)) continue;
       const filtered = arr.filter((p) => p.ts <= cutoff);
-      if (filtered.length < 2) return null;
+      if (filtered.length < 2) continue;
       const pts = filtered.map((p) => [p.lat, p.lon] as [number, number]);
-      // If first observed point looks like a takeoff (low + near a known field),
-      // prepend the airfield position so the trail visually starts at departure.
       const first = filtered[0];
       const dep = first.altFt <= 1500 ? nearestAirfield(first.lat, first.lon, 2.5) : null;
       if (dep) pts.unshift([dep.lat, dep.lon]);
-      const colour = a.isOwnFleet ? "#38bdf8"
-        : a.type === "glider" ? "#a3e635"
-        : a.type === "helicopter" ? "#fb923c"
+      const colour = meta.isOwnFleet ? "#38bdf8"
+        : meta.type === "glider" ? "#a3e635"
+        : meta.type === "helicopter" ? "#fb923c"
         : "#f8fafc";
-      const isSelected = selectedId === a.id;
-      return { id: a.id, pts, colour, isOwn: a.isOwnFleet, isSelected };
-    }).filter((x): x is { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean } => x !== null);
-  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId]);
+      out.push({ id, pts, colour, isOwn: meta.isOwnFleet, isSelected: selectedId === id });
+    }
+    return out;
+  }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId, ownFleetOnly]);
 
   // Icon cache — only rebuild when the actual silhouette/label state changes.
   // Altitude and heading are deliberately excluded to prevent Leaflet from
