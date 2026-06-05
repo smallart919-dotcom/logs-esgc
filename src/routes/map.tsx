@@ -580,16 +580,7 @@ function MapPage() {
         ])}
 
 
-        {visible.map((a) => {
-          const trail = trailsRef.current.get(a.id);
-          const start = trail && trail.length ? trail[0] : null;
-          // Only call it a "departure" if first trail point is low (likely
-          // on-airfield/just-after-takeoff) AND within 2.5nm of a known field.
-          // Otherwise we just saw the aircraft mid-flight — show "first seen".
-          const dep = start && start.altFt <= 1500 ? nearestAirfield(start.lat, start.lon, 2.5) : null;
-          const firstSeenAirfield = !dep && start ? nearestAirfield(start.lat, start.lon, 8) : null;
-          const photo = photoCache.get(a.id) ?? null;
-          return (
+        {visible.map((a) => (
           <Marker
             key={a.id}
             position={[a.lat, a.lon]}
@@ -597,56 +588,89 @@ function MapPage() {
             zIndexOffset={a.isOwnFleet ? 1000 : a.type === "glider" ? 500 : 0}
             eventHandlers={{
               click: () => setSelectedId(a.id),
-              popupclose: () => setSelectedId((cur) => (cur === a.id ? null : cur)),
             }}
-          >
-            <Popup>
-              <div style={{ fontFamily: "system-ui,sans-serif", fontSize: "13px", minWidth: "220px" }}>
-                <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  {a.reg || a.id || "Unknown"}
-                  {a.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: "11px" }}>⚡ ESGC</span>}
-                  {selectedId === a.id && <span style={{ color: "#4ade80", fontSize: "10px", marginLeft: "auto" }}>● TRACKING</span>}
-                </div>
-                {photo && (
-                  <a href={photo.link} target="_blank" rel="noreferrer noopener" style={{ display: "block", marginBottom: "6px" }}>
-                    <img src={photo.url} alt={a.reg || a.id} style={{ width: "100%", height: "auto", borderRadius: "6px", display: "block" }} />
-                    {photo.photographer && (
-                      <div style={{ fontSize: "9px", color: "#9ca3af", textAlign: "right", marginTop: "2px" }}>© {photo.photographer} · planespotters.net</div>
-                    )}
-                  </a>
-                )}
-                <div style={{ color: "#6b7280", lineHeight: 1.7, fontSize: "12px" }}>
-                  <div>Alt: <b>{a.altFt.toLocaleString()}ft</b> ({a.altM}m)</div>
-                  <div>Speed: <b>{a.speedKph} km/h</b> · {Math.round(a.speedKph / 1.852)} kts</div>
-                  <div>{a.climbMs >= 0 ? "↑" : "↓"} <b>{Math.abs(a.climbMs).toFixed(1)} m/s</b> · Course: {Math.round(a.course)}°</div>
-                  {a.category && <div>Type: {a.category}</div>}
-                  {a.squawk && <div>Squawk: {a.squawk}</div>}
-                  {dep ? (
-                    <div style={{ marginTop: "2px" }}>
-                      Departed: <b style={{ color: "#38bdf8" }}>{dep.icao ? `${dep.icao} ` : ""}{dep.name}</b>
-                    </div>
-                  ) : firstSeenAirfield ? (
-                    <div style={{ marginTop: "2px", color: "#9ca3af" }}>
-                      First seen near: {firstSeenAirfield.icao ? `${firstSeenAirfield.icao} ` : ""}{firstSeenAirfield.name} @ {start!.altFt.toLocaleString()}ft
-                    </div>
-                  ) : start ? (
-                    <div style={{ marginTop: "2px", color: "#9ca3af" }}>
-                      First seen: {start.lat.toFixed(2)}°,{start.lon.toFixed(2)}° @ {start.altFt.toLocaleString()}ft
-                    </div>
-                  ) : null}
-                  <div style={{ marginTop: "4px", color: "#9ca3af" }}>
-                    Source: {a.source === "ogn" ? "OGN/FLARM" : "ADS-B"}<br />
-                    {a.isStale ? "⚠ Position may be stale" : `Updated ${Math.max(0, Math.round(Date.now() / 1000 - a.ts))}s ago`}
-                  </div>
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-          );
-        })}
+          />
+        ))}
+
+
         <FollowSelected selectedId={selectedId} aircraft={visible} />
 
       </MapContainer>
+
+      {/* Aircraft detail side panel (FR24-style) */}
+      {(() => {
+        const sel = selectedId ? visible.find((a) => a.id === selectedId) : null;
+        if (!sel) return null;
+        const trail = trailsRef.current.get(sel.id);
+        const start = trail && trail.length ? trail[0] : null;
+        const dep = start && start.altFt <= 1500 ? nearestAirfield(start.lat, start.lon, 2.5) : null;
+        const firstSeenAirfield = !dep && start ? nearestAirfield(start.lat, start.lon, 8) : null;
+        const photo = photoCache.get(sel.id) ?? null;
+        return (
+          <div
+            className="absolute z-[1002] left-0 right-0 bottom-0 sm:right-auto sm:bottom-auto sm:top-4 sm:left-4"
+            style={{
+              background: "rgba(0,0,0,0.92)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: "12px",
+              color: "#f1f5f9",
+              fontFamily: "system-ui,sans-serif",
+              fontSize: "13px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+              width: "min(320px, 100vw)",
+              maxHeight: "60vh",
+              overflowY: "auto",
+              margin: "0 auto",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)", position: "sticky", top: 0, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)" }}>
+              <div style={{ fontWeight: 700, fontSize: "16px", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {sel.reg || sel.id || "Unknown"}
+                {sel.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: "11px", marginLeft: "6px" }}>⚡ ESGC</span>}
+              </div>
+              <span style={{ color: "#4ade80", fontSize: "10px" }}>● TRACKING</span>
+              <button
+                onClick={() => setSelectedId(null)}
+                aria-label="Close"
+                style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#f1f5f9", borderRadius: "6px", width: "28px", height: "28px", cursor: "pointer", fontSize: "16px", lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ padding: "12px 14px" }}>
+              {photo && (
+                <a href={photo.link} target="_blank" rel="noreferrer noopener" style={{ display: "block", marginBottom: "10px" }}>
+                  <img src={photo.url} alt={sel.reg || sel.id} style={{ width: "100%", height: "auto", borderRadius: "8px", display: "block" }} />
+                  {photo.photographer && (
+                    <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textAlign: "right", marginTop: "2px" }}>© {photo.photographer} · planespotters.net</div>
+                  )}
+                </a>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 12px", marginBottom: "10px" }}>
+                <div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Altitude</div><b>{sel.altFt.toLocaleString()}ft</b> <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "11px" }}>({sel.altM}m)</span></div>
+                <div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Speed</div><b>{Math.round(sel.speedKph / 1.852)}kts</b> <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "11px" }}>({sel.speedKph}km/h)</span></div>
+                <div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Vertical</div><b>{sel.climbMs >= 0 ? "↑" : "↓"} {Math.abs(sel.climbMs).toFixed(1)}m/s</b></div>
+                <div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Course</div><b>{Math.round(sel.course)}°</b></div>
+                {sel.category && (<div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Type</div><b>{sel.category}</b></div>)}
+                {sel.squawk && (<div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Squawk</div><b>{sel.squawk}</b></div>)}
+              </div>
+              {dep ? (
+                <div style={{ marginBottom: "6px" }}>Departed: <b style={{ color: "#38bdf8" }}>{dep.icao ? `${dep.icao} ` : ""}{dep.name}</b></div>
+              ) : firstSeenAirfield ? (
+                <div style={{ marginBottom: "6px", color: "rgba(255,255,255,0.7)" }}>First seen near: {firstSeenAirfield.icao ? `${firstSeenAirfield.icao} ` : ""}{firstSeenAirfield.name} @ {start!.altFt.toLocaleString()}ft</div>
+              ) : start ? (
+                <div style={{ marginBottom: "6px", color: "rgba(255,255,255,0.7)" }}>First seen: {start.lat.toFixed(2)}°,{start.lon.toFixed(2)}° @ {start.altFt.toLocaleString()}ft</div>
+              ) : null}
+              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)" }}>
+                Source: {sel.source === "ogn" ? "OGN/FLARM" : "ADS-B"} · {sel.isStale ? "⚠ stale" : `Updated ${Math.max(0, Math.round(Date.now() / 1000 - sel.ts))}s ago`}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+
 
 
       {/* Control panel — collapsible toggle for mobile */}
