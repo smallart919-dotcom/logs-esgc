@@ -802,7 +802,7 @@ function FollowSelected({ selectedId, aircraft }: { selectedId: string | null; a
 }
 
 /** Silky-smooth proximity chime: gentle descending two-tone via WebAudio. */
-function playChime(ctxRef: React.MutableRefObject<AudioContext | null>) {
+function playChime(ctxRef: React.MutableRefObject<AudioContext | null>, volume = 0.9) {
   try {
     if (typeof window === "undefined") return;
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
