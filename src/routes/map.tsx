@@ -581,7 +581,7 @@ function MapPage() {
           <Marker
             key={a.id}
             position={[a.lat, a.lon]}
-            icon={aircraftIcon(a)}
+            icon={getIcon(a)}
             zIndexOffset={a.isOwnFleet ? 1000 : a.type === "glider" ? 500 : 0}
             eventHandlers={{
               click: () => setSelectedId(a.id),
