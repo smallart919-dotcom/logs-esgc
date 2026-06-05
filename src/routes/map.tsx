@@ -597,53 +597,11 @@ function MapPage() {
             zIndexOffset={a.isOwnFleet ? 1000 : a.type === "glider" ? 500 : 0}
             eventHandlers={{
               click: () => setSelectedId(a.id),
-              popupclose: () => setSelectedId((cur) => (cur === a.id ? null : cur)),
             }}
-          >
-            <Popup>
-              <div style={{ fontFamily: "system-ui,sans-serif", fontSize: "13px", minWidth: "220px" }}>
-                <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  {a.reg || a.id || "Unknown"}
-                  {a.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: "11px" }}>⚡ ESGC</span>}
-                  {selectedId === a.id && <span style={{ color: "#4ade80", fontSize: "10px", marginLeft: "auto" }}>● TRACKING</span>}
-                </div>
-                {photo && (
-                  <a href={photo.link} target="_blank" rel="noreferrer noopener" style={{ display: "block", marginBottom: "6px" }}>
-                    <img src={photo.url} alt={a.reg || a.id} style={{ width: "100%", height: "auto", borderRadius: "6px", display: "block" }} />
-                    {photo.photographer && (
-                      <div style={{ fontSize: "9px", color: "#9ca3af", textAlign: "right", marginTop: "2px" }}>© {photo.photographer} · planespotters.net</div>
-                    )}
-                  </a>
-                )}
-                <div style={{ color: "#6b7280", lineHeight: 1.7, fontSize: "12px" }}>
-                  <div>Alt: <b>{a.altFt.toLocaleString()}ft</b> ({a.altM}m)</div>
-                  <div>Speed: <b>{a.speedKph} km/h</b> · {Math.round(a.speedKph / 1.852)} kts</div>
-                  <div>{a.climbMs >= 0 ? "↑" : "↓"} <b>{Math.abs(a.climbMs).toFixed(1)} m/s</b> · Course: {Math.round(a.course)}°</div>
-                  {a.category && <div>Type: {a.category}</div>}
-                  {a.squawk && <div>Squawk: {a.squawk}</div>}
-                  {dep ? (
-                    <div style={{ marginTop: "2px" }}>
-                      Departed: <b style={{ color: "#38bdf8" }}>{dep.icao ? `${dep.icao} ` : ""}{dep.name}</b>
-                    </div>
-                  ) : firstSeenAirfield ? (
-                    <div style={{ marginTop: "2px", color: "#9ca3af" }}>
-                      First seen near: {firstSeenAirfield.icao ? `${firstSeenAirfield.icao} ` : ""}{firstSeenAirfield.name} @ {start!.altFt.toLocaleString()}ft
-                    </div>
-                  ) : start ? (
-                    <div style={{ marginTop: "2px", color: "#9ca3af" }}>
-                      First seen: {start.lat.toFixed(2)}°,{start.lon.toFixed(2)}° @ {start.altFt.toLocaleString()}ft
-                    </div>
-                  ) : null}
-                  <div style={{ marginTop: "4px", color: "#9ca3af" }}>
-                    Source: {a.source === "ogn" ? "OGN/FLARM" : "ADS-B"}<br />
-                    {a.isStale ? "⚠ Position may be stale" : `Updated ${Math.max(0, Math.round(Date.now() / 1000 - a.ts))}s ago`}
-                  </div>
-                </div>
-              </div>
-            </Popup>
-          </Marker>
+          />
           );
         })}
+
         <FollowSelected selectedId={selectedId} aircraft={visible} />
 
       </MapContainer>
