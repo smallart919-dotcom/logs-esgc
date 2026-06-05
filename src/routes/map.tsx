@@ -342,34 +342,7 @@ function MapPage() {
     }
   }, [aircraft, notifyEnabled, proximityNm, audioChime]);
 
-  // Inbound detection — aircraft tracking towards Ringmer at <15nm
-  useEffect(() => {
-    if (!notifyEnabled) return;
-    const [alat, alon] = AIRFIELD_LATLON;
-    const nowSec = Date.now() / 1000;
-    for (const a of aircraft) {
-      if (a.isStale || a.speedKph < 40 || a.altFt > 2200) continue;
-      const toRad = (d: number) => (d * Math.PI) / 180;
-      const dLat = toRad(a.lat - alat);
-      const dLon = toRad(a.lon - alon);
-      const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(alat)) * Math.cos(toRad(a.lat)) * Math.sin(dLon / 2) ** 2;
-      const distNm = (2 * 6371 * Math.asin(Math.sqrt(h))) / 1.852;
-      if (distNm > 15 || distNm < 2) continue;
-      // Bearing FROM aircraft TO airfield
-      const y = Math.sin(toRad(alon - a.lon)) * Math.cos(toRad(alat));
-      const x = Math.cos(toRad(a.lat)) * Math.sin(toRad(alat)) -
-        Math.sin(toRad(a.lat)) * Math.cos(toRad(alat)) * Math.cos(toRad(alon - a.lon));
-      const bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-      const diff = Math.abs(((a.course - bearing + 540) % 360) - 180);
-      if (diff < 30) {
-        const prev = inboundRef.current.get(a.id);
-        if (!prev || nowSec - prev > 600) {
-          toast(`🎯 Inbound to Ringmer`, { description: `${a.reg || a.id} · ${distNm.toFixed(1)}nm · ${a.altFt.toLocaleString()}ft` });
-          inboundRef.current.set(a.id, nowSec);
-        }
-      }
-    }
-  }, [aircraft, notifyEnabled]);
+  // Inbound alerts removed per user request.
 
   // Photo fetch — planespotters.net public API (CORS-enabled) for ADS-B hex IDs
   useEffect(() => {
