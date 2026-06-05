@@ -481,12 +481,11 @@ function MapPage() {
   const iconCacheRef = useRef<Map<string, { sig: string; icon: L.DivIcon }>>(new Map());
   const getIcon = useCallback((a: LiveAircraft): L.DivIcon => {
     // Quantize course to 3° so tiny heading wobbles don't rebuild the icon.
-    const courseQ = Math.round(a.course / 3) * 3;
-    const altQ = Math.round(a.altFt / 100) * 100;
-    const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${altQ}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
+    const courseQ = Math.round(a.course / 5) * 5;
+    const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
     const hit = iconCacheRef.current.get(a.id);
     if (hit && hit.sig === sig) return hit.icon;
-    const icon = aircraftIcon({ ...a, course: courseQ, altFt: altQ });
+    const icon = aircraftIcon({ ...a, course: courseQ });
     iconCacheRef.current.set(a.id, { sig, icon });
     return icon;
   }, []);
