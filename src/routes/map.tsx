@@ -786,11 +786,15 @@ function aircraftIcon(a: LiveAircraft): L.DivIcon {
 
   const stroke = "#0b0f19";
 
-  // Top-down silhouettes (north-up; rotated by heading). Generic shapes.
-  // Glider: very long thin wings, narrow fuselage, small T-tail.
+  // Top-down silhouettes (north-up; rotated by heading), FR24-style.
+  // Glider: extremely long slender wings (15m+ span), pencil fuselage, T-tail.
   const gliderShape = `
-    <path d="M24 4 C25.6 4 26.4 6 26.6 10 L27 22 L46 25 L46 27 L27 26 L27 36 L31 38 L31 40 L24 39 L17 40 L17 38 L21 36 L21 26 L2 27 L2 25 L21 22 L21.4 10 C21.6 6 22.4 4 24 4 Z"
-      fill="${colour}" stroke="${stroke}" stroke-width="1.2" stroke-linejoin="round" opacity="${opacity}"/>
+    <ellipse cx="24" cy="24" rx="1.6" ry="17" fill="${colour}" stroke="${stroke}" stroke-width="0.7" opacity="${opacity}"/>
+    <path d="M24 22.5 L46.5 24 L46.5 25.4 L24 25.4 L1.5 25.4 L1.5 24 Z"
+      fill="${colour}" stroke="${stroke}" stroke-width="0.7" stroke-linejoin="round" opacity="${opacity}"/>
+    <path d="M19 39.5 L24 38.4 L29 39.5 L29 40.7 L24 39.9 L19 40.7 Z"
+      fill="${colour}" stroke="${stroke}" stroke-width="0.6" opacity="${opacity}"/>
+    <rect x="23.2" y="38.4" width="1.6" height="2" fill="${stroke}" opacity="${opacity * 0.7}"/>
   `;
   // Powered: classic airliner top-down — swept wings, tail, engines.
   const poweredShape = `
