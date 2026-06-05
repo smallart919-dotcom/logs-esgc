@@ -161,7 +161,7 @@ function MapPage() {
           category: String(a.model ?? ""),
           source: "ogn" as const,
           isOwnFleet: flarmSet.has(flarm) || regSet.has(normReg),
-          isStale: nowSec - ts > 60,
+          isStale: nowSec - ts > 70,
           ts,
           _kind: kind,
         } as LiveAircraft & { _kind: number };
