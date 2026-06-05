@@ -471,8 +471,14 @@ function MapPage() {
     return visible.map((a) => {
       const arr = trailsRef.current.get(a.id);
       if (!arr || arr.length < 2) return null;
-      const pts = arr.filter((p) => p.ts <= cutoff).map((p) => [p.lat, p.lon] as [number, number]);
-      if (pts.length < 2) return null;
+      const filtered = arr.filter((p) => p.ts <= cutoff);
+      if (filtered.length < 2) return null;
+      const pts = filtered.map((p) => [p.lat, p.lon] as [number, number]);
+      // If first observed point looks like a takeoff (low + near a known field),
+      // prepend the airfield position so the trail visually starts at departure.
+      const first = filtered[0];
+      const dep = first.altFt <= 1500 ? nearestAirfield(first.lat, first.lon, 2.5) : null;
+      if (dep) pts.unshift([dep.lat, dep.lon]);
       const colour = a.isOwnFleet ? "#38bdf8"
         : a.type === "glider" ? "#a3e635"
         : a.type === "helicopter" ? "#fb923c"
