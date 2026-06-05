@@ -192,7 +192,7 @@ function MapPage() {
         if (/^B1/.test(catU) || /GLIDER/.test(catU)) type = "glider";
         else if (/^A7/.test(catU) || /HELI|ROTOR/.test(catU)) type = "helicopter";
         return {
-          id: normReg || hex || `adsb-${lat.toFixed(3)}-${lon.toFixed(3)}`,
+          id: hex || normReg || `adsb-${lat.toFixed(3)}-${lon.toFixed(3)}`,
           lat,
           lon,
           altM: Math.round(altFt * 0.3048),
