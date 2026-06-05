@@ -262,24 +262,16 @@ function MapPage() {
       return next.filter((a) => a.ts > cutoffTs);
     });
 
-    // Append trail points (full session — capped to last 2 hours)
-    const cutoff = nowSec - 7200;
+    // Append trail points — kept permanently for the session (FR24-style).
     for (const a of merged) {
       if (a.isStale) continue;
       const arr = trailsRef.current.get(a.id) ?? [];
       const last = arr[arr.length - 1];
-      // Only append if position has actually moved or 5s elapsed
       if (!last || last.ts !== a.ts) {
         arr.push({ lat: a.lat, lon: a.lon, altFt: a.altFt, ts: a.ts, course: a.course, speedKph: a.speedKph });
       }
-      // Trim by age
-      while (arr.length && arr[0].ts < cutoff) arr.shift();
       trailsRef.current.set(a.id, arr);
-    }
-    // GC ids not seen for >30 min
-    for (const id of Array.from(trailsRef.current.keys())) {
-      const arr = trailsRef.current.get(id)!;
-      if (!arr.length || nowSec - arr[arr.length - 1].ts > 1800) trailsRef.current.delete(id);
+      trailMetaRef.current.set(a.id, { type: a.type, isOwnFleet: a.isOwnFleet, reg: a.reg });
     }
     setTrailsTick((t) => t + 1);
   }, [flarmSet, regSet]);
