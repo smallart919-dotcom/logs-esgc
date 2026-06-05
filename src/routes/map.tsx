@@ -88,7 +88,7 @@ function MapPage() {
   const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
-  const inboundRef = useRef<Map<string, number>>(new Map());
+  const [panelOpen, setPanelOpen] = useState(false);
   // Per-aircraft trail history (full session, capped to last 2 hours)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const failCountRef = useRef(0);
@@ -342,34 +342,7 @@ function MapPage() {
     }
   }, [aircraft, notifyEnabled, proximityNm, audioChime]);
 
-  // Inbound detection — aircraft tracking towards Ringmer at <15nm
-  useEffect(() => {
-    if (!notifyEnabled) return;
-    const [alat, alon] = AIRFIELD_LATLON;
-    const nowSec = Date.now() / 1000;
-    for (const a of aircraft) {
-      if (a.isStale || a.speedKph < 40 || a.altFt > 2200) continue;
-      const toRad = (d: number) => (d * Math.PI) / 180;
-      const dLat = toRad(a.lat - alat);
-      const dLon = toRad(a.lon - alon);
-      const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(alat)) * Math.cos(toRad(a.lat)) * Math.sin(dLon / 2) ** 2;
-      const distNm = (2 * 6371 * Math.asin(Math.sqrt(h))) / 1.852;
-      if (distNm > 15 || distNm < 2) continue;
-      // Bearing FROM aircraft TO airfield
-      const y = Math.sin(toRad(alon - a.lon)) * Math.cos(toRad(alat));
-      const x = Math.cos(toRad(a.lat)) * Math.sin(toRad(alat)) -
-        Math.sin(toRad(a.lat)) * Math.cos(toRad(alat)) * Math.cos(toRad(alon - a.lon));
-      const bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-      const diff = Math.abs(((a.course - bearing + 540) % 360) - 180);
-      if (diff < 30) {
-        const prev = inboundRef.current.get(a.id);
-        if (!prev || nowSec - prev > 600) {
-          toast(`🎯 Inbound to Ringmer`, { description: `${a.reg || a.id} · ${distNm.toFixed(1)}nm · ${a.altFt.toLocaleString()}ft` });
-          inboundRef.current.set(a.id, nowSec);
-        }
-      }
-    }
-  }, [aircraft, notifyEnabled]);
+  // Inbound alerts removed per user request.
 
   // Photo fetch — planespotters.net public API (CORS-enabled) for ADS-B hex IDs
   useEffect(() => {
@@ -668,8 +641,20 @@ function MapPage() {
       </MapContainer>
 
 
-      {/* Control panel */}
-      <div className="absolute top-4 right-4 z-[1000]" style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "14px 16px", minWidth: "230px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "13px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+      {/* Control panel — collapsible toggle for mobile */}
+      <button
+        onClick={() => setPanelOpen((v) => !v)}
+        aria-label={panelOpen ? "Hide controls" : "Show controls"}
+        className="absolute top-3 right-3 z-[1001] sm:hidden"
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "8px 12px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}
+      >
+        {panelOpen ? "✕" : "☰"} {!panelOpen && `${countLive(() => true)} live`}
+      </button>
+
+      <div
+        className={`absolute z-[1000] ${panelOpen ? "block" : "hidden"} sm:block top-3 right-3 sm:top-4 sm:right-4`}
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "12px", padding: "14px 16px", color: "#f1f5f9", fontFamily: "system-ui,sans-serif", fontSize: "13px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", width: "min(260px, calc(100vw - 24px))", maxHeight: "calc(100vh - 14rem)", overflowY: "auto", marginTop: panelOpen ? "44px" : 0 }}
+      >
         <div style={{ marginBottom: "10px", lineHeight: 2 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#38bdf8", display: "inline-block" }} />
@@ -792,7 +777,7 @@ function MapPage() {
           {fetchError
             ? <span style={{ color: "#f87171" }}>⚠ {fetchError}</span>
             : <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#4ade80", marginRight: 6, boxShadow: "0 0 6px #4ade80", animation: "pulse 1.5s ease-in-out infinite" }} />LIVE · {lastUpdate ? lastUpdate.toLocaleTimeString("en-GB") : "connecting…"}</span>}
-          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 0.5s refresh</div>
+          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 1.5s refresh</div>
         </div>
       </div>
     </div>
