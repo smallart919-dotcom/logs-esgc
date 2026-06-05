@@ -486,7 +486,7 @@ function MapPage() {
     const sig = `${a.type}|${courseQ}|${a.reg || a.id}|${altQ}|${a.isOwnFleet ? 1 : 0}|${a.isStale ? 1 : 0}`;
     const hit = iconCacheRef.current.get(a.id);
     if (hit && hit.sig === sig) return hit.icon;
-    const icon = aircraftIcon({ ...a, course: courseQ });
+    const icon = aircraftIcon({ ...a, course: courseQ, altFt: altQ });
     iconCacheRef.current.set(a.id, { sig, icon });
     return icon;
   }, []);
