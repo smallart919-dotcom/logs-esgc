@@ -288,7 +288,7 @@ function MapPage() {
       const visible = typeof document !== "undefined" && document.visibilityState === "visible";
       fetchLive().finally(() => {
         if (cancelled) return;
-        timer = setTimeout(tick, visible ? 500 : 15_000);
+        timer = setTimeout(tick, visible ? 1500 : 20_000);
       });
     };
     tick();
