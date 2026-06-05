@@ -720,32 +720,38 @@ function MapPage() {
             </label>
           ))}
           {isOffice && (
-            <details style={{ marginTop: "6px", marginBottom: "4px" }}>
-              <summary style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)", cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ fontSize: "10px" }}>⚙</span> Settings
-              </summary>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px", paddingLeft: "2px" }}>
-                <button
-                  type="button"
-                  onClick={() => playChime(audioCtxRef, chimeVolume)}
-                  style={{ background: "rgba(56,189,248,0.15)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.4)", borderRadius: "4px", padding: "3px 8px", fontSize: "10px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
-                  title="Preview chime"
-                >
-                  ▶ Preview
-                </button>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={chimeVolume}
-                  onChange={(e) => setChimeVolume(parseFloat(e.target.value))}
-                  style={{ flex: 1, accentColor: "#38bdf8" }}
-                  aria-label="Chime volume"
-                />
-                <span style={{ fontSize: "11px", width: "32px", textAlign: "right" }}>{Math.round(chimeVolume * 100)}%</span>
-              </div>
-            </details>
+            <div style={{ marginTop: "6px", marginBottom: "4px" }}>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen((v) => !v)}
+                style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)", background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <span style={{ fontSize: "10px", transition: "transform 0.2s", transform: settingsOpen ? "rotate(90deg)" : "rotate(0deg)", display: "inline-block" }}>▶</span> Settings
+              </button>
+              {settingsOpen && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px", paddingLeft: "2px" }}>
+                  <button
+                    type="button"
+                    onClick={() => playChime(audioCtxRef, chimeVolume)}
+                    style={{ background: "rgba(56,189,248,0.15)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.4)", borderRadius: "4px", padding: "3px 8px", fontSize: "10px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                    title="Preview chime"
+                  >
+                    ▶ Preview
+                  </button>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={chimeVolume}
+                    onChange={(e) => setChimeVolume(parseFloat(e.target.value))}
+                    style={{ flex: 1, accentColor: "#38bdf8" }}
+                    aria-label="Chime volume"
+                  />
+                  <span style={{ fontSize: "11px", width: "32px", textAlign: "right" }}>{Math.round(chimeVolume * 100)}%</span>
+                </div>
+              )}
+            </div>
           )}
           {notifyEnabled && (
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
