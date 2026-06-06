@@ -286,7 +286,9 @@ function FlightsPage() {
     if (!silent) { setSyncing(true); setSyncResult(null); }
     try {
       const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
+      const token =
+        sess.session?.access_token ??
+        (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined);
       const res = await fetch("/api/public/hooks/ogn-sync", {
         method: "POST",
         headers: {
@@ -295,6 +297,7 @@ function FlightsPage() {
         },
         body: JSON.stringify({ icao: code, date }),
       });
+
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
       if (!silent) setSyncResult(j);
