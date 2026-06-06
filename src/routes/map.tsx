@@ -589,30 +589,33 @@ function MapPage() {
 
         {/* Trails — from where each aircraft was first seen.
             Selected aircraft trail is rendered thicker + brighter (FR24-style). */}
-        {trailPolylines.flatMap((t) => [
+        {/* Altitude-coloured trail segments + start-point dots */}
+        {trailPolylines.map((seg) => (
           <Polyline
-            key={`trail-${t.id}`}
-            positions={t.pts}
+            key={`seg-${seg.id}`}
+            positions={seg.pts}
             pathOptions={{
-              color: t.colour,
-              weight: t.isSelected ? 4 : t.isOwn ? 3 : 2,
-              opacity: t.isSelected ? 0.95 : 0.55,
+              color: seg.colour,
+              weight: seg.weight,
+              opacity: seg.opacity,
               lineCap: "round",
               lineJoin: "round",
             }}
-          />,
+          />
+        ))}
+        {trailPolylines.filter((s) => s.isStart && s.startPt).map((seg) => (
           <Marker
-            key={`start-${t.id}`}
-            position={t.pts[0]}
+            key={`start-${seg.id}`}
+            position={seg.startPt as [number, number]}
             interactive={false}
             icon={L.divIcon({
               className: "",
-              html: `<div style="width:${t.isSelected ? 12 : 10}px;height:${t.isSelected ? 12 : 10}px;border-radius:50%;background:${t.colour};border:2px solid #0b0f19;box-shadow:0 0 ${t.isSelected ? 10 : 6}px ${t.colour}${t.isSelected ? "" : "aa"}"></div>`,
-              iconSize: [t.isSelected ? 12 : 10, t.isSelected ? 12 : 10],
-              iconAnchor: [t.isSelected ? 6 : 5, t.isSelected ? 6 : 5],
+              html: `<div style="width:${seg.weight >= 4 ? 12 : 10}px;height:${seg.weight >= 4 ? 12 : 10}px;border-radius:50%;background:${seg.startColour};border:2px solid #0b0f19;box-shadow:0 0 ${seg.weight >= 4 ? 10 : 6}px ${seg.startColour}aa"></div>`,
+              iconSize: [seg.weight >= 4 ? 12 : 10, seg.weight >= 4 ? 12 : 10],
+              iconAnchor: [seg.weight >= 4 ? 6 : 5, seg.weight >= 4 ? 6 : 5],
             })}
-          />,
-        ])}
+          />
+        ))}
 
 
         {visible.map((a) => (
