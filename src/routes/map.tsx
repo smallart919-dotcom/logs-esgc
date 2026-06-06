@@ -873,7 +873,11 @@ function FollowSelected({ selectedId, aircraft }: { selectedId: string | null; a
   return null;
 }
 
-/** Silky-smooth proximity chime: gentle descending two-tone via WebAudio. */
+/**
+ * Silky proximity chime — descending C major triad (G5 → E5 → C5) with
+ * a sine+triangle blend, slow vibrato, low-pass warmth and a single
+ * delay-echo for a reverb-style tail. Pleasant enough for all-day use.
+ */
 function playChime(ctxRef: React.MutableRefObject<AudioContext | null>, volume = 0.9) {
   try {
     if (typeof window === "undefined") return;
@@ -883,42 +887,80 @@ function playChime(ctxRef: React.MutableRefObject<AudioContext | null>, volume =
     const ctx = ctxRef.current;
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
     const now = ctx.currentTime;
+    const vol = Math.max(0, Math.min(1, volume));
 
-    // Master bus with gentle low-pass for warmth
     const master = ctx.createGain();
-    master.gain.value = Math.max(0, Math.min(1, volume));
+    master.gain.value = vol;
+
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.value = 2400;
-    lp.Q.value = 0.4;
-    master.connect(lp).connect(ctx.destination);
+    lp.frequency.value = 2000;
+    lp.Q.value = 0.5;
+
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.knee.value = 8;
+    comp.ratio.value = 3;
+    comp.attack.value = 0.01;
+    comp.release.value = 0.3;
+
+    master.connect(lp);
+    lp.connect(comp);
+    comp.connect(ctx.destination);
+
+    // Single delay-line echo fed into the low-pass for a reverb-ish tail.
+    const delay = ctx.createDelay(0.5);
+    delay.delayTime.value = 0.22;
+    const echoGain = ctx.createGain();
+    echoGain.gain.value = 0.12;
+    delay.connect(echoGain);
+    echoGain.connect(lp);
 
     const tone = (freq: number, start: number, dur: number, peak: number) => {
-      // Sine fundamental + soft triangle harmonic for body
       const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
       osc1.type = "sine";
-      osc2.type = "triangle";
       osc1.frequency.value = freq;
+
+      const osc2 = ctx.createOscillator();
+      osc2.type = "triangle";
       osc2.frequency.value = freq * 2;
+
+      // Slow vibrato — ±3 Hz at ~5 Hz
+      const lfo = ctx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.value = 5.2;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 3;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc1.frequency);
+      lfoGain.connect(osc2.frequency);
+
       const g = ctx.createGain();
       const h = ctx.createGain();
-      h.gain.value = 0.08;
+      h.gain.value = 0.07;
+
       g.gain.setValueAtTime(0.0001, now + start);
-      g.gain.exponentialRampToValueAtTime(peak, now + start + 0.08); // slow attack
-      g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur); // long tail
+      g.gain.exponentialRampToValueAtTime(peak, now + start + 0.12);
+      g.gain.setValueAtTime(peak, now + start + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+
       osc1.connect(g);
-      osc2.connect(h).connect(g);
+      osc2.connect(h);
+      h.connect(g);
       g.connect(master);
-      osc1.start(now + start);
-      osc2.start(now + start);
-      osc1.stop(now + start + dur + 0.1);
-      osc2.stop(now + start + dur + 0.1);
+      g.connect(delay);
+
+      const startT = now + start;
+      const stopT = now + start + dur + 0.15;
+      lfo.start(startT); lfo.stop(stopT);
+      osc1.start(startT); osc1.stop(stopT);
+      osc2.start(startT); osc2.stop(stopT);
     };
 
-    // Major sixth descent (E5 → C5) — calm, pleasant, non-alarming
-    tone(659.25, 0,    1.1, 0.18);
-    tone(523.25, 0.22, 1.3, 0.16);
+    // Descending C major triad — G5, E5, C5, slightly overlapped for legato.
+    tone(783.99, 0.00, 1.20, 0.16);
+    tone(659.25, 0.28, 1.30, 0.15);
+    tone(523.25, 0.56, 1.60, 0.13);
   } catch { /* noop */ }
 }
 
