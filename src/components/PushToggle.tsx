@@ -55,9 +55,10 @@ export function PushToggle() {
       }
       const reg = await getRegistration();
       if (!reg) { toast.error("Push not supported on this browser"); return; }
+      const key = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer,
       });
       const json = sub.toJSON();
       await subscribe({
