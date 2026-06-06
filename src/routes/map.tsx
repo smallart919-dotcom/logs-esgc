@@ -13,7 +13,7 @@ import { AIRFIELD, AIRFIELD_LATLON } from "@/lib/airfield";
 import { getAirspaceForBbox } from "@/lib/openaip.functions";
 import { getLiveTraffic } from "@/lib/live-traffic.functions";
 import { nearestAirfield, distanceNm } from "@/lib/nearby-airfields";
-import { listActiveNotams, type NotamRecord } from "@/lib/notams.functions";
+import { listActiveNotams, refreshNotamsNow, type NotamRecord } from "@/lib/notams.functions";
 import { firePush } from "@/lib/push.functions";
 import { PushToggle } from "@/components/PushToggle";
 
