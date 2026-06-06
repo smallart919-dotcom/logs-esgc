@@ -844,7 +844,18 @@ function MapPage() {
               <span style={{ fontSize: "11px", width: "32px", textAlign: "right" }}>{proximityNm}nm</span>
             </div>
           )}
+          {showTrails && (
+            <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed rgba(255,255,255,0.08)" }}>
+              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Trail altitude</div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "10px", color: "rgba(255,255,255,0.7)" }}>
+                <span>0ft</span>
+                <div style={{ flex: 1, height: "8px", borderRadius: "4px", background: "linear-gradient(to right, rgb(74,222,128), rgb(250,204,21), rgb(239,68,68))" }} />
+                <span>6000ft</span>
+              </div>
+            </div>
+          )}
         </div>
+
 
         {/* Replay scrubber */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
