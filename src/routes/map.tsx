@@ -647,6 +647,15 @@ function MapPage() {
         photo={selectedId ? photoCache.get(selectedId) ?? null : null}
         onClose={() => setSelectedId(null)}
       />
+
+      {/* ESGC fleet dock — bottom-centre, fleet at a glance */}
+      <FleetDock
+        aircraft={displayAircraft}
+        fleetRegs={fleetGliders}
+        selectedId={selectedId}
+        onSelect={(id) => setSelectedId(id)}
+      />
+
       
 
 
