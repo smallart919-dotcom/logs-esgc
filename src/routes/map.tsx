@@ -407,7 +407,7 @@ function MapPage() {
   const refreshNotamsManually = useCallback(async () => {
     setNotamsRefreshing(true);
     try {
-      const r = await refreshNotamsFn({ data: undefined as never });
+      const r = await refreshNotamsFn();
       if (r.error) toast.error(`NOTAM refresh: ${r.error}`);
       else toast.success(`NOTAMs refreshed (${r.upserted} active)`);
       const next = await fetchNotamsFn();
