@@ -86,6 +86,10 @@ function MapPage() {
   const lastPushRef = useRef<Map<string, number>>(new Map());
   const firePushFn = useServerFn(firePush);
   const fetchNotamsFn = useServerFn(listActiveNotams);
+  const refreshNotamsFn = useServerFn(refreshNotamsNow);
+  const [notamsRefreshing, setNotamsRefreshing] = useState(false);
+  const ownAirborneRef = useRef<Map<string, number>>(new Map());
+
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
