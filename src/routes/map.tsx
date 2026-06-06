@@ -347,6 +347,12 @@ function MapPage() {
             try { new Notification("Aircraft near Ringmer", { body: msg, tag: a.id }); } catch { /* noop */ }
           }
           if (audioChime) playChime(audioCtxRef, chimeVolume);
+          // Broadcast to push subscribers (debounced per aircraft, max once / 10 min)
+          const lastPush = lastPushRef.current.get(a.id) ?? 0;
+          if (nowSec - lastPush > 600) {
+            lastPushRef.current.set(a.id, nowSec);
+            firePushFn({ data: { category: "proximity", title: "Aircraft near Ringmer", body: msg, tag: a.id, url: "/map" } }).catch(() => {});
+          }
         }
         insideZoneRef.current.set(a.id, nowSec);
       }
@@ -357,7 +363,7 @@ function MapPage() {
         insideZoneRef.current.delete(id);
       }
     }
-  }, [aircraft, notifyEnabled, proximityNm, audioChime]);
+  }, [aircraft, notifyEnabled, proximityNm, audioChime, chimeVolume, firePushFn]);
 
   // Inbound alerts removed per user request.
 
