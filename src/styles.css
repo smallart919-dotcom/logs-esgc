@@ -847,8 +847,22 @@ table thead th {
   0%   { background-position: 0% 50%; }
   100% { background-position: 200% 50%; }
 }
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+/* Soft glow on aircraft trails (FR24 feel) */
+.trail-glow {
+  filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 1.5px currentColor);
+}
 @media (prefers-reduced-motion: reduce) {
   @keyframes panelSlideIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes livePulse    { 0%, 100% { opacity: 1; } }
   @keyframes accentSheen  { 0%, 100% { background-position: 0% 50%; } }
+  @keyframes shimmer      { 0%, 100% { background-position: 0 0; } }
 }

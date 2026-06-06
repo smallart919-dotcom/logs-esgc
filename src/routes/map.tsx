@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, useMap } from "react-leaflet";
+import jsPDF from "jspdf";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
@@ -561,6 +562,9 @@ function MapPage() {
 
         {showAirspace && <AirspaceLabels />}
 
+        <NightTerminator />
+
+
         {notifyEnabled && (
           <Circle
             center={AIRFIELD_LATLON}
@@ -600,6 +604,7 @@ function MapPage() {
               opacity: seg.opacity,
               lineCap: "round",
               lineJoin: "round",
+              className: "trail-glow",
             }}
           />
         ))}
@@ -642,6 +647,15 @@ function MapPage() {
         photo={selectedId ? photoCache.get(selectedId) ?? null : null}
         onClose={() => setSelectedId(null)}
       />
+
+      {/* ESGC fleet dock — bottom-centre, fleet at a glance */}
+      <FleetDock
+        aircraft={displayAircraft}
+        fleetRegs={fleetGliders}
+        selectedId={selectedId}
+        onSelect={(id) => setSelectedId(id)}
+      />
+
       
 
 
@@ -999,8 +1013,11 @@ function AircraftPanel({
             )}
           </a>
         ) : (
-          <div style={{ marginBottom: 12, padding: "20px 0", textAlign: "center", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.08)", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
-            No photo available
+          <div
+            className="skeleton-shimmer"
+            style={{ marginBottom: 12, height: 110, borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "rgba(255,255,255,0.35)" }}
+          >
+            {sel.source === "adsb" ? "Looking up photo…" : "No photo available"}
           </div>
         )}
 
@@ -1012,6 +1029,19 @@ function AircraftPanel({
           <Stat label="From ESGC" value={`${distNm.toFixed(1)} nm`} sub={cardinal} />
           {sel.squawk ? <Stat label="Squawk" value={sel.squawk} /> : sel.category ? <Stat label="Type" value={sel.category} /> : null}
         </div>
+
+        {/* Sparkline altitude (last ~10 min) + compass rose */}
+        <div style={{ display: "flex", gap: 12, alignItems: "stretch", marginBottom: 12, padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Altitude · last 10 min</div>
+            <AltSparkline trail={trail} accent={accent} />
+          </div>
+          <div style={{ width: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Track</div>
+            <CompassRose course={sel.course} />
+          </div>
+        </div>
+
 
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10, marginBottom: 10 }}>
@@ -1033,9 +1063,15 @@ function AircraftPanel({
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Report incident</div>
-          <button onClick={() => copy(reportText, "rep")} style={{ width: "100%", background: copied === "rep" ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.08)", color: copied === "rep" ? "#4ade80" : "#f1f5f9", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", marginBottom: 6 }}>
-            {copied === "rep" ? "✓ Report copied to clipboard" : "📋 Copy full report"}
-          </button>
+          <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+            <button onClick={() => copy(reportText, "rep")} style={{ flex: 1, background: copied === "rep" ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.08)", color: copied === "rep" ? "#4ade80" : "#f1f5f9", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              {copied === "rep" ? "✓ Copied" : "📋 Copy text"}
+            </button>
+            <button onClick={() => downloadAirproxPDF(sel, reportText, photo)} style={{ flex: 1, background: "rgba(168,85,247,0.14)", color: "#c084fc", border: "1px solid rgba(168,85,247,0.35)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              📄 PDF report
+            </button>
+          </div>
+
           <div style={{ display: "flex", gap: 6 }}>
             <a href="https://www.airproxboard.org.uk/Report-an-Airprox/" target="_blank" rel="noreferrer noopener" style={{ flex: 1, textAlign: "center", background: "rgba(251,146,60,0.12)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.3)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
               Airprox Board ↗
@@ -1049,6 +1085,163 @@ function AircraftPanel({
     </div>
   );
 }
+
+
+/* ─────────────────────────  Sparkline (altitude history) ───────────────────────── */
+function AltSparkline({ trail, accent }: { trail: TrailPoint[] | null; accent: string }) {
+  const pts = useMemo(() => {
+    if (!trail || trail.length < 2) return null;
+    const cutoff = Date.now() / 1000 - 10 * 60;
+    const slice = trail.filter((p) => p.ts >= cutoff);
+    if (slice.length < 2) return null;
+    const t0 = slice[0].ts;
+    const tN = slice[slice.length - 1].ts;
+    const tSpan = Math.max(1, tN - t0);
+    const alts = slice.map((p) => p.altFt);
+    const lo = Math.min(...alts);
+    const hi = Math.max(...alts);
+    const span = Math.max(50, hi - lo);
+    const W = 180, H = 44, pad = 3;
+    const poly = slice
+      .map((p) => {
+        const x = pad + ((p.ts - t0) / tSpan) * (W - 2 * pad);
+        const y = H - pad - ((p.altFt - lo) / span) * (H - 2 * pad);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+    const area = `${pad},${H - pad} ${poly} ${W - pad},${H - pad}`;
+    return { poly, area, lo, hi, W, H };
+  }, [trail]);
+  if (!pts) return <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", padding: "8px 0" }}>Collecting data…</div>;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${pts.W} ${pts.H}`} style={{ width: "100%", height: 44, display: "block" }}>
+        <polygon points={pts.area} fill={accent} opacity={0.18} />
+        <polyline points={pts.poly} fill="none" stroke={accent} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+        <span>{pts.lo.toLocaleString()}ft</span>
+        <span>{pts.hi.toLocaleString()}ft</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────  Compass rose ───────────────────────── */
+function CompassRose({ course }: { course: number }) {
+  return (
+    <svg viewBox="0 0 60 60" style={{ width: 56, height: 56 }}>
+      <circle cx="30" cy="30" r="26" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+      {["N", "E", "S", "W"].map((dir, i) => {
+        const angle = (i * 90 - 90) * (Math.PI / 180);
+        const x = 30 + Math.cos(angle) * 22;
+        const y = 30 + Math.sin(angle) * 22 + 3;
+        return <text key={dir} x={x} y={y} textAnchor="middle" fontSize="8" fill={dir === "N" ? "#f87171" : "rgba(255,255,255,0.55)"} fontWeight={700}>{dir}</text>;
+      })}
+      <g transform={`rotate(${course} 30 30)`}>
+        <polygon points="30,8 34,32 30,28 26,32" fill="#38bdf8" />
+        <polygon points="30,52 34,30 30,32 26,30" fill="rgba(255,255,255,0.35)" />
+      </g>
+      <circle cx="30" cy="30" r="2" fill="#f1f5f9" />
+    </svg>
+  );
+}
+
+/* ─────────────────────────  Airprox PDF download ───────────────────────── */
+async function downloadAirproxPDF(sel: LiveAircraft, reportText: string, photo: AircraftPhoto) {
+  try {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const margin = 48;
+    let y = margin;
+
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, 595, 80, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("AIRPROX / SAFETY REPORT", margin, 40);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Draft — review before submission · ESGC Logs (Ringmer)", margin, 58);
+
+    y = 110;
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${sel.reg || sel.id || "Unknown aircraft"}`, margin, y);
+    y += 22;
+
+    if (photo?.url) {
+      try {
+        const blob = await (await fetch(photo.url)).blob();
+        const dataUrl: string = await new Promise((res) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result as string);
+          r.readAsDataURL(blob);
+        });
+        doc.addImage(dataUrl, "JPEG", margin, y, 200, 130);
+        y += 145;
+      } catch { /* skip image on failure */ }
+    }
+
+    doc.setFont("courier", "normal");
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(reportText, 595 - 2 * margin);
+    doc.text(lines, margin, y);
+
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Generated ${new Date().toISOString()} · esgclogs.uk`, margin, 820);
+
+    const fname = `airprox-${sel.reg || sel.id || "report"}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.pdf`;
+    doc.save(fname);
+    toast.success("PDF downloaded");
+  } catch (e) {
+    console.error(e);
+    toast.error("PDF generation failed");
+  }
+}
+
+/* ─────────────────────────  Day/Night Terminator overlay ───────────────────────── */
+function NightTerminator() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 5 * 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const { polygon, isNight } = useMemo(() => {
+    const date = new Date();
+    const dayOfYear = Math.floor((date.getTime() - Date.UTC(date.getUTCFullYear(), 0, 0)) / 86400000);
+    const declRad = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10)) * Math.PI / 180;
+    const utcH = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+    const sunLon = -((utcH - 12) * 15);
+    const pts: [number, number][] = [];
+    for (let lon = -180; lon <= 180; lon += 2) {
+      const h = (lon - sunLon) * Math.PI / 180;
+      const lat = Math.atan(-Math.cos(h) / Math.tan(declRad)) * 180 / Math.PI;
+      pts.push([lat, lon]);
+    }
+    // Night is on the side opposite the sun's declination hemisphere
+    const nightNorth = declRad < 0;
+    const poly: [number, number][] = nightNorth
+      ? [[85, -180], ...pts.map(([la, lo]) => [la, lo] as [number, number]), [85, 180]]
+      : [[-85, -180], ...pts.map(([la, lo]) => [la, lo] as [number, number]), [-85, 180]];
+    return { polygon: poly, isNight: nightNorth };
+  }, []);
+  void isNight;
+  return (
+    <Polygon
+      positions={polygon}
+      pathOptions={{
+        color: "transparent",
+        fillColor: "#0b1020",
+        fillOpacity: 0.28,
+        interactive: false,
+      }}
+    />
+  );
+}
+
 
 
 
@@ -1356,3 +1549,90 @@ function LiveAirspace() {
 }
 
 
+
+/* ─────────────────────────  ESGC Fleet Dock ───────────────────────── */
+function FleetDock({
+  aircraft,
+  fleetRegs,
+  selectedId,
+  onSelect,
+}: {
+  aircraft: LiveAircraft[];
+  fleetRegs: { flarm_id: string | null; registration: string }[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const byReg = useMemo(() => {
+    const map = new Map<string, LiveAircraft>();
+    for (const a of aircraft) {
+      const key = (a.reg || a.id).toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (key && !map.has(key)) map.set(key, a);
+    }
+    return map;
+  }, [aircraft]);
+
+  if (!fleetRegs.length) return null;
+
+  return (
+    <div
+      className="absolute z-[1000] left-1/2 -translate-x-1/2 bottom-3 sm:bottom-4"
+      style={{
+        background: "rgba(10,12,18,0.88)",
+        backdropFilter: "blur(14px) saturate(140%)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 14,
+        padding: "6px 8px",
+        boxShadow: "0 14px 40px -8px rgba(0,0,0,0.6)",
+        display: "flex",
+        gap: 4,
+        maxWidth: "calc(100vw - 16px)",
+        overflowX: "auto",
+      }}
+    >
+      {fleetRegs.map((g) => {
+        const key = g.registration.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const live = byReg.get(key);
+        const isAirborne = !!live && !live.isStale;
+        const isSelected = !!live && selectedId === live.id;
+        return (
+          <button
+            key={g.registration}
+            onClick={() => live && onSelect(live.id)}
+            disabled={!live}
+            title={isAirborne ? `${g.registration} · ${live!.altFt.toLocaleString()}ft · ${Math.round(live!.speedKph / 1.852)}kt` : `${g.registration} · on ground`}
+            style={{
+              minWidth: 64,
+              padding: "6px 8px",
+              borderRadius: 9,
+              border: isSelected ? "1px solid #38bdf8" : "1px solid rgba(255,255,255,0.08)",
+              background: isSelected ? "rgba(56,189,248,0.18)" : isAirborne ? "rgba(74,222,128,0.08)" : "rgba(255,255,255,0.03)",
+              color: "#f1f5f9",
+              fontFamily: "system-ui,-apple-system,sans-serif",
+              cursor: live ? "pointer" : "default",
+              opacity: live ? 1 : 0.45,
+              transition: "all 0.15s ease",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: isAirborne ? "#4ade80" : "rgba(255,255,255,0.25)",
+                  boxShadow: isAirborne ? "0 0 6px #4ade80" : "none",
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3 }}>{g.registration}</span>
+            </div>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>
+              {isAirborne ? `${live!.altFt.toLocaleString()}ft` : "on ground"}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
