@@ -1549,3 +1549,90 @@ function LiveAirspace() {
 }
 
 
+
+/* ─────────────────────────  ESGC Fleet Dock ───────────────────────── */
+function FleetDock({
+  aircraft,
+  fleetRegs,
+  selectedId,
+  onSelect,
+}: {
+  aircraft: LiveAircraft[];
+  fleetRegs: { flarm_id: string | null; registration: string }[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const byReg = useMemo(() => {
+    const map = new Map<string, LiveAircraft>();
+    for (const a of aircraft) {
+      const key = (a.reg || a.id).toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (key && !map.has(key)) map.set(key, a);
+    }
+    return map;
+  }, [aircraft]);
+
+  if (!fleetRegs.length) return null;
+
+  return (
+    <div
+      className="absolute z-[1000] left-1/2 -translate-x-1/2 bottom-3 sm:bottom-4"
+      style={{
+        background: "rgba(10,12,18,0.88)",
+        backdropFilter: "blur(14px) saturate(140%)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 14,
+        padding: "6px 8px",
+        boxShadow: "0 14px 40px -8px rgba(0,0,0,0.6)",
+        display: "flex",
+        gap: 4,
+        maxWidth: "calc(100vw - 16px)",
+        overflowX: "auto",
+      }}
+    >
+      {fleetRegs.map((g) => {
+        const key = g.registration.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const live = byReg.get(key);
+        const isAirborne = !!live && !live.isStale;
+        const isSelected = !!live && selectedId === live.id;
+        return (
+          <button
+            key={g.registration}
+            onClick={() => live && onSelect(live.id)}
+            disabled={!live}
+            title={isAirborne ? `${g.registration} · ${live!.altFt.toLocaleString()}ft · ${Math.round(live!.speedKph / 1.852)}kt` : `${g.registration} · on ground`}
+            style={{
+              minWidth: 64,
+              padding: "6px 8px",
+              borderRadius: 9,
+              border: isSelected ? "1px solid #38bdf8" : "1px solid rgba(255,255,255,0.08)",
+              background: isSelected ? "rgba(56,189,248,0.18)" : isAirborne ? "rgba(74,222,128,0.08)" : "rgba(255,255,255,0.03)",
+              color: "#f1f5f9",
+              fontFamily: "system-ui,-apple-system,sans-serif",
+              cursor: live ? "pointer" : "default",
+              opacity: live ? 1 : 0.45,
+              transition: "all 0.15s ease",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: isAirborne ? "#4ade80" : "rgba(255,255,255,0.25)",
+                  boxShadow: isAirborne ? "0 0 6px #4ade80" : "none",
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3 }}>{g.registration}</span>
+            </div>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>
+              {isAirborne ? `${live!.altFt.toLocaleString()}ft` : "on ground"}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
