@@ -764,6 +764,7 @@ function MapPage() {
 
           {([
             ["Airspace overlay", showAirspace, setShowAirspace, true],
+            [`NOTAMs / TRA (${notams.length})`, showNotams, setShowNotams, true],
             ["Show trails", showTrails, setShowTrails, true],
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
             ["Hide stale (>60s)", hideStale, setHideStale, true],
