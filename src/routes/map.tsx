@@ -1054,9 +1054,15 @@ function AircraftPanel({
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Report incident</div>
-          <button onClick={() => copy(reportText, "rep")} style={{ width: "100%", background: copied === "rep" ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.08)", color: copied === "rep" ? "#4ade80" : "#f1f5f9", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", marginBottom: 6 }}>
-            {copied === "rep" ? "✓ Report copied to clipboard" : "📋 Copy full report"}
-          </button>
+          <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+            <button onClick={() => copy(reportText, "rep")} style={{ flex: 1, background: copied === "rep" ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.08)", color: copied === "rep" ? "#4ade80" : "#f1f5f9", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              {copied === "rep" ? "✓ Copied" : "📋 Copy text"}
+            </button>
+            <button onClick={() => downloadAirproxPDF(sel, reportText, photo)} style={{ flex: 1, background: "rgba(168,85,247,0.14)", color: "#c084fc", border: "1px solid rgba(168,85,247,0.35)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              📄 PDF report
+            </button>
+          </div>
+
           <div style={{ display: "flex", gap: 6 }}>
             <a href="https://www.airproxboard.org.uk/Report-an-Airprox/" target="_blank" rel="noreferrer noopener" style={{ flex: 1, textAlign: "center", background: "rgba(251,146,60,0.12)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.3)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
               Airprox Board ↗
