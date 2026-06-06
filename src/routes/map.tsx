@@ -81,6 +81,11 @@ function MapPage() {
   const [ownFleetOnly, setOwnFleetOnly] = useState(false);
   const [hideStale, setHideStale] = useState(true);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
+  const [showNotams, setShowNotams] = useState(true);
+  const [notams, setNotams] = useState<NotamRecord[]>([]);
+  const lastPushRef = useRef<Map<string, number>>(new Map());
+  const firePushFn = useServerFn(firePush);
+  const fetchNotamsFn = useServerFn(listActiveNotams);
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
