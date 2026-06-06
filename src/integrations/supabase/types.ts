@@ -490,6 +490,63 @@ export type Database = {
         }
         Relationships: []
       }
+      notams: {
+        Row: {
+          centre_lat: number
+          centre_lon: number
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          lower_ft: number | null
+          notam_ref: string
+          polygon: Json | null
+          radius_nm: number | null
+          raw: string | null
+          source: string
+          updated_at: string
+          upper_ft: number | null
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          centre_lat: number
+          centre_lon: number
+          created_at?: string
+          description?: string
+          id?: string
+          kind?: string
+          lower_ft?: number | null
+          notam_ref: string
+          polygon?: Json | null
+          radius_nm?: number | null
+          raw?: string | null
+          source?: string
+          updated_at?: string
+          upper_ft?: number | null
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          centre_lat?: number
+          centre_lon?: number
+          created_at?: string
+          description?: string
+          id?: string
+          kind?: string
+          lower_ft?: number | null
+          notam_ref?: string
+          polygon?: Json | null
+          radius_nm?: number | null
+          raw?: string | null
+          source?: string
+          updated_at?: string
+          upper_ft?: number | null
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -505,6 +562,45 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_used_at: string
+          notify_own_fleet: boolean
+          notify_proximity: boolean
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_used_at?: string
+          notify_own_fleet?: boolean
+          notify_proximity?: boolean
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_used_at?: string
+          notify_own_fleet?: boolean
+          notify_proximity?: boolean
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
