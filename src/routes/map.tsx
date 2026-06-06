@@ -844,6 +844,16 @@ function MapPage() {
               </label>
             );
           })}
+          <button
+            type="button"
+            onClick={refreshNotamsManually}
+            disabled={notamsRefreshing}
+            style={{ marginTop: 4, marginBottom: 6, alignSelf: "flex-start", background: "rgba(56,189,248,0.15)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.4)", borderRadius: 4, padding: "3px 8px", fontSize: 10, fontWeight: 600, cursor: notamsRefreshing ? "wait" : "pointer" }}
+            title="Re-scrape NATS NOTAM briefing now"
+          >
+            {notamsRefreshing ? "Refreshing NOTAMs…" : "↻ Refresh NOTAMs"}
+          </button>
+
           {isOffice && (
             <div style={{ marginTop: "6px", marginBottom: "4px" }}>
               <button
