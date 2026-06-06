@@ -855,7 +855,9 @@ function MapPage() {
               </div>
             </div>
           )}
+          <PushToggle />
         </div>
+
 
 
         {/* Replay scrubber */}
