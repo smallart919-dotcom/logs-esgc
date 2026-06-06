@@ -1078,6 +1078,163 @@ function AircraftPanel({
 }
 
 
+/* ─────────────────────────  Sparkline (altitude history) ───────────────────────── */
+function AltSparkline({ trail, accent }: { trail: TrailPoint[] | null; accent: string }) {
+  const pts = useMemo(() => {
+    if (!trail || trail.length < 2) return null;
+    const cutoff = Date.now() / 1000 - 10 * 60;
+    const slice = trail.filter((p) => p.ts >= cutoff);
+    if (slice.length < 2) return null;
+    const t0 = slice[0].ts;
+    const tN = slice[slice.length - 1].ts;
+    const tSpan = Math.max(1, tN - t0);
+    const alts = slice.map((p) => p.altFt);
+    const lo = Math.min(...alts);
+    const hi = Math.max(...alts);
+    const span = Math.max(50, hi - lo);
+    const W = 180, H = 44, pad = 3;
+    const poly = slice
+      .map((p) => {
+        const x = pad + ((p.ts - t0) / tSpan) * (W - 2 * pad);
+        const y = H - pad - ((p.altFt - lo) / span) * (H - 2 * pad);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+    const area = `${pad},${H - pad} ${poly} ${W - pad},${H - pad}`;
+    return { poly, area, lo, hi, W, H };
+  }, [trail]);
+  if (!pts) return <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", padding: "8px 0" }}>Collecting data…</div>;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${pts.W} ${pts.H}`} style={{ width: "100%", height: 44, display: "block" }}>
+        <polygon points={pts.area} fill={accent} opacity={0.18} />
+        <polyline points={pts.poly} fill="none" stroke={accent} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+        <span>{pts.lo.toLocaleString()}ft</span>
+        <span>{pts.hi.toLocaleString()}ft</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────  Compass rose ───────────────────────── */
+function CompassRose({ course }: { course: number }) {
+  return (
+    <svg viewBox="0 0 60 60" style={{ width: 56, height: 56 }}>
+      <circle cx="30" cy="30" r="26" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+      {["N", "E", "S", "W"].map((dir, i) => {
+        const angle = (i * 90 - 90) * (Math.PI / 180);
+        const x = 30 + Math.cos(angle) * 22;
+        const y = 30 + Math.sin(angle) * 22 + 3;
+        return <text key={dir} x={x} y={y} textAnchor="middle" fontSize="8" fill={dir === "N" ? "#f87171" : "rgba(255,255,255,0.55)"} fontWeight={700}>{dir}</text>;
+      })}
+      <g transform={`rotate(${course} 30 30)`}>
+        <polygon points="30,8 34,32 30,28 26,32" fill="#38bdf8" />
+        <polygon points="30,52 34,30 30,32 26,30" fill="rgba(255,255,255,0.35)" />
+      </g>
+      <circle cx="30" cy="30" r="2" fill="#f1f5f9" />
+    </svg>
+  );
+}
+
+/* ─────────────────────────  Airprox PDF download ───────────────────────── */
+async function downloadAirproxPDF(sel: LiveAircraft, reportText: string, photo: AircraftPhoto) {
+  try {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const margin = 48;
+    let y = margin;
+
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, 595, 80, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("AIRPROX / SAFETY REPORT", margin, 40);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Draft — review before submission · ESGC Logs (Ringmer)", margin, 58);
+
+    y = 110;
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${sel.reg || sel.id || "Unknown aircraft"}`, margin, y);
+    y += 22;
+
+    if (photo?.url) {
+      try {
+        const blob = await (await fetch(photo.url)).blob();
+        const dataUrl: string = await new Promise((res) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result as string);
+          r.readAsDataURL(blob);
+        });
+        doc.addImage(dataUrl, "JPEG", margin, y, 200, 130);
+        y += 145;
+      } catch { /* skip image on failure */ }
+    }
+
+    doc.setFont("courier", "normal");
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(reportText, 595 - 2 * margin);
+    doc.text(lines, margin, y);
+
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Generated ${new Date().toISOString()} · esgclogs.uk`, margin, 820);
+
+    const fname = `airprox-${sel.reg || sel.id || "report"}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.pdf`;
+    doc.save(fname);
+    toast.success("PDF downloaded");
+  } catch (e) {
+    console.error(e);
+    toast.error("PDF generation failed");
+  }
+}
+
+/* ─────────────────────────  Day/Night Terminator overlay ───────────────────────── */
+function NightTerminator() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 5 * 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const { polygon, isNight } = useMemo(() => {
+    const date = new Date();
+    const dayOfYear = Math.floor((date.getTime() - Date.UTC(date.getUTCFullYear(), 0, 0)) / 86400000);
+    const declRad = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10)) * Math.PI / 180;
+    const utcH = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+    const sunLon = -((utcH - 12) * 15);
+    const pts: [number, number][] = [];
+    for (let lon = -180; lon <= 180; lon += 2) {
+      const h = (lon - sunLon) * Math.PI / 180;
+      const lat = Math.atan(-Math.cos(h) / Math.tan(declRad)) * 180 / Math.PI;
+      pts.push([lat, lon]);
+    }
+    // Night is on the side opposite the sun's declination hemisphere
+    const nightNorth = declRad < 0;
+    const poly: [number, number][] = nightNorth
+      ? [[85, -180], ...pts.map(([la, lo]) => [la, lo] as [number, number]), [85, 180]]
+      : [[-85, -180], ...pts.map(([la, lo]) => [la, lo] as [number, number]), [-85, 180]];
+    return { polygon: poly, isNight: nightNorth };
+  }, []);
+  void isNight;
+  return (
+    <Polygon
+      positions={polygon}
+      pathOptions={{
+        color: "transparent",
+        fillColor: "#0b1020",
+        fillOpacity: 0.28,
+        interactive: false,
+      }}
+    />
+  );
+}
+
+
+
 
 /**
  * Silky proximity chime — descending C major triad (G5 → E5 → C5) with
