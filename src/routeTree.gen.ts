@@ -22,6 +22,7 @@ import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicHooksRefreshNotamsRouteImport } from './routes/api/public/hooks/refresh-notams'
 import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/hooks/ogn-sync'
 import { Route as ApiPublicHooksCngSyncRouteImport } from './routes/api/public/hooks/cng-sync'
 import { Route as ApiPublicHooksAutoSendLogsRouteImport } from './routes/api/public/hooks/auto-send-logs'
@@ -91,6 +92,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksRefreshNotamsRoute =
+  ApiPublicHooksRefreshNotamsRouteImport.update({
+    id: '/api/public/hooks/refresh-notams',
+    path: '/api/public/hooks/refresh-notams',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksOgnSyncRoute = ApiPublicHooksOgnSyncRouteImport.update({
   id: '/api/public/hooks/ogn-sync',
   path: '/api/public/hooks/ogn-sync',
@@ -125,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
+  '/api/public/hooks/refresh-notams': typeof ApiPublicHooksRefreshNotamsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -143,6 +151,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
+  '/api/public/hooks/refresh-notams': typeof ApiPublicHooksRefreshNotamsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -162,6 +171,7 @@ export interface FileRoutesById {
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
+  '/api/public/hooks/refresh-notams': typeof ApiPublicHooksRefreshNotamsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
+    | '/api/public/hooks/refresh-notams'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
+    | '/api/public/hooks/refresh-notams'
   id:
     | '__root__'
     | '/'
@@ -218,6 +230,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
+    | '/api/public/hooks/refresh-notams'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -237,6 +250,7 @@ export interface RootRouteChildren {
   ApiPublicHooksAutoSendLogsRoute: typeof ApiPublicHooksAutoSendLogsRoute
   ApiPublicHooksCngSyncRoute: typeof ApiPublicHooksCngSyncRoute
   ApiPublicHooksOgnSyncRoute: typeof ApiPublicHooksOgnSyncRoute
+  ApiPublicHooksRefreshNotamsRoute: typeof ApiPublicHooksRefreshNotamsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -332,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/refresh-notams': {
+      id: '/api/public/hooks/refresh-notams'
+      path: '/api/public/hooks/refresh-notams'
+      fullPath: '/api/public/hooks/refresh-notams'
+      preLoaderRoute: typeof ApiPublicHooksRefreshNotamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/ogn-sync': {
       id: '/api/public/hooks/ogn-sync'
       path: '/api/public/hooks/ogn-sync'
@@ -373,6 +394,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksAutoSendLogsRoute: ApiPublicHooksAutoSendLogsRoute,
   ApiPublicHooksCngSyncRoute: ApiPublicHooksCngSyncRoute,
   ApiPublicHooksOgnSyncRoute: ApiPublicHooksOgnSyncRoute,
+  ApiPublicHooksRefreshNotamsRoute: ApiPublicHooksRefreshNotamsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
