@@ -929,38 +929,66 @@ function AircraftPanel({
     </div>
   );
 
+  // Bearing + distance from observer (Ringmer / ESGC ~ 50.886, 0.090)
+  const OBS_LAT = 50.886, OBS_LON = 0.090;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(sel.lat - OBS_LAT);
+  const dLon = toRad(sel.lon - OBS_LON);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(OBS_LAT)) * Math.cos(toRad(sel.lat)) * Math.sin(dLon / 2) ** 2;
+  const distKm = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distNm = distKm * 0.539957;
+  const y = Math.sin(dLon) * Math.cos(toRad(sel.lat));
+  const x = Math.cos(toRad(OBS_LAT)) * Math.sin(toRad(sel.lat)) - Math.sin(toRad(OBS_LAT)) * Math.cos(toRad(sel.lat)) * Math.cos(dLon);
+  const bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  const cardinal = ["N","NE","E","SE","S","SW","W","NW"][Math.round(bearing / 45) % 8];
+  const accent = altColour(sel.altFt);
+
   return (
     <div
       className="absolute z-[1002] left-0 right-0 bottom-0 sm:right-auto sm:bottom-auto sm:top-4 sm:left-4"
       style={{
-        background: "rgba(10,12,18,0.94)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
+        background: "linear-gradient(180deg, rgba(14,18,28,0.96) 0%, rgba(10,12,18,0.96) 100%)",
+        backdropFilter: "blur(18px) saturate(140%)",
+        WebkitBackdropFilter: "blur(18px) saturate(140%)",
         border: "1px solid rgba(255,255,255,0.10)",
-        borderRadius: 14,
+        borderRadius: 16,
         color: "#f1f5f9",
         fontFamily: "system-ui,-apple-system,sans-serif",
         fontSize: 13,
-        boxShadow: "0 20px 50px -10px rgba(0,0,0,0.7)",
+        boxShadow: `0 24px 60px -12px rgba(0,0,0,0.75), 0 0 0 1px ${accent}22, 0 -2px 20px -8px ${accent}55 inset`,
         width: "min(340px, 100vw)",
-        maxHeight: "70vh",
+        maxHeight: "76vh",
         overflowY: "auto",
         margin: "0 auto",
-        animation: "panelSlideIn 0.25s ease-out",
+        animation: "panelSlideIn 0.28s cubic-bezier(0.22,1,0.36,1)",
+        overflow: "hidden",
       }}
     >
+      {/* Altitude-coloured accent strip */}
+      <div style={{
+        height: 3,
+        background: `linear-gradient(90deg, ${accent}, ${accent}88, ${accent})`,
+        backgroundSize: "200% 100%",
+        animation: "accentSheen 6s linear infinite",
+      }} />
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, background: "rgba(10,12,18,0.94)", backdropFilter: "blur(16px)", zIndex: 2 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: 0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {sel.reg || sel.id || "Unknown"}
-            {sel.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: 10, marginLeft: 6, fontWeight: 600 }}>ESGC</span>}
+            {sel.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: 10, marginLeft: 6, fontWeight: 700, background: "rgba(56,189,248,0.12)", padding: "2px 6px", borderRadius: 4, letterSpacing: 0.5 }}>ESGC</span>}
           </div>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
-            <span style={{ color: "#4ade80" }}>● TRACKING</span> · {sel.source === "ogn" ? "OGN/FLARM" : "ADS-B"} · {sel.isStale ? "⚠ stale" : `${Math.max(0, Math.round(Date.now() / 1000 - sel.ts))}s ago`}
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: sel.isStale ? "#f59e0b" : "#4ade80", animation: sel.isStale ? "none" : "livePulse 1.6s ease-out infinite" }} />
+            <span>{sel.isStale ? "STALE" : "LIVE"}</span>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <span>{sel.source === "ogn" ? "OGN/FLARM" : "ADS-B"}</span>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <span>{Math.max(0, Math.round(Date.now() / 1000 - sel.ts))}s</span>
           </div>
         </div>
         <button onClick={onClose} aria-label="Close" style={{ background: "rgba(255,255,255,0.06)", border: "none", color: "#f1f5f9", borderRadius: 8, width: 28, height: 28, cursor: "pointer", fontSize: 14 }}>✕</button>
       </div>
+
 
       <div style={{ padding: "12px 14px" }}>
         {photo ? (
@@ -977,13 +1005,14 @@ function AircraftPanel({
         )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 14px", marginBottom: 12 }}>
-          <Stat label="Altitude" value={`${sel.altFt.toLocaleString()} ft`} sub={`${sel.altM}m`} />
+          <Stat label="Altitude" value={<span style={{ color: accent }}>{sel.altFt.toLocaleString()} ft</span>} sub={`${sel.altM}m`} />
           <Stat label="Speed" value={`${knots} kt`} sub={`${sel.speedKph}km/h`} />
-          <Stat label="Vertical" value={`${fpm >= 0 ? "↑" : "↓"} ${Math.abs(fpm)} fpm`} />
+          <Stat label="Vertical" value={<span style={{ color: fpm > 50 ? "#4ade80" : fpm < -50 ? "#f87171" : "#cbd5e1" }}>{fpm >= 0 ? "↑" : "↓"} {Math.abs(fpm)} fpm</span>} />
           <Stat label="Course" value={`${Math.round(sel.course)}°`} />
-          {sel.category && <Stat label="Type" value={sel.category} />}
-          {sel.squawk && <Stat label="Squawk" value={sel.squawk} />}
+          <Stat label="From ESGC" value={`${distNm.toFixed(1)} nm`} sub={cardinal} />
+          {sel.squawk ? <Stat label="Squawk" value={sel.squawk} /> : sel.category ? <Stat label="Type" value={sel.category} /> : null}
         </div>
+
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10, marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
