@@ -369,7 +369,57 @@ function MapPage() {
     }
   }, [aircraft, notifyEnabled, proximityNm, audioChime, chimeVolume, firePushFn]);
 
-  // Inbound alerts removed per user request.
+  // Own-fleet airborne / landed alerts — fire push when one of our gliders
+  // transitions between "on ground" and "airborne" (rough heuristic on altFt).
+  useEffect(() => {
+    const AIRBORNE_FT = 250;
+    const nowSec = Date.now() / 1000;
+    const present = new Set<string>();
+    for (const a of aircraft) {
+      if (!a.isOwnFleet || a.isStale) continue;
+      present.add(a.id);
+      const wasAt = ownAirborneRef.current.get(a.id);
+      const airborne = a.altFt >= AIRBORNE_FT;
+      const isTracked = wasAt !== undefined;
+      if (!isTracked) {
+        // First sighting: just record state, don't alert (avoids spam on page open).
+        ownAirborneRef.current.set(a.id, airborne ? nowSec : 0);
+        continue;
+      }
+      const wasAirborne = wasAt > 0;
+      if (airborne !== wasAirborne) {
+        ownAirborneRef.current.set(a.id, airborne ? nowSec : 0);
+        const label = a.reg || a.id;
+        const title = airborne ? `${label} airborne` : `${label} landed`;
+        const body = `${a.altFt.toLocaleString()}ft`;
+        toast(`✈ ${title}`, { description: body });
+        firePushFn({
+          data: { category: "own_fleet", title, body, tag: `own-${a.id}-${airborne ? "up" : "down"}`, url: "/map" },
+        }).catch(() => {});
+      }
+    }
+    // Drop entries for aircraft that fell off the live feed for >10 min.
+    for (const id of Array.from(ownAirborneRef.current.keys())) {
+      if (!present.has(id)) ownAirborneRef.current.delete(id);
+    }
+  }, [aircraft, firePushFn]);
+
+  const refreshNotamsManually = useCallback(async () => {
+    setNotamsRefreshing(true);
+    try {
+      const r = await refreshNotamsFn({ data: undefined as never });
+      if (r.error) toast.error(`NOTAM refresh: ${r.error}`);
+      else toast.success(`NOTAMs refreshed (${r.upserted} active)`);
+      const next = await fetchNotamsFn();
+      setNotams(next.notams);
+    } catch (e) {
+      toast.error(`NOTAM refresh failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setNotamsRefreshing(false);
+    }
+  }, [refreshNotamsFn, fetchNotamsFn]);
+
+
 
   // Photo fetch — planespotters.net public API (CORS-enabled) for ADS-B hex IDs
   useEffect(() => {
