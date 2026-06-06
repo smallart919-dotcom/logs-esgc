@@ -636,77 +636,13 @@ function MapPage() {
       </MapContainer>
 
       {/* Aircraft detail side panel (FR24-style) */}
-      {(() => {
-        const sel = selectedId ? visible.find((a) => a.id === selectedId) : null;
-        if (!sel) return null;
-        const trail = trailsRef.current.get(sel.id);
-        const start = trail && trail.length ? trail[0] : null;
-        const dep = start && start.altFt <= 1500 ? nearestAirfield(start.lat, start.lon, 2.5) : null;
-        const firstSeenAirfield = !dep && start ? nearestAirfield(start.lat, start.lon, 8) : null;
-        const photo = photoCache.get(sel.id) ?? null;
-        return (
-          <div
-            className="absolute z-[1002] left-0 right-0 bottom-0 sm:right-auto sm:bottom-auto sm:top-4 sm:left-4"
-            style={{
-              background: "rgba(0,0,0,0.92)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: "12px",
-              color: "#f1f5f9",
-              fontFamily: "system-ui,sans-serif",
-              fontSize: "13px",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-              width: "min(320px, 100vw)",
-              maxHeight: "60vh",
-              overflowY: "auto",
-              margin: "0 auto",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)", position: "sticky", top: 0, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)" }}>
-              <div style={{ fontWeight: 700, fontSize: "16px", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {sel.reg || sel.id || "Unknown"}
-                {sel.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: "11px", marginLeft: "6px" }}>⚡ ESGC</span>}
-              </div>
-              <span style={{ color: "#4ade80", fontSize: "10px" }}>● TRACKING</span>
-              <button
-                onClick={() => setSelectedId(null)}
-                aria-label="Close"
-                style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#f1f5f9", borderRadius: "6px", width: "28px", height: "28px", cursor: "pointer", fontSize: "16px", lineHeight: 1 }}
-              >
-                ✕
-              </button>
-            </div>
-            <div style={{ padding: "12px 14px" }}>
-              {photo && (
-                <a href={photo.link} target="_blank" rel="noreferrer noopener" style={{ display: "block", marginBottom: "10px" }}>
-                  <img src={photo.url} alt={sel.reg || sel.id} style={{ width: "100%", height: "auto", borderRadius: "8px", display: "block" }} />
-                  {photo.photographer && (
-                    <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", textAlign: "right", marginTop: "2px" }}>© {photo.photographer} · planespotters.net</div>
-                  )}
-                </a>
-              )}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 12px", marginBottom: "10px" }}>
-                <div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Altitude</div><b>{sel.altFt.toLocaleString()}ft</b> <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "11px" }}>({sel.altM}m)</span></div>
-                <div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Speed</div><b>{Math.round(sel.speedKph / 1.852)}kts</b> <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "11px" }}>({sel.speedKph}km/h)</span></div>
-                <div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Vertical</div><b>{sel.climbMs >= 0 ? "↑" : "↓"} {Math.abs(sel.climbMs).toFixed(1)}m/s</b></div>
-                <div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Course</div><b>{Math.round(sel.course)}°</b></div>
-                {sel.category && (<div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Type</div><b>{sel.category}</b></div>)}
-                {sel.squawk && (<div><div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Squawk</div><b>{sel.squawk}</b></div>)}
-              </div>
-              {dep ? (
-                <div style={{ marginBottom: "6px" }}>Departed: <b style={{ color: "#38bdf8" }}>{dep.icao ? `${dep.icao} ` : ""}{dep.name}</b></div>
-              ) : firstSeenAirfield ? (
-                <div style={{ marginBottom: "6px", color: "rgba(255,255,255,0.7)" }}>First seen near: {firstSeenAirfield.icao ? `${firstSeenAirfield.icao} ` : ""}{firstSeenAirfield.name} @ {start!.altFt.toLocaleString()}ft</div>
-              ) : start ? (
-                <div style={{ marginBottom: "6px", color: "rgba(255,255,255,0.7)" }}>First seen: {start.lat.toFixed(2)}°,{start.lon.toFixed(2)}° @ {start.altFt.toLocaleString()}ft</div>
-              ) : null}
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)" }}>
-                Source: {sel.source === "ogn" ? "OGN/FLARM" : "ADS-B"} · {sel.isStale ? "⚠ stale" : `Updated ${Math.max(0, Math.round(Date.now() / 1000 - sel.ts))}s ago`}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      <AircraftPanel
+        sel={selectedId ? visible.find((a) => a.id === selectedId) ?? null : null}
+        trail={selectedId ? trailsRef.current.get(selectedId) ?? null : null}
+        photo={selectedId ? photoCache.get(selectedId) ?? null : null}
+        onClose={() => setSelectedId(null)}
+      />
+      
 
 
 
@@ -922,6 +858,170 @@ function FollowSelected({ selectedId, aircraft }: { selectedId: string | null; a
   }, [lat, lon, map]);
   return null;
 }
+
+type AircraftPhoto = { url: string; photographer?: string; link?: string } | null;
+
+function formatDMS(lat: number, lon: number): string {
+  const toDMS = (v: number, pos: string, neg: string) => {
+    const d = Math.abs(v);
+    const deg = Math.floor(d);
+    const minF = (d - deg) * 60;
+    const min = Math.floor(minF);
+    const sec = ((minF - min) * 60).toFixed(1);
+    return `${deg}°${String(min).padStart(2, "0")}'${sec.padStart(4, "0")}"${v >= 0 ? pos : neg}`;
+  };
+  return `${toDMS(lat, "N", "S")} ${toDMS(lon, "E", "W")}`;
+}
+
+function AircraftPanel({
+  sel,
+  trail,
+  photo,
+  onClose,
+}: {
+  sel: LiveAircraft | null;
+  trail: TrailPoint[] | null;
+  photo: AircraftPhoto;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState<string | null>(null);
+  if (!sel) return null;
+
+  const start = trail && trail.length ? trail[0] : null;
+  const dep = start && start.altFt <= 1500 ? nearestAirfield(start.lat, start.lon, 2.5) : null;
+  const firstSeen = !dep && start ? nearestAirfield(start.lat, start.lon, 8) : null;
+  const nowUtc = new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, "Z");
+  const knots = Math.round(sel.speedKph / 1.852);
+  const fpm = Math.round(sel.climbMs * 196.85);
+
+  const reportText =
+    `AIRPROX / SAFETY REPORT — DRAFT\n` +
+    `Time (UTC): ${nowUtc}\n` +
+    `Registration: ${sel.reg || "Unknown"}\n` +
+    `Mode-S / ID: ${sel.id}\n` +
+    `Type: ${sel.category || sel.type}\n` +
+    `Source: ${sel.source === "ogn" ? "OGN/FLARM" : "ADS-B"}\n` +
+    `Position: ${sel.lat.toFixed(5)}, ${sel.lon.toFixed(5)}\n` +
+    `         (${formatDMS(sel.lat, sel.lon)})\n` +
+    `Altitude: ${sel.altFt.toLocaleString()} ft (${sel.altM} m)\n` +
+    `Track: ${Math.round(sel.course)}°  Speed: ${knots} kt\n` +
+    `Vertical: ${fpm >= 0 ? "+" : ""}${fpm} fpm\n` +
+    (sel.squawk ? `Squawk: ${sel.squawk}\n` : "") +
+    (dep ? `Departed: ${dep.icao ?? ""} ${dep.name}\n` : firstSeen ? `First seen near: ${firstSeen.icao ?? ""} ${firstSeen.name} @ ${start!.altFt}ft\n` : "") +
+    `Observer: ESGC Logs (Ringmer)\n` +
+    `Refs: https://www.airproxboard.org.uk/Report-an-Airprox/  ·  https://members.gliding.co.uk/safety/report-an-incident/`;
+
+  const copy = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(key);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      toast.error("Copy failed");
+    }
+  };
+
+  const Stat = ({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) => (
+    <div>
+      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>{label}</div>
+      <div style={{ fontWeight: 600, fontSize: 13 }}>{value}{sub && <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 400, marginLeft: 4, fontSize: 11 }}>{sub}</span>}</div>
+    </div>
+  );
+
+  return (
+    <div
+      className="absolute z-[1002] left-0 right-0 bottom-0 sm:right-auto sm:bottom-auto sm:top-4 sm:left-4"
+      style={{
+        background: "rgba(10,12,18,0.94)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 14,
+        color: "#f1f5f9",
+        fontFamily: "system-ui,-apple-system,sans-serif",
+        fontSize: 13,
+        boxShadow: "0 20px 50px -10px rgba(0,0,0,0.7)",
+        width: "min(340px, 100vw)",
+        maxHeight: "70vh",
+        overflowY: "auto",
+        margin: "0 auto",
+        animation: "panelSlideIn 0.25s ease-out",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, background: "rgba(10,12,18,0.94)", backdropFilter: "blur(16px)", zIndex: 2 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: 0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {sel.reg || sel.id || "Unknown"}
+            {sel.isOwnFleet && <span style={{ color: "#38bdf8", fontSize: 10, marginLeft: 6, fontWeight: 600 }}>ESGC</span>}
+          </div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
+            <span style={{ color: "#4ade80" }}>● TRACKING</span> · {sel.source === "ogn" ? "OGN/FLARM" : "ADS-B"} · {sel.isStale ? "⚠ stale" : `${Math.max(0, Math.round(Date.now() / 1000 - sel.ts))}s ago`}
+          </div>
+        </div>
+        <button onClick={onClose} aria-label="Close" style={{ background: "rgba(255,255,255,0.06)", border: "none", color: "#f1f5f9", borderRadius: 8, width: 28, height: 28, cursor: "pointer", fontSize: 14 }}>✕</button>
+      </div>
+
+      <div style={{ padding: "12px 14px" }}>
+        {photo ? (
+          <a href={photo.link} target="_blank" rel="noreferrer noopener" style={{ display: "block", marginBottom: 12 }}>
+            <img src={photo.url} alt={sel.reg || sel.id} style={{ width: "100%", height: "auto", borderRadius: 10, display: "block", border: "1px solid rgba(255,255,255,0.06)" }} />
+            {photo.photographer && (
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", textAlign: "right", marginTop: 3 }}>© {photo.photographer} · planespotters.net</div>
+            )}
+          </a>
+        ) : (
+          <div style={{ marginBottom: 12, padding: "20px 0", textAlign: "center", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.08)", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+            No photo available
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 14px", marginBottom: 12 }}>
+          <Stat label="Altitude" value={`${sel.altFt.toLocaleString()} ft`} sub={`${sel.altM}m`} />
+          <Stat label="Speed" value={`${knots} kt`} sub={`${sel.speedKph}km/h`} />
+          <Stat label="Vertical" value={`${fpm >= 0 ? "↑" : "↓"} ${Math.abs(fpm)} fpm`} />
+          <Stat label="Course" value={`${Math.round(sel.course)}°`} />
+          {sel.category && <Stat label="Type" value={sel.category} />}
+          {sel.squawk && <Stat label="Squawk" value={sel.squawk} />}
+        </div>
+
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10, marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.4 }}>Position · UTC {nowUtc}</div>
+            <button onClick={() => copy(`${sel.lat.toFixed(5)}, ${sel.lon.toFixed(5)}`, "pos")} style={{ background: "rgba(56,189,248,0.12)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.3)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
+              {copied === "pos" ? "✓" : "Copy"}
+            </button>
+          </div>
+          <div style={{ fontFamily: "ui-monospace,monospace", fontSize: 12, color: "rgba(255,255,255,0.85)" }}>{sel.lat.toFixed(5)}, {sel.lon.toFixed(5)}</div>
+          <div style={{ fontFamily: "ui-monospace,monospace", fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{formatDMS(sel.lat, sel.lon)}</div>
+        </div>
+
+        {dep ? (
+          <div style={{ marginBottom: 10, fontSize: 12 }}>Departed: <b style={{ color: "#38bdf8" }}>{dep.icao ? `${dep.icao} ` : ""}{dep.name}</b></div>
+        ) : firstSeen ? (
+          <div style={{ marginBottom: 10, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>First seen near: {firstSeen.icao ? `${firstSeen.icao} ` : ""}{firstSeen.name} @ {start!.altFt.toLocaleString()}ft</div>
+        ) : null}
+
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Report incident</div>
+          <button onClick={() => copy(reportText, "rep")} style={{ width: "100%", background: copied === "rep" ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.08)", color: copied === "rep" ? "#4ade80" : "#f1f5f9", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", marginBottom: 6 }}>
+            {copied === "rep" ? "✓ Report copied to clipboard" : "📋 Copy full report"}
+          </button>
+          <div style={{ display: "flex", gap: 6 }}>
+            <a href="https://www.airproxboard.org.uk/Report-an-Airprox/" target="_blank" rel="noreferrer noopener" style={{ flex: 1, textAlign: "center", background: "rgba(251,146,60,0.12)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.3)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
+              Airprox Board ↗
+            </a>
+            <a href="https://members.gliding.co.uk/safety/report-an-incident/" target="_blank" rel="noreferrer noopener" style={{ flex: 1, textAlign: "center", background: "rgba(56,189,248,0.12)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.3)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
+              BGA Safety ↗
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 
 /**
  * Silky proximity chime — descending C major triad (G5 → E5 → C5) with
