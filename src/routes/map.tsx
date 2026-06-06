@@ -1005,13 +1005,14 @@ function AircraftPanel({
         )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 14px", marginBottom: 12 }}>
-          <Stat label="Altitude" value={`${sel.altFt.toLocaleString()} ft`} sub={`${sel.altM}m`} />
+          <Stat label="Altitude" value={<span style={{ color: accent }}>{sel.altFt.toLocaleString()} ft</span>} sub={`${sel.altM}m`} />
           <Stat label="Speed" value={`${knots} kt`} sub={`${sel.speedKph}km/h`} />
-          <Stat label="Vertical" value={`${fpm >= 0 ? "↑" : "↓"} ${Math.abs(fpm)} fpm`} />
+          <Stat label="Vertical" value={<span style={{ color: fpm > 50 ? "#4ade80" : fpm < -50 ? "#f87171" : "#cbd5e1" }}>{fpm >= 0 ? "↑" : "↓"} {Math.abs(fpm)} fpm</span>} />
           <Stat label="Course" value={`${Math.round(sel.course)}°`} />
-          {sel.category && <Stat label="Type" value={sel.category} />}
-          {sel.squawk && <Stat label="Squawk" value={sel.squawk} />}
+          <Stat label="From ESGC" value={`${distNm.toFixed(1)} nm`} sub={cardinal} />
+          {sel.squawk ? <Stat label="Squawk" value={sel.squawk} /> : sel.category ? <Stat label="Type" value={sel.category} /> : null}
         </div>
+
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10, marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
