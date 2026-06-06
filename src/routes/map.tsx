@@ -1004,8 +1004,11 @@ function AircraftPanel({
             )}
           </a>
         ) : (
-          <div style={{ marginBottom: 12, padding: "20px 0", textAlign: "center", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.08)", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
-            No photo available
+          <div
+            className="skeleton-shimmer"
+            style={{ marginBottom: 12, height: 110, borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "rgba(255,255,255,0.35)" }}
+          >
+            {sel.source === "adsb" ? "Looking up photo…" : "No photo available"}
           </div>
         )}
 
@@ -1017,6 +1020,19 @@ function AircraftPanel({
           <Stat label="From ESGC" value={`${distNm.toFixed(1)} nm`} sub={cardinal} />
           {sel.squawk ? <Stat label="Squawk" value={sel.squawk} /> : sel.category ? <Stat label="Type" value={sel.category} /> : null}
         </div>
+
+        {/* Sparkline altitude (last ~10 min) + compass rose */}
+        <div style={{ display: "flex", gap: 12, alignItems: "stretch", marginBottom: 12, padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Altitude · last 10 min</div>
+            <AltSparkline trail={trail} accent={accent} />
+          </div>
+          <div style={{ width: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Track</div>
+            <CompassRose course={sel.course} />
+          </div>
+        </div>
+
 
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10, marginBottom: 10 }}>
