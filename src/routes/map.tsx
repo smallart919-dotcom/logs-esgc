@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, useMap } from "react-leaflet";
+import { useServerFn } from "@tanstack/react-start";
 import jsPDF from "jspdf";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -12,6 +13,9 @@ import { AIRFIELD, AIRFIELD_LATLON } from "@/lib/airfield";
 import { getAirspaceForBbox } from "@/lib/openaip.functions";
 import { getLiveTraffic } from "@/lib/live-traffic.functions";
 import { nearestAirfield, distanceNm } from "@/lib/nearby-airfields";
+import { listActiveNotams, type NotamRecord } from "@/lib/notams.functions";
+import { firePush } from "@/lib/push.functions";
+import { PushToggle } from "@/components/PushToggle";
 
 export const Route = createFileRoute("/map")({
   beforeLoad: requireAuth,
@@ -77,6 +81,11 @@ function MapPage() {
   const [ownFleetOnly, setOwnFleetOnly] = useState(false);
   const [hideStale, setHideStale] = useState(true);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
+  const [showNotams, setShowNotams] = useState(true);
+  const [notams, setNotams] = useState<NotamRecord[]>([]);
+  const lastPushRef = useRef<Map<string, number>>(new Map());
+  const firePushFn = useServerFn(firePush);
+  const fetchNotamsFn = useServerFn(listActiveNotams);
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
@@ -111,6 +120,15 @@ function MapPage() {
       setFleetGliders(data ?? []);
     });
   }, []);
+
+  // Load NOTAMs (active set) — refresh every 30 min
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => fetchNotamsFn().then((r) => { if (!cancelled) setNotams(r.notams); }).catch(() => {});
+    load();
+    const t = setInterval(load, 30 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [fetchNotamsFn]);
 
   const { flarmSet, regSet } = useMemo(() => {
     const flarmSet = new Set<string>();
@@ -329,6 +347,12 @@ function MapPage() {
             try { new Notification("Aircraft near Ringmer", { body: msg, tag: a.id }); } catch { /* noop */ }
           }
           if (audioChime) playChime(audioCtxRef, chimeVolume);
+          // Broadcast to push subscribers (debounced per aircraft, max once / 10 min)
+          const lastPush = lastPushRef.current.get(a.id) ?? 0;
+          if (nowSec - lastPush > 600) {
+            lastPushRef.current.set(a.id, nowSec);
+            firePushFn({ data: { category: "proximity", title: "Aircraft near Ringmer", body: msg, tag: a.id, url: "/map" } }).catch(() => {});
+          }
         }
         insideZoneRef.current.set(a.id, nowSec);
       }
@@ -339,7 +363,7 @@ function MapPage() {
         insideZoneRef.current.delete(id);
       }
     }
-  }, [aircraft, notifyEnabled, proximityNm, audioChime]);
+  }, [aircraft, notifyEnabled, proximityNm, audioChime, chimeVolume, firePushFn]);
 
   // Inbound alerts removed per user request.
 
@@ -564,6 +588,32 @@ function MapPage() {
 
         <NightTerminator />
 
+        {showNotams && notams.map((n) => {
+          const colour = n.kind === "danger" ? "#ef4444" : n.kind === "tra" ? "#f97316" : n.kind === "restricted" ? "#a855f7" : "#facc15";
+          const radius = (n.radius_nm ?? 2) * 1852;
+          return (
+            <Circle
+              key={n.id}
+              center={[n.centre_lat, n.centre_lon]}
+              radius={radius}
+              pathOptions={{ color: colour, weight: 1.5, fillColor: colour, fillOpacity: 0.12, dashArray: "4 4" }}
+            >
+              <Tooltip direction="top" sticky>
+                <div style={{ maxWidth: 280, fontSize: 11 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 2 }}>
+                    {n.kind.toUpperCase()} · {n.notam_ref}
+                  </div>
+                  <div style={{ marginBottom: 2 }}>
+                    {n.lower_ft != null ? `${n.lower_ft}ft` : "SFC"} – {n.upper_ft != null ? `${n.upper_ft}ft` : "UNL"}
+                  </div>
+                  <div style={{ opacity: 0.8 }}>{n.description}</div>
+                </div>
+              </Tooltip>
+            </Circle>
+          );
+        })}
+
+
 
         {notifyEnabled && (
           <Circle
@@ -714,6 +764,7 @@ function MapPage() {
 
           {([
             ["Airspace overlay", showAirspace, setShowAirspace, true],
+            [`NOTAMs / TRA (${notams.length})`, showNotams, setShowNotams, true],
             ["Show trails", showTrails, setShowTrails, true],
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
             ["Hide stale (>60s)", hideStale, setHideStale, true],
@@ -804,7 +855,9 @@ function MapPage() {
               </div>
             </div>
           )}
+          <PushToggle />
         </div>
+
 
 
         {/* Replay scrubber */}
