@@ -460,14 +460,32 @@ function MapPage() {
     });
   }, [visible]);
 
-  // Build trail polylines — iterate trail history directly so trails persist
-  // even after an aircraft drops off the live feed (FR24-style).
+  // Build trail polylines — segment-coloured by altitude so the whole flight
+  // gradient is visible at a glance (low=green, mid=amber, high=yellow).
   const trailPolylines = useMemo(() => {
-    if (!showTrails) return [];
+    if (!showTrails) return [] as {
+      id: string;
+      pts: [[number, number], [number, number]];
+      colour: string;
+      weight: number;
+      opacity: number;
+      isStart: boolean;
+      startPt: [number, number] | null;
+      startColour: string;
+    }[];
     void trailsTick;
     const cutoff = isReplay ? replayTargetTs : Infinity;
     const visibleIds = new Set(visible.map((a) => a.id));
-    const out: { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean }[] = [];
+    const segs: {
+      id: string;
+      pts: [[number, number], [number, number]];
+      colour: string;
+      weight: number;
+      opacity: number;
+      isStart: boolean;
+      startPt: [number, number] | null;
+      startColour: string;
+    }[] = [];
     for (const [id, arr] of trailsRef.current.entries()) {
       if (!arr || arr.length < 2) continue;
       const meta = trailMetaRef.current.get(id);
@@ -475,17 +493,35 @@ function MapPage() {
       if (ownFleetOnly && !meta.isOwnFleet && !visibleIds.has(id)) continue;
       const filtered = arr.filter((p) => p.ts <= cutoff);
       if (filtered.length < 2) continue;
-      const pts = filtered.map((p) => [p.lat, p.lon] as [number, number]);
+
       const first = filtered[0];
       const dep = first.altFt <= 1500 ? nearestAirfield(first.lat, first.lon, 2.5) : null;
-      if (dep) pts.unshift([dep.lat, dep.lon]);
-      const colour = meta.isOwnFleet ? "#38bdf8"
-        : meta.type === "glider" ? "#a3e635"
-        : meta.type === "helicopter" ? "#fb923c"
-        : "#f8fafc";
-      out.push({ id, pts, colour, isOwn: meta.isOwnFleet, isSelected: selectedId === id });
+      const allPts: { lat: number; lon: number; altFt: number }[] = dep
+        ? [{ lat: dep.lat, lon: dep.lon, altFt: 0 }, ...filtered]
+        : filtered;
+
+      const isSelected = selectedId === id;
+      const weight = isSelected ? 4 : meta.isOwnFleet ? 3 : 2;
+      const opacity = isSelected ? 0.95 : meta.isOwnFleet ? 0.78 : 0.62;
+      const useAlt = meta.type === "glider" || meta.isOwnFleet;
+      const flat = meta.type === "helicopter" ? "#fb923c" : "#f8fafc";
+      const startColour = useAlt ? altColour(allPts[0].altFt) : flat;
+
+      for (let i = 0; i < allPts.length - 1; i++) {
+        const avg = (allPts[i].altFt + allPts[i + 1].altFt) / 2;
+        segs.push({
+          id: `${id}-${i}`,
+          pts: [[allPts[i].lat, allPts[i].lon], [allPts[i + 1].lat, allPts[i + 1].lon]],
+          colour: useAlt ? altColour(avg) : flat,
+          weight,
+          opacity,
+          isStart: i === 0,
+          startPt: i === 0 ? [allPts[0].lat, allPts[0].lon] : null,
+          startColour,
+        });
+      }
     }
-    return out;
+    return segs;
   }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId, ownFleetOnly]);
 
   // Icon cache — only rebuild when the actual silhouette/label state changes.
