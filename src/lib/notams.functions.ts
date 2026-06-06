@@ -41,3 +41,11 @@ export const listActiveNotams = createServerFn({ method: "GET" }).handler(async 
   }
   return { notams: (data ?? []) as NotamRecord[] };
 });
+
+/** Authenticated: trigger an on-demand NATS NOTAM refresh. */
+export const refreshNotamsNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { refreshNotamsFromNATS } = await import("./notams-refresh.server");
+    return refreshNotamsFromNATS();
+  });
