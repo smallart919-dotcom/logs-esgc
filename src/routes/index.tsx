@@ -286,7 +286,9 @@ function FlightsPage() {
     if (!silent) { setSyncing(true); setSyncResult(null); }
     try {
       const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
+      const token =
+        sess.session?.access_token ??
+        (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined);
       const res = await fetch("/api/public/hooks/ogn-sync", {
         method: "POST",
         headers: {
@@ -295,6 +297,7 @@ function FlightsPage() {
         },
         body: JSON.stringify({ icao: code, date }),
       });
+
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
       if (!silent) setSyncResult(j);
@@ -1038,6 +1041,10 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
 
   const save = useCallback(async (silent = false) => {
     if (loading) return;
+    // Daily log writes require auth (RLS). Quietly skip for anonymous viewers
+    // so the page doesn't spam 401s in the background.
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) { if (!silent) toast.error("Sign in to save the daily log"); return; }
     setSaving(true);
     const { error } = await supabase.from("daily_logs").upsert({
       flight_date: date, duty_instructor: duty_instructor || null, duty_pilot: duty_pilot || null, notes: notes || null,
@@ -1046,6 +1053,7 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
     if (error) { if (!silent) toast.error(error.message); }
     else if (!silent) toast.success("Daily log saved");
   }, [loading, date, duty_instructor, duty_pilot, notes]);
+
 
   // Debounced autosave whenever any field changes.
   useEffect(() => {
