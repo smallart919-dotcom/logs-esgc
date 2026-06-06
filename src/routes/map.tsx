@@ -460,14 +460,32 @@ function MapPage() {
     });
   }, [visible]);
 
-  // Build trail polylines — iterate trail history directly so trails persist
-  // even after an aircraft drops off the live feed (FR24-style).
+  // Build trail polylines — segment-coloured by altitude so the whole flight
+  // gradient is visible at a glance (low=green, mid=amber, high=yellow).
   const trailPolylines = useMemo(() => {
-    if (!showTrails) return [];
+    if (!showTrails) return [] as {
+      id: string;
+      pts: [[number, number], [number, number]];
+      colour: string;
+      weight: number;
+      opacity: number;
+      isStart: boolean;
+      startPt: [number, number] | null;
+      startColour: string;
+    }[];
     void trailsTick;
     const cutoff = isReplay ? replayTargetTs : Infinity;
     const visibleIds = new Set(visible.map((a) => a.id));
-    const out: { id: string; pts: [number, number][]; colour: string; isOwn: boolean; isSelected: boolean }[] = [];
+    const segs: {
+      id: string;
+      pts: [[number, number], [number, number]];
+      colour: string;
+      weight: number;
+      opacity: number;
+      isStart: boolean;
+      startPt: [number, number] | null;
+      startColour: string;
+    }[] = [];
     for (const [id, arr] of trailsRef.current.entries()) {
       if (!arr || arr.length < 2) continue;
       const meta = trailMetaRef.current.get(id);
@@ -475,17 +493,35 @@ function MapPage() {
       if (ownFleetOnly && !meta.isOwnFleet && !visibleIds.has(id)) continue;
       const filtered = arr.filter((p) => p.ts <= cutoff);
       if (filtered.length < 2) continue;
-      const pts = filtered.map((p) => [p.lat, p.lon] as [number, number]);
+
       const first = filtered[0];
       const dep = first.altFt <= 1500 ? nearestAirfield(first.lat, first.lon, 2.5) : null;
-      if (dep) pts.unshift([dep.lat, dep.lon]);
-      const colour = meta.isOwnFleet ? "#38bdf8"
-        : meta.type === "glider" ? "#a3e635"
-        : meta.type === "helicopter" ? "#fb923c"
-        : "#f8fafc";
-      out.push({ id, pts, colour, isOwn: meta.isOwnFleet, isSelected: selectedId === id });
+      const allPts: { lat: number; lon: number; altFt: number }[] = dep
+        ? [{ lat: dep.lat, lon: dep.lon, altFt: 0 }, ...filtered]
+        : filtered;
+
+      const isSelected = selectedId === id;
+      const weight = isSelected ? 4 : meta.isOwnFleet ? 3 : 2;
+      const opacity = isSelected ? 0.95 : meta.isOwnFleet ? 0.78 : 0.62;
+      const useAlt = meta.type === "glider" || meta.isOwnFleet;
+      const flat = meta.type === "helicopter" ? "#fb923c" : "#f8fafc";
+      const startColour = useAlt ? altColour(allPts[0].altFt) : flat;
+
+      for (let i = 0; i < allPts.length - 1; i++) {
+        const avg = (allPts[i].altFt + allPts[i + 1].altFt) / 2;
+        segs.push({
+          id: `${id}-${i}`,
+          pts: [[allPts[i].lat, allPts[i].lon], [allPts[i + 1].lat, allPts[i + 1].lon]],
+          colour: useAlt ? altColour(avg) : flat,
+          weight,
+          opacity,
+          isStart: i === 0,
+          startPt: i === 0 ? [allPts[0].lat, allPts[0].lon] : null,
+          startColour,
+        });
+      }
     }
-    return out;
+    return segs;
   }, [visible, showTrails, trailsTick, isReplay, replayTargetTs, selectedId, ownFleetOnly]);
 
   // Icon cache — only rebuild when the actual silhouette/label state changes.
@@ -553,30 +589,33 @@ function MapPage() {
 
         {/* Trails — from where each aircraft was first seen.
             Selected aircraft trail is rendered thicker + brighter (FR24-style). */}
-        {trailPolylines.flatMap((t) => [
+        {/* Altitude-coloured trail segments + start-point dots */}
+        {trailPolylines.map((seg) => (
           <Polyline
-            key={`trail-${t.id}`}
-            positions={t.pts}
+            key={`seg-${seg.id}`}
+            positions={seg.pts}
             pathOptions={{
-              color: t.colour,
-              weight: t.isSelected ? 4 : t.isOwn ? 3 : 2,
-              opacity: t.isSelected ? 0.95 : 0.55,
+              color: seg.colour,
+              weight: seg.weight,
+              opacity: seg.opacity,
               lineCap: "round",
               lineJoin: "round",
             }}
-          />,
+          />
+        ))}
+        {trailPolylines.filter((s) => s.isStart && s.startPt).map((seg) => (
           <Marker
-            key={`start-${t.id}`}
-            position={t.pts[0]}
+            key={`start-${seg.id}`}
+            position={seg.startPt as [number, number]}
             interactive={false}
             icon={L.divIcon({
               className: "",
-              html: `<div style="width:${t.isSelected ? 12 : 10}px;height:${t.isSelected ? 12 : 10}px;border-radius:50%;background:${t.colour};border:2px solid #0b0f19;box-shadow:0 0 ${t.isSelected ? 10 : 6}px ${t.colour}${t.isSelected ? "" : "aa"}"></div>`,
-              iconSize: [t.isSelected ? 12 : 10, t.isSelected ? 12 : 10],
-              iconAnchor: [t.isSelected ? 6 : 5, t.isSelected ? 6 : 5],
+              html: `<div style="width:${seg.weight >= 4 ? 12 : 10}px;height:${seg.weight >= 4 ? 12 : 10}px;border-radius:50%;background:${seg.startColour};border:2px solid #0b0f19;box-shadow:0 0 ${seg.weight >= 4 ? 10 : 6}px ${seg.startColour}aa"></div>`,
+              iconSize: [seg.weight >= 4 ? 12 : 10, seg.weight >= 4 ? 12 : 10],
+              iconAnchor: [seg.weight >= 4 ? 6 : 5, seg.weight >= 4 ? 6 : 5],
             })}
-          />,
-        ])}
+          />
+        ))}
 
 
         {visible.map((a) => (
@@ -729,19 +768,27 @@ function MapPage() {
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
             ["Hide stale (>60s)", hideStale, setHideStale, true],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled, true],
-            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef, chimeVolume); }, isOffice],
-          ] as [string, boolean, (v: boolean) => void, boolean][]).map(([label, state, setter, enabled]) => (
-            <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: enabled ? "pointer" : "not-allowed", marginBottom: "5px", opacity: enabled ? 1 : 0.5 }}>
-              <input
-                type="checkbox"
-                checked={state}
-                disabled={!enabled}
-                onChange={(e) => setter(e.target.checked)}
-                style={{ accentColor: "#38bdf8", width: 15, height: 15 }}
-              />
-              {label}{!enabled && label.startsWith("Audio") ? " (office only)" : ""}
-            </label>
-          ))}
+            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef, chimeVolume); }, true],
+          ] as [string, boolean, (v: boolean) => void, boolean][]).map(([label, state, setter, enabled]) => {
+            const lockedForCaravan = !isOffice && label.startsWith("Audio");
+            return (
+              <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: enabled && !lockedForCaravan ? "pointer" : "not-allowed", marginBottom: "5px", opacity: enabled ? 1 : 0.5 }}>
+                <input
+                  type="checkbox"
+                  checked={state}
+                  disabled={!enabled || lockedForCaravan}
+                  onChange={(e) => setter(e.target.checked)}
+                  style={{ accentColor: "#38bdf8", width: 15, height: 15 }}
+                />
+                <span>
+                  {label}
+                  {lockedForCaravan && (
+                    <span style={{ marginLeft: 6, fontSize: 10, color: "rgba(255,255,255,0.45)", fontStyle: "italic" }}>· office adjustable</span>
+                  )}
+                </span>
+              </label>
+            );
+          })}
           {isOffice && (
             <div style={{ marginTop: "6px", marginBottom: "4px" }}>
               <button
@@ -797,7 +844,18 @@ function MapPage() {
               <span style={{ fontSize: "11px", width: "32px", textAlign: "right" }}>{proximityNm}nm</span>
             </div>
           )}
+          {showTrails && (
+            <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed rgba(255,255,255,0.08)" }}>
+              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Trail altitude</div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "10px", color: "rgba(255,255,255,0.7)" }}>
+                <span>0ft</span>
+                <div style={{ flex: 1, height: "8px", borderRadius: "4px", background: "linear-gradient(to right, rgb(74,222,128), rgb(250,204,21), rgb(239,68,68))" }} />
+                <span>6000ft</span>
+              </div>
+            </div>
+          )}
         </div>
+
 
         {/* Replay scrubber */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
@@ -865,7 +923,11 @@ function FollowSelected({ selectedId, aircraft }: { selectedId: string | null; a
   return null;
 }
 
-/** Silky-smooth proximity chime: gentle descending two-tone via WebAudio. */
+/**
+ * Silky proximity chime — descending C major triad (G5 → E5 → C5) with
+ * a sine+triangle blend, slow vibrato, low-pass warmth and a single
+ * delay-echo for a reverb-style tail. Pleasant enough for all-day use.
+ */
 function playChime(ctxRef: React.MutableRefObject<AudioContext | null>, volume = 0.9) {
   try {
     if (typeof window === "undefined") return;
@@ -875,42 +937,80 @@ function playChime(ctxRef: React.MutableRefObject<AudioContext | null>, volume =
     const ctx = ctxRef.current;
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
     const now = ctx.currentTime;
+    const vol = Math.max(0, Math.min(1, volume));
 
-    // Master bus with gentle low-pass for warmth
     const master = ctx.createGain();
-    master.gain.value = Math.max(0, Math.min(1, volume));
+    master.gain.value = vol;
+
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.value = 2400;
-    lp.Q.value = 0.4;
-    master.connect(lp).connect(ctx.destination);
+    lp.frequency.value = 2000;
+    lp.Q.value = 0.5;
+
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.knee.value = 8;
+    comp.ratio.value = 3;
+    comp.attack.value = 0.01;
+    comp.release.value = 0.3;
+
+    master.connect(lp);
+    lp.connect(comp);
+    comp.connect(ctx.destination);
+
+    // Single delay-line echo fed into the low-pass for a reverb-ish tail.
+    const delay = ctx.createDelay(0.5);
+    delay.delayTime.value = 0.22;
+    const echoGain = ctx.createGain();
+    echoGain.gain.value = 0.12;
+    delay.connect(echoGain);
+    echoGain.connect(lp);
 
     const tone = (freq: number, start: number, dur: number, peak: number) => {
-      // Sine fundamental + soft triangle harmonic for body
       const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
       osc1.type = "sine";
-      osc2.type = "triangle";
       osc1.frequency.value = freq;
+
+      const osc2 = ctx.createOscillator();
+      osc2.type = "triangle";
       osc2.frequency.value = freq * 2;
+
+      // Slow vibrato — ±3 Hz at ~5 Hz
+      const lfo = ctx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.value = 5.2;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 3;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc1.frequency);
+      lfoGain.connect(osc2.frequency);
+
       const g = ctx.createGain();
       const h = ctx.createGain();
-      h.gain.value = 0.08;
+      h.gain.value = 0.07;
+
       g.gain.setValueAtTime(0.0001, now + start);
-      g.gain.exponentialRampToValueAtTime(peak, now + start + 0.08); // slow attack
-      g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur); // long tail
+      g.gain.exponentialRampToValueAtTime(peak, now + start + 0.12);
+      g.gain.setValueAtTime(peak, now + start + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+
       osc1.connect(g);
-      osc2.connect(h).connect(g);
+      osc2.connect(h);
+      h.connect(g);
       g.connect(master);
-      osc1.start(now + start);
-      osc2.start(now + start);
-      osc1.stop(now + start + dur + 0.1);
-      osc2.stop(now + start + dur + 0.1);
+      g.connect(delay);
+
+      const startT = now + start;
+      const stopT = now + start + dur + 0.15;
+      lfo.start(startT); lfo.stop(stopT);
+      osc1.start(startT); osc1.stop(stopT);
+      osc2.start(startT); osc2.stop(stopT);
     };
 
-    // Major sixth descent (E5 → C5) — calm, pleasant, non-alarming
-    tone(659.25, 0,    1.1, 0.18);
-    tone(523.25, 0.22, 1.3, 0.16);
+    // Descending C major triad — G5, E5, C5, slightly overlapped for legato.
+    tone(783.99, 0.00, 1.20, 0.16);
+    tone(659.25, 0.28, 1.30, 0.15);
+    tone(523.25, 0.56, 1.60, 0.13);
   } catch { /* noop */ }
 }
 
@@ -929,6 +1029,17 @@ const airfieldIcon = L.divIcon({
 
 function normalizeCourse(course: number): number {
   return ((Math.round(course) % 360) + 360) % 360;
+}
+
+/** Altitude → colour ramp (green→amber→yellow, 0 to 6000ft). */
+function altColour(altFt: number): string {
+  const t = Math.max(0, Math.min(1, altFt / 6000));
+  if (t < 0.5) {
+    const s = t / 0.5;
+    return `rgb(${Math.round(74 + 176 * s)},${Math.round(222 - 18 * s)},${Math.round(128 - 107 * s)})`;
+  }
+  const s = (t - 0.5) / 0.5;
+  return `rgb(${Math.round(250 - 11 * s)},${Math.round(204 - 136 * s)},${Math.round(21 + 47 * s)})`;
 }
 
 function aircraftIcon(a: LiveAircraft): L.DivIcon {
