@@ -588,6 +588,32 @@ function MapPage() {
 
         <NightTerminator />
 
+        {showNotams && notams.map((n) => {
+          const colour = n.kind === "danger" ? "#ef4444" : n.kind === "tra" ? "#f97316" : n.kind === "restricted" ? "#a855f7" : "#facc15";
+          const radius = (n.radius_nm ?? 2) * 1852;
+          return (
+            <Circle
+              key={n.id}
+              center={[n.centre_lat, n.centre_lon]}
+              radius={radius}
+              pathOptions={{ color: colour, weight: 1.5, fillColor: colour, fillOpacity: 0.12, dashArray: "4 4" }}
+            >
+              <Tooltip direction="top" sticky>
+                <div style={{ maxWidth: 280, fontSize: 11 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 2 }}>
+                    {n.kind.toUpperCase()} · {n.notam_ref}
+                  </div>
+                  <div style={{ marginBottom: 2 }}>
+                    {n.lower_ft != null ? `${n.lower_ft}ft` : "SFC"} – {n.upper_ft != null ? `${n.upper_ft}ft` : "UNL"}
+                  </div>
+                  <div style={{ opacity: 0.8 }}>{n.description}</div>
+                </div>
+              </Tooltip>
+            </Circle>
+          );
+        })}
+
+
 
         {notifyEnabled && (
           <Circle
