@@ -1041,6 +1041,10 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
 
   const save = useCallback(async (silent = false) => {
     if (loading) return;
+    // Daily log writes require auth (RLS). Quietly skip for anonymous viewers
+    // so the page doesn't spam 401s in the background.
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) { if (!silent) toast.error("Sign in to save the daily log"); return; }
     setSaving(true);
     const { error } = await supabase.from("daily_logs").upsert({
       flight_date: date, duty_instructor: duty_instructor || null, duty_pilot: duty_pilot || null, notes: notes || null,
@@ -1049,6 +1053,7 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
     if (error) { if (!silent) toast.error(error.message); }
     else if (!silent) toast.success("Daily log saved");
   }, [loading, date, duty_instructor, duty_pilot, notes]);
+
 
   // Debounced autosave whenever any field changes.
   useEffect(() => {
