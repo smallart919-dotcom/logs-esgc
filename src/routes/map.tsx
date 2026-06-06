@@ -1020,6 +1020,17 @@ function normalizeCourse(course: number): number {
   return ((Math.round(course) % 360) + 360) % 360;
 }
 
+/** Altitude → colour ramp (green→amber→yellow, 0 to 6000ft). */
+function altColour(altFt: number): string {
+  const t = Math.max(0, Math.min(1, altFt / 6000));
+  if (t < 0.5) {
+    const s = t / 0.5;
+    return `rgb(${Math.round(74 + 176 * s)},${Math.round(222 - 18 * s)},${Math.round(128 - 107 * s)})`;
+  }
+  const s = (t - 0.5) / 0.5;
+  return `rgb(${Math.round(250 - 11 * s)},${Math.round(204 - 136 * s)},${Math.round(21 + 47 * s)})`;
+}
+
 function aircraftIcon(a: LiveAircraft): L.DivIcon {
   const isOwn = a.isOwnFleet;
   const stale = a.isStale;
