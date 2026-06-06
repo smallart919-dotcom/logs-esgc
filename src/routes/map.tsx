@@ -601,6 +601,7 @@ function MapPage() {
               opacity: seg.opacity,
               lineCap: "round",
               lineJoin: "round",
+              className: "trail-glow",
             }}
           />
         ))}
