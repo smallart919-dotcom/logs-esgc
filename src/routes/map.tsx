@@ -562,6 +562,9 @@ function MapPage() {
 
         {showAirspace && <AirspaceLabels />}
 
+        <NightTerminator />
+
+
         {notifyEnabled && (
           <Circle
             center={AIRFIELD_LATLON}
