@@ -55,7 +55,7 @@ export const updatePushPrefs = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, boolean> = {};
+    const patch: { notify_proximity?: boolean; notify_own_fleet?: boolean } = {};
     if (typeof data.notifyProximity === "boolean") patch.notify_proximity = data.notifyProximity;
     if (typeof data.notifyOwnFleet === "boolean") patch.notify_own_fleet = data.notifyOwnFleet;
     const { error } = await context.supabase
