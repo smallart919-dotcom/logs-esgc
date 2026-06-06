@@ -121,6 +121,15 @@ function MapPage() {
     });
   }, []);
 
+  // Load NOTAMs (active set) — refresh every 30 min
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => fetchNotamsFn().then((r) => { if (!cancelled) setNotams(r.notams); }).catch(() => {});
+    load();
+    const t = setInterval(load, 30 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [fetchNotamsFn]);
+
   const { flarmSet, regSet } = useMemo(() => {
     const flarmSet = new Set<string>();
     const regSet = new Set<string>();
