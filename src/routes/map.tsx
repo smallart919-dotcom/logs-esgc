@@ -729,19 +729,27 @@ function MapPage() {
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
             ["Hide stale (>60s)", hideStale, setHideStale, true],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled, true],
-            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef, chimeVolume); }, isOffice],
-          ] as [string, boolean, (v: boolean) => void, boolean][]).map(([label, state, setter, enabled]) => (
-            <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: enabled ? "pointer" : "not-allowed", marginBottom: "5px", opacity: enabled ? 1 : 0.5 }}>
-              <input
-                type="checkbox"
-                checked={state}
-                disabled={!enabled}
-                onChange={(e) => setter(e.target.checked)}
-                style={{ accentColor: "#38bdf8", width: 15, height: 15 }}
-              />
-              {label}{!enabled && label.startsWith("Audio") ? " (office only)" : ""}
-            </label>
-          ))}
+            ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef, chimeVolume); }, true],
+          ] as [string, boolean, (v: boolean) => void, boolean][]).map(([label, state, setter, enabled]) => {
+            const lockedForCaravan = !isOffice && label.startsWith("Audio");
+            return (
+              <label key={label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: enabled && !lockedForCaravan ? "pointer" : "not-allowed", marginBottom: "5px", opacity: enabled ? 1 : 0.5 }}>
+                <input
+                  type="checkbox"
+                  checked={state}
+                  disabled={!enabled || lockedForCaravan}
+                  onChange={(e) => setter(e.target.checked)}
+                  style={{ accentColor: "#38bdf8", width: 15, height: 15 }}
+                />
+                <span>
+                  {label}
+                  {lockedForCaravan && (
+                    <span style={{ marginLeft: 6, fontSize: 10, color: "rgba(255,255,255,0.45)", fontStyle: "italic" }}>· office adjustable</span>
+                  )}
+                </span>
+              </label>
+            );
+          })}
           {isOffice && (
             <div style={{ marginTop: "6px", marginBottom: "4px" }}>
               <button
