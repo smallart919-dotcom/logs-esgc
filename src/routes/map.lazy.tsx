@@ -446,48 +446,8 @@ function MapPage() {
     return () => { cancelled = true; };
   }, [aircraft, photoCache]);
 
-  // METAR — refresh every 10 min (NOAA aviationweather.gov, CORS-enabled)
-  useEffect(() => {
-    let cancelled = false;
-    const fetchMetar = async () => {
-      try {
-        const r = await fetch("https://aviationweather.gov/api/data/metar?ids=EGKB,EGKA,EGMD&format=json&hours=2");
-        if (!r.ok) return;
-        const json = await r.json() as Array<{ icaoId: string; rawOb: string; reportTime: string }>;
-        if (cancelled || !Array.isArray(json)) return;
-        // Latest per ICAO
-        const latest = new Map<string, { id: string; raw: string; obs: string }>();
-        for (const m of json) {
-          if (!latest.has(m.icaoId)) latest.set(m.icaoId, { id: m.icaoId, raw: m.rawOb, obs: m.reportTime });
-        }
-        setMetar(Array.from(latest.values()));
-      } catch { /* noop */ }
-    };
-    fetchMetar();
-    const id = setInterval(fetchMetar, 10 * 60 * 1000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, []);
+  // (Weather fetching now lives in the shared WeatherView / useAviationWeather hook.)
 
-  // TAF — refresh every 30 min for the same nearby aerodromes
-  useEffect(() => {
-    let cancelled = false;
-    const fetchTaf = async () => {
-      try {
-        const r = await fetch("https://aviationweather.gov/api/data/taf?ids=EGKB,EGKA,EGMD&format=json");
-        if (!r.ok) return;
-        const json = await r.json() as Array<{ icaoId: string; rawTAF: string }>;
-        if (cancelled || !Array.isArray(json)) return;
-        const latest = new Map<string, { id: string; raw: string }>();
-        for (const t of json) {
-          if (t.rawTAF && !latest.has(t.icaoId)) latest.set(t.icaoId, { id: t.icaoId, raw: t.rawTAF });
-        }
-        setTaf(Array.from(latest.values()));
-      } catch { /* noop */ }
-    };
-    fetchTaf();
-    const id = setInterval(fetchTaf, 30 * 60 * 1000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, []);
 
   // Smooth interpolation tick — between data fetches we extrapolate positions
   // from each aircraft's last known speed/course so markers glide instead of
