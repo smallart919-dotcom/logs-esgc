@@ -99,11 +99,76 @@ function MapPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [weatherOpen, setWeatherOpen] = useState(false);
-  // Per-aircraft trail history (full session, kept permanently like FR24)
+  // Per-aircraft trail history (persisted in localStorage, FR24-style).
+  const TRAILS_LS_KEY = "esgc.map.trails.v1";
+  const TRAILS_META_LS_KEY = "esgc.map.trails.meta.v1";
+  const TRAIL_MAX_AGE_MS = 24 * 60 * 60 * 1000; // keep last 24h
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   // Last-known meta per id so we can keep drawing trails after the aircraft
   // drops off the live feed (FR24-style persistence).
   const trailMetaRef = useRef<Map<string, { type: AircraftType; isOwnFleet: boolean; reg: string }>>(new Map());
+  const trailsLoadedRef = useRef(false);
+  const trailsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Hydrate trails from localStorage once on mount.
+  useEffect(() => {
+    try {
+      const rawT = localStorage.getItem(TRAILS_LS_KEY);
+      const rawM = localStorage.getItem(TRAILS_META_LS_KEY);
+      const cutoffSec = (Date.now() - TRAIL_MAX_AGE_MS) / 1000;
+      if (rawT) {
+        const obj = JSON.parse(rawT) as Record<string, TrailPoint[]>;
+        for (const [id, pts] of Object.entries(obj)) {
+          const filtered = (pts || []).filter((p) => p && p.ts > cutoffSec);
+          if (filtered.length) trailsRef.current.set(id, filtered);
+        }
+      }
+      if (rawM) {
+        const obj = JSON.parse(rawM) as Record<string, { type: AircraftType; isOwnFleet: boolean; reg: string }>;
+        for (const [id, m] of Object.entries(obj)) {
+          if (trailsRef.current.has(id)) trailMetaRef.current.set(id, m);
+        }
+      }
+      trailsLoadedRef.current = true;
+      setTrailsTick((t) => t + 1);
+    } catch {
+      trailsLoadedRef.current = true;
+    }
+  }, []);
+
+  // Throttled persistence to localStorage.
+  const scheduleTrailSave = () => {
+    if (trailsSaveTimerRef.current) return;
+    trailsSaveTimerRef.current = setTimeout(() => {
+      trailsSaveTimerRef.current = null;
+      try {
+        const cutoffSec = (Date.now() - TRAIL_MAX_AGE_MS) / 1000;
+        const obj: Record<string, TrailPoint[]> = {};
+        const meta: Record<string, { type: AircraftType; isOwnFleet: boolean; reg: string }> = {};
+        for (const [id, pts] of trailsRef.current.entries()) {
+          // downsample heavily-populated trails to keep storage small
+          const filtered = pts.filter((p) => p.ts > cutoffSec);
+          if (!filtered.length) continue;
+          const step = filtered.length > 2000 ? Math.ceil(filtered.length / 2000) : 1;
+          const out: TrailPoint[] = [];
+          for (let i = 0; i < filtered.length; i += step) out.push(filtered[i]);
+          if (out[out.length - 1] !== filtered[filtered.length - 1]) out.push(filtered[filtered.length - 1]);
+          obj[id] = out;
+          const m = trailMetaRef.current.get(id);
+          if (m) meta[id] = m;
+        }
+        localStorage.setItem(TRAILS_LS_KEY, JSON.stringify(obj));
+        localStorage.setItem(TRAILS_META_LS_KEY, JSON.stringify(meta));
+      } catch {
+        // quota or serialization error — drop oldest half and retry once
+        try {
+          const ids = Array.from(trailsRef.current.keys());
+          const drop = ids.slice(0, Math.floor(ids.length / 2));
+          for (const id of drop) trailsRef.current.delete(id);
+        } catch { /* ignore */ }
+      }
+    }, 5000);
+  };
   const failCountRef = useRef(0);
 
   useEffect(() => {
