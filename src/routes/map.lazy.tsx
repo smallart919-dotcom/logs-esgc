@@ -1121,8 +1121,6 @@ function MapPage() {
         </div>
       )}
 
-      <MapOnboarding />
-
     </div>
   );
 }
