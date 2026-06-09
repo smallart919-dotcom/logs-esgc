@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, useMap } from "react-leaflet";
@@ -17,7 +17,7 @@ import { listActiveNotams, refreshNotamsNow, type NotamRecord } from "@/lib/nota
 import { firePush } from "@/lib/push.functions";
 import { PushToggle } from "@/components/PushToggle";
 
-export const Route = createFileRoute("/map")({
+export const Route = createLazyFileRoute("/map")({
   beforeLoad: requireAuth,
   head: () => ({
     meta: [
@@ -1752,5 +1752,5 @@ function FleetDock({
         );
       })}
     </div>
-  );
+  )
 }
