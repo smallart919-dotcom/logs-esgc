@@ -25,6 +25,7 @@ export const Route = createFileRoute("/map")({
       { name: "description", content: "Live aircraft positions around Ringmer — OGN + ADS-B." },
     ],
   }),
+  ssr: false,
   component: MapPage,
 });
 
