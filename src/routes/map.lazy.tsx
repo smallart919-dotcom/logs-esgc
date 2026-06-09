@@ -87,6 +87,8 @@ function MapPage() {
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
+  const [showThermals, setShowThermals] = useState(false);
+  const [showWindy, setShowWindy] = useState(false);
   const [audioChime, setAudioChime] = useState(true);
   const [chimeVolume, setChimeVolume] = useState(0.9);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
