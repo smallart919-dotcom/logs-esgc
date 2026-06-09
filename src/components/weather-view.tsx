@@ -76,17 +76,12 @@ export function WeatherView({ variant = "page" }: { variant?: "drawer" | "page" 
         </div>
       </section>
 
-      {/* METAR / TAF */}
+      {/* METAR / TAF — official metar-taf.com embed (landscape widget for EGKA/Ringmer) */}
       <Section title="✈ METAR / TAF" subtitle={`Live weather for Ringmer Glider Field (${METAR_ID}) · Runway 06/24 (not 7/25)`} muted={muted}>
-        <div style={{ background: cardBg, border: cardBorder, borderRadius: 12, padding: 12, display: "flex", justifyContent: "center" }}>
-          <iframe
-            title="METAR Ringmer"
-            src={`https://metar-taf.com/embed-widget/${METAR_ID}?bg=transparent`}
-            style={{ width: "100%", maxWidth: 460, height: 460, border: "none", borderRadius: 8 }}
-            loading="lazy"
-          />
+        <div style={{ background: cardBg, border: cardBorder, borderRadius: 12, padding: 14, display: "flex", justifyContent: "center" }}>
+          <MetarTafWidget dark={dark} />
         </div>
-        <a href={`https://metar-taf.com/metar/${METAR_ID}`} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 13, color: "#38bdf8" }}>
+        <a href={`https://metar-taf.com/metar/${METAR_ID}?station_id=EGKA`} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 13, color: "#38bdf8" }}>
           Open full METAR / TAF ↗
         </a>
       </Section>
