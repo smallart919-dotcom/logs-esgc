@@ -892,6 +892,8 @@ function MapPage() {
             ["Airspace overlay", showAirspace, setShowAirspace, true],
             [`NOTAMs / TRA (${notams.length})`, showNotams, setShowNotams, true],
             ["Show trails", showTrails, setShowTrails, true],
+            ["🌡 Thermals (RASP)", showThermals, setShowThermals, true],
+            ["💨 Windy overlay", showWindy, setShowWindy, true],
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
             ["Hide stale (>5min)", hideStale, setHideStale, true],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled, true],
