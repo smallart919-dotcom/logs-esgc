@@ -469,6 +469,27 @@ function MapPage() {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
+  // TAF — refresh every 30 min for the same nearby aerodromes
+  useEffect(() => {
+    let cancelled = false;
+    const fetchTaf = async () => {
+      try {
+        const r = await fetch("https://aviationweather.gov/api/data/taf?ids=EGKB,EGKA,EGMD&format=json");
+        if (!r.ok) return;
+        const json = await r.json() as Array<{ icaoId: string; rawTAF: string }>;
+        if (cancelled || !Array.isArray(json)) return;
+        const latest = new Map<string, { id: string; raw: string }>();
+        for (const t of json) {
+          if (t.rawTAF && !latest.has(t.icaoId)) latest.set(t.icaoId, { id: t.icaoId, raw: t.rawTAF });
+        }
+        setTaf(Array.from(latest.values()));
+      } catch { /* noop */ }
+    };
+    fetchTaf();
+    const id = setInterval(fetchTaf, 30 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
   // Smooth interpolation tick — between data fetches we extrapolate positions
   // from each aircraft's last known speed/course so markers glide instead of
   // jumping (FR24-style). Runs at ~10fps when visible.
