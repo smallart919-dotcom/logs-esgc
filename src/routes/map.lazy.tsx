@@ -93,14 +93,11 @@ function MapPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [photoCache, setPhotoCache] = useState<Map<string, { url: string; photographer?: string; link?: string } | null>>(new Map());
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
-  const [taf, setTaf] = useState<{ id: string; raw: string }[]>([]);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
   const [panelOpen, setPanelOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [weatherOpen, setWeatherOpen] = useState(false);
-  const [weatherTab, setWeatherTab] = useState<"metar" | "taf" | "windy" | "rasp">("metar");
   // Per-aircraft trail history (full session, kept permanently like FR24)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   // Last-known meta per id so we can keep drawing trails after the aircraft
