@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WeatherRouteImport } from './routes/weather'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as MembersRouteImport } from './routes/members'
@@ -27,6 +28,11 @@ import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/h
 import { Route as ApiPublicHooksCngSyncRouteImport } from './routes/api/public/hooks/cng-sync'
 import { Route as ApiPublicHooksAutoSendLogsRouteImport } from './routes/api/public/hooks/auto-send-logs'
 
+const WeatherRoute = WeatherRouteImport.update({
+  id: '/weather',
+  path: '/weather',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/weather': typeof WeatherRoute
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/weather': typeof WeatherRoute
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/weather': typeof WeatherRoute
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
   '/api/public/hooks/cng-sync': typeof ApiPublicHooksCngSyncRoute
   '/api/public/hooks/ogn-sync': typeof ApiPublicHooksOgnSyncRoute
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
+    | '/weather'
     | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
+    | '/weather'
     | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/settings'
     | '/stats'
+    | '/weather'
     | '/api/public/hooks/auto-send-logs'
     | '/api/public/hooks/cng-sync'
     | '/api/public/hooks/ogn-sync'
@@ -247,6 +259,7 @@ export interface RootRouteChildren {
   MembersRoute: typeof MembersRoute
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
+  WeatherRoute: typeof WeatherRoute
   ApiPublicHooksAutoSendLogsRoute: typeof ApiPublicHooksAutoSendLogsRoute
   ApiPublicHooksCngSyncRoute: typeof ApiPublicHooksCngSyncRoute
   ApiPublicHooksOgnSyncRoute: typeof ApiPublicHooksOgnSyncRoute
@@ -255,6 +268,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/weather': {
+      id: '/weather'
+      path: '/weather'
+      fullPath: '/weather'
+      preLoaderRoute: typeof WeatherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stats': {
       id: '/stats'
       path: '/stats'
@@ -391,6 +411,7 @@ const rootRouteChildren: RootRouteChildren = {
   MembersRoute: MembersRoute,
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
+  WeatherRoute: WeatherRoute,
   ApiPublicHooksAutoSendLogsRoute: ApiPublicHooksAutoSendLogsRoute,
   ApiPublicHooksCngSyncRoute: ApiPublicHooksCngSyncRoute,
   ApiPublicHooksOgnSyncRoute: ApiPublicHooksOgnSyncRoute,
@@ -399,3 +420,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
