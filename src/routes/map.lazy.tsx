@@ -1193,6 +1193,27 @@ function MapOnboarding() {
 }
 
 
+function MapViewSync({ onChange }: { onChange: (view: { lat: number; lon: number; zoom: number }) => void }) {
+  const map = useMapEvents({
+    moveend: () => {
+      const center = map.getCenter();
+      onChange({ lat: center.lat, lon: center.lng, zoom: map.getZoom() });
+    },
+    zoomend: () => {
+      const center = map.getCenter();
+      onChange({ lat: center.lat, lon: center.lng, zoom: map.getZoom() });
+    },
+  });
+
+  useEffect(() => {
+    const center = map.getCenter();
+    onChange({ lat: center.lat, lon: center.lng, zoom: map.getZoom() });
+  }, [map, onChange]);
+
+  return null;
+}
+
+
 
 
 
