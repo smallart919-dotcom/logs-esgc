@@ -45,7 +45,7 @@ export const getLiveTraffic = createServerFn({ method: "GET" }).handler(async ()
   }
 
   const OGN_URL =
-    "https://api.glideandseek.com/v2/aircraft?showOnlyGliders=false&a=51.4&b=1.8&c=50.4&d=-0.6";
+    "https://api.glideandseek.com/v2/aircraft?showOnlyGliders=false&a=51.7&b=1.6&c=50.1&d=-1.4";
   const ADSB_URLS = [
     "https://opendata.adsb.fi/api/v2/lat/50.907/lon/0.105/dist/50",
     "https://api.airplanes.live/v2/point/50.907/0.105/50",
