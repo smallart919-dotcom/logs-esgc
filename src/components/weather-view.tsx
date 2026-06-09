@@ -188,3 +188,30 @@ function ChartCard({ label, desc, src, cardBg, cardBorder, muted, tall }: { labe
     </div>
   );
 }
+
+/**
+ * Official metar-taf.com landscape embed. Their script writes the widget
+ * into an anchor with a specific id, then attaches a global script tag.
+ * We render the anchor and inject the script once per mount.
+ */
+function MetarTafWidget({ dark }: { dark: boolean }) {
+  const targetId = useRef(`metartaf-${Math.random().toString(36).slice(2, 10)}`).current;
+  useEffect(() => {
+    const s = document.createElement("script");
+    s.async = true;
+    s.defer = true;
+    s.crossOrigin = "anonymous";
+    s.src = `https://metar-taf.com/embed-js/${METAR_ID}?bg_color=${dark ? "000000" : "ffffff"}&station_id=EGKA&layout=landscape&qnh=inHg&rh=rh&target=${targetId}`;
+    document.body.appendChild(s);
+    return () => { s.remove(); };
+  }, [dark, targetId]);
+  return (
+    <a
+      href={`https://metar-taf.com/metar/${METAR_ID}?station_id=EGKA`}
+      id={targetId}
+      style={{ fontSize: 18, fontWeight: 500, color: dark ? "#fff" : "#000", width: 350, height: 278, display: "block" }}
+    >
+      METAR Ringmer Glider Field
+    </a>
+  );
+}
