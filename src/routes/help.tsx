@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   BookOpen, Pencil, Save, X, CheckCircle2, ListChecks, Plus, Trash2,
-  Printer, ArrowUp, Type, Search,
+  Printer, ArrowUp, Type, Search, Sparkles, MapPin, FileText, HelpCircle,
 } from "lucide-react";
 import { todayUKDate } from "@/lib/uktime";
 
