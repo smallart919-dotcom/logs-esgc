@@ -946,17 +946,44 @@ function MapPage() {
         </div>
       </div>
 
+      {/* Floating weather button — independent of the controls panel */}
+      <button
+        type="button"
+        onClick={() => setWeatherOpen(true)}
+        aria-label="Open weather"
+        className="absolute z-[1000] bottom-4 left-4"
+        style={{ background: "rgba(56,189,248,0.95)", color: "#0b0f19", border: "none", borderRadius: 999, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 20px rgba(0,0,0,0.5)", fontFamily: "system-ui,sans-serif" }}
+      >
+        🌦 Weather
+      </button>
+
       {weatherOpen && (
-        <WeatherPanel
-          metar={metar}
-          taf={taf}
-          tab={weatherTab}
-          setTab={setWeatherTab}
-          onClose={() => setWeatherOpen(false)}
-        />
+        <div
+          role="dialog"
+          aria-label="Weather"
+          onClick={() => setWeatherOpen(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "flex-end" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "min(580px, 100vw)", height: "100%", background: "#0b0f19", borderLeft: "1px solid rgba(255,255,255,0.1)", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.6)" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#f1f5f9", fontFamily: "system-ui,sans-serif" }}>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>🌦 Weather — for the day</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <a href="/weather" style={{ background: "rgba(255,255,255,0.08)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "6px 10px", fontSize: 12, textDecoration: "none" }}>Full page ↗</a>
+                <button onClick={() => setWeatherOpen(false)} aria-label="Close weather" style={{ background: "rgba(255,255,255,0.08)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "6px 10px", cursor: "pointer", fontSize: 13 }}>✕</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px" }}>
+              <WeatherView variant="drawer" />
+            </div>
+          </div>
+        </div>
       )}
 
       <MapOnboarding />
+
     </div>
   );
 }
