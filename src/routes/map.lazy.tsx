@@ -1,7 +1,7 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, ImageOverlay, useMap } from "react-leaflet";
 import { useServerFn } from "@tanstack/react-start";
 import jsPDF from "jspdf";
 import L from "leaflet";
@@ -87,6 +87,8 @@ function MapPage() {
   const [proximityNm, setProximityNm] = useState(1);
   const [isOffice, setIsOffice] = useState(false);
   const [showTrails, setShowTrails] = useState(true);
+  const [showThermals, setShowThermals] = useState(false);
+  const [showWindy, setShowWindy] = useState(false);
   const [audioChime, setAudioChime] = useState(true);
   const [chimeVolume, setChimeVolume] = useState(0.9);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
@@ -677,6 +679,16 @@ function MapPage() {
           maxZoom={19}
         />
 
+        {/* Thermal overlay — RASP wstar BSRATIO for today, 13:00 local.
+            Rough UK2 domain bounds — sufficient for situational awareness. */}
+        {showThermals && (
+          <ImageOverlay
+            url={`https://rasp.stratus.org.uk/UK2/FCST/wstar_bsratio.curr.1300lst.d2.body.png?d=${new Date().toISOString().slice(0,10)}`}
+            bounds={[[49.0, -6.6], [55.8, 3.2]]}
+            opacity={0.55}
+          />
+        )}
+
         {showAirspace && <LiveAirspace />}
 
         {showAirspace && <AirspaceLabels />}
@@ -785,6 +797,25 @@ function MapPage() {
 
       </MapContainer>
 
+      {/* Windy overlay — translucent iframe layered above the map.
+          When enabled, pointer events pass to Windy so user can pan/zoom Windy
+          independently. A small dismiss chip in the corner closes the overlay. */}
+      {showWindy && (
+        <div style={{ position: "absolute", inset: 0, zIndex: 600, pointerEvents: "auto", borderRadius: 12, overflow: "hidden" }}>
+          <iframe
+            title="Windy overlay"
+            src="https://embed.windy.com/embed2.html?lat=50.87&lon=0.10&detailLat=50.87&detailLon=0.10&zoom=9&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1"
+            style={{ width: "100%", height: "100%", border: "none", opacity: 0.92 }}
+          />
+          <button
+            onClick={() => setShowWindy(false)}
+            style={{ position: "absolute", top: 10, right: 10, zIndex: 601, background: "rgba(0,0,0,0.85)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            ✕ Close Windy
+          </button>
+        </div>
+      )}
+
       {/* Aircraft detail side panel (FR24-style) */}
       <AircraftPanel
         sel={selectedId ? visible.find((a) => a.id === selectedId) ?? null : null}
@@ -861,6 +892,8 @@ function MapPage() {
             ["Airspace overlay", showAirspace, setShowAirspace, true],
             [`NOTAMs / TRA (${notams.length})`, showNotams, setShowNotams, true],
             ["Show trails", showTrails, setShowTrails, true],
+            ["🌡 Thermals (RASP)", showThermals, setShowThermals, true],
+            ["💨 Windy overlay", showWindy, setShowWindy, true],
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
             ["Hide stale (>5min)", hideStale, setHideStale, true],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled, true],

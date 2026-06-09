@@ -1,166 +1,193 @@
 import { useMemo, useState } from "react";
-import { useAviationWeather, NEARBY_AIRFIELDS, type MetarRecord, type TafRecord } from "@/lib/use-aviation-weather";
-
-type Tab = "metar" | "taf" | "windy" | "rasp";
 
 /**
- * Reusable weather UI — tabs for METAR / TAF / Windy / RASP plus a
- * checkbox list of nearby aerodromes (Ringmer / Deanland area).
+ * Ringmer Soarcast-style weather briefing.
+ * - METAR/TAF: metar-taf.com embed widget for GB-0614 (Ringmer Glider Field)
+ * - RASP BlipSpot: 8 forecast graphs for trigraph RIN, day-pickable
+ * - RASP Meteogram: full column atmospheric forecast, day-pickable
  *
- * `variant="drawer"` styles for a dark map overlay; `variant="page"` styles
- * for a standalone full-width route.
+ * Day buttons mirror the live Monday→Sunday RASP sequence. At UK midnight
+ * into Sunday, Monday–Saturday roll forward; Sunday holds today's chart.
  */
+
+const RIN_TRIGRAPH = "RIN";
+const METAR_ID = "GB-0614";
+
+type Day = { key: string; label: string; date: Date; rasp: string };
+
+/** Build the Monday→Sunday day list used by the RASP buttons. */
+function buildWeek(): Day[] {
+  const now = new Date();
+  // RASP day param is the English weekday name.
+  const monday = new Date(now);
+  const dow = (now.getDay() + 6) % 7; // 0 = Monday
+  monday.setDate(now.getDate() - dow);
+  monday.setHours(12, 0, 0, 0);
+  const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  return names.map((n, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return {
+      key: n.slice(0, 3) + d.getDate(),
+      label: `${n.slice(0, 3)} ${d.getDate()} ${d.toLocaleString("en-GB", { month: "short" })}`,
+      date: d,
+      rasp: n,
+    };
+  });
+}
+
+const BLIP_PARAMS: { key: string; label: string; desc: string }[] = [
+  { key: "blip_main", label: "Main Parameters", desc: "Thermal strength, height & cloudbase" },
+  { key: "blip_temp", label: "Temperature", desc: "Surface & dew point temperature" },
+  { key: "blip_wind", label: "Wind Speed", desc: "Surface & boundary layer winds" },
+  { key: "blip_wind_dir", label: "Wind Direction", desc: "Wind direction through the day" },
+  { key: "blip_cu", label: "Cu Potential", desc: "Cumulus cloudbase potential" },
+  { key: "blip_sun", label: "Sun %", desc: "Solar radiation percentage" },
+  { key: "blip_rain", label: "Rain", desc: "Precipitation forecast" },
+  { key: "blip_stars", label: "Star Rating", desc: "Cross-country soaring rating" },
+];
+
 export function WeatherView({ variant = "page" }: { variant?: "drawer" | "page" }) {
+  const week = useMemo(buildWeek, []);
+  const todayIdx = (new Date().getDay() + 6) % 7;
+  const [blipDay, setBlipDay] = useState<Day>(week[todayIdx]);
+  const [metDay, setMetDay] = useState<Day>(week[todayIdx]);
+
   const dark = variant === "drawer";
-  const [tab, setTab] = useState<Tab>("metar");
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(NEARBY_AIRFIELDS.filter((a) => a.near).map((a) => a.icao)),
-  );
-  const icaos = useMemo(() => Array.from(selected), [selected]);
-  const { metar, taf } = useAviationWeather(icaos);
-
-  const toggle = (icao: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(icao)) next.delete(icao); else next.add(icao);
-      return next;
-    });
-
-  const dayKey = new Date().toISOString().slice(0, 10);
-  const raspImg = `https://rasp.stratus.org.uk/UK2/FCST/wstar_bsratio.curr.1300lst.d2.png?d=${dayKey}`;
-  const raspAlt = `https://rasp.stratus.org.uk/UK2/FCST/press1000.curr.1300lst.d2.png?d=${dayKey}`;
-  const raspLink = "https://rasp.stratus.org.uk/";
-
-  const windySrc =
-    "https://embed.windy.com/embed2.html?lat=50.87&lon=0.10&detailLat=50.87&detailLon=0.10&width=650&height=450&zoom=8&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1";
-
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "metar", label: "METAR" },
-    { key: "taf", label: "TAF" },
-    { key: "windy", label: "Windy" },
-    { key: "rasp", label: "RASP" },
-  ];
-
-  const cardBg = dark ? "rgba(255,255,255,0.04)" : "hsl(var(--card))";
-  const cardBorder = dark ? "1px solid rgba(255,255,255,0.08)" : "1px solid hsl(var(--border))";
   const text = dark ? "#f1f5f9" : "hsl(var(--foreground))";
   const muted = dark ? "rgba(255,255,255,0.6)" : "hsl(var(--muted-foreground))";
+  const cardBg = dark ? "rgba(255,255,255,0.04)" : "hsl(var(--card))";
+  const cardBorder = dark ? "1px solid rgba(255,255,255,0.08)" : "1px solid hsl(var(--border))";
 
   return (
     <div style={{ color: text, fontFamily: "system-ui,sans-serif" }}>
-      {/* Airfield selector */}
-      <div style={{ marginBottom: 14, padding: 12, background: cardBg, border: cardBorder, borderRadius: 10 }}>
-        <div style={{ fontSize: 12, color: muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
-          Aerodromes (closest to Ringmer / Deanland)
+      {/* Briefing intro */}
+      <section style={{ marginBottom: 28, padding: 18, background: cardBg, border: cardBorder, borderRadius: 14 }}>
+        <div style={{ display: "inline-block", padding: "4px 10px", background: "rgba(56,189,248,0.15)", color: "#38bdf8", borderRadius: 999, fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
+          ☁ Ringmer gliding outlook · {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 14px" }}>
-          {NEARBY_AIRFIELDS.map((a) => (
-            <label key={a.icao} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13 }}>
-              <input
-                type="checkbox"
-                checked={selected.has(a.icao)}
-                onChange={() => toggle(a.icao)}
-                style={{ accentColor: "#38bdf8", width: 16, height: 16 }}
-              />
-              <span><b>{a.icao}</b> <span style={{ color: muted }}>· {a.name}</span></span>
-            </label>
-          ))}
+        <h2 style={{ fontSize: 22, fontWeight: 700, margin: "4px 0 6px" }}>Live flying-day briefing</h2>
+        <p style={{ color: muted, fontSize: 14, lineHeight: 1.5, marginBottom: 12, marginTop: 0 }}>
+          Today's RASP, meteogram, METAR and aviation briefings are lined up below for a quick go / no-go scan before launch.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12, marginTop: 10 }}>
+          <MiniCard title="Suitability" body="Check today's live charts below" extra="The dashboard is aligned so each button date matches its live upstream chart." muted={muted} dark={dark} />
+          <MiniCard title="Forecast flow" body="Sunday midnight rolls the week forward" extra="Monday–Saturday jump to the next forecast set at UK midnight into Sunday." muted={muted} dark={dark} />
         </div>
-        <div style={{ fontSize: 11, color: muted, marginTop: 8, fontStyle: "italic" }}>
-          Deanland (EGML) doesn't publish METAR/TAF — Shoreham &amp; Headcorn are the nearest reporting stations.
-        </div>
-      </div>
+      </section>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{
-              flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer",
-              fontSize: 13, fontWeight: 600,
-              background: tab === t.key ? "#38bdf8" : (dark ? "rgba(255,255,255,0.06)" : "hsl(var(--muted))"),
-              color: tab === t.key ? "#0b0f19" : text,
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      {tab === "metar" && <ReportList records={metar} accent="#38bdf8" empty="Fetching latest METAR…" muted={muted} cardBg={cardBg} cardBorder={cardBorder} />}
-      {tab === "taf" && <ReportList records={taf as MetarRecord[]} accent="#a3e635" empty="Fetching latest TAF…" muted={muted} cardBg={cardBg} cardBorder={cardBorder} stripTaf />}
-
-      {tab === "windy" && (
-        <div>
-          <div style={{ fontSize: 12, color: muted, marginBottom: 8 }}>Live wind &amp; weather · scroll / zoom to explore</div>
+      {/* METAR / TAF */}
+      <Section title="✈ METAR / TAF" subtitle={`Live weather for Ringmer Glider Field (${METAR_ID}) · Runway 06/24 (not 7/25)`} muted={muted}>
+        <div style={{ background: cardBg, border: cardBorder, borderRadius: 12, padding: 12, display: "flex", justifyContent: "center" }}>
           <iframe
-            title="Windy"
-            src={windySrc}
-            style={{ width: "100%", height: 500, border: "none", borderRadius: 10 }}
+            title="METAR Ringmer"
+            src={`https://metar-taf.com/embed-widget/${METAR_ID}?bg=transparent`}
+            style={{ width: "100%", maxWidth: 460, height: 460, border: "none", borderRadius: 8 }}
             loading="lazy"
           />
-          <a href="https://www.windy.com/?50.87,0.10,8" target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 13, color: "#38bdf8" }}>
-            Open full Windy ↗
-          </a>
         </div>
-      )}
+        <a href={`https://metar-taf.com/metar/${METAR_ID}`} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 13, color: "#38bdf8" }}>
+          Open full METAR / TAF ↗
+        </a>
+      </Section>
 
-      {tab === "rasp" && (
-        <div>
-          <div style={{ fontSize: 12, color: muted, marginBottom: 8 }}>Today's soaring forecast · 13:00 local</div>
-          <RaspImg label="Thermal strength × B/S ratio" src={raspImg} cardBg={cardBg} cardBorder={cardBorder} />
-          <RaspImg label="Surface pressure" src={raspAlt} cardBg={cardBg} cardBorder={cardBorder} />
-          <a href={raspLink} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#38bdf8" }}>
-            Open full RASP UK ↗
-          </a>
+      {/* RASP BlipSpot */}
+      <Section
+        title={`☁ RASP BlipSpot — Ringmer (${RIN_TRIGRAPH})`}
+        subtitle={<>Soaring forecast graphs from <a href={`https://rasp.stratus.org.uk/index.php/blipspot-maker?tp=${RIN_TRIGRAPH}`} target="_blank" rel="noreferrer" style={{ color: "#38bdf8" }}>RASP Stratus</a></>}
+        muted={muted}
+      >
+        <DayPicker week={week} selected={blipDay} onSelect={setBlipDay} dark={dark} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14, marginTop: 14 }}>
+          {BLIP_PARAMS.map((p) => (
+            <ChartCard
+              key={p.key}
+              label={p.label}
+              desc={p.desc}
+              src={`https://app.stratus.org.uk/blip/graph/${p.key}.php?day=${blipDay.rasp}&tp=${RIN_TRIGRAPH}`}
+              cardBg={cardBg}
+              cardBorder={cardBorder}
+              muted={muted}
+            />
+          ))}
         </div>
-      )}
+      </Section>
+
+      {/* RASP Meteogram */}
+      <Section
+        title={`📊 RASP Meteogram — Ringmer (${RIN_TRIGRAPH})`}
+        subtitle={<>Full atmospheric profile from <a href={`https://rasp.stratus.org.uk/index.php/meteograms?tp=${RIN_TRIGRAPH}`} target="_blank" rel="noreferrer" style={{ color: "#38bdf8" }}>RASP Meteograms</a></>}
+        muted={muted}
+      >
+        <DayPicker week={week} selected={metDay} onSelect={setMetDay} dark={dark} />
+        <ChartCard
+          label={`Meteogram — ${metDay.label}`}
+          desc="Full column atmospheric forecast for Ringmer"
+          src={`https://app.stratus.org.uk/blip/graph/meteogram.php?day=${metDay.rasp}&tp=${RIN_TRIGRAPH}`}
+          cardBg={cardBg}
+          cardBorder={cardBorder}
+          muted={muted}
+          tall
+        />
+      </Section>
     </div>
   );
 }
 
-function ReportList({
-  records, accent, empty, muted, cardBg, cardBorder, stripTaf,
-}: {
-  records: (MetarRecord | TafRecord)[];
-  accent: string;
-  empty: string;
-  muted: string;
-  cardBg: string;
-  cardBorder: string;
-  stripTaf?: boolean;
-}) {
-  if (records.length === 0) {
-    return <div style={{ fontSize: 14, color: muted, fontStyle: "italic", padding: 12 }}>{empty}</div>;
-  }
+function Section({ title, subtitle, muted, children }: { title: string; subtitle: React.ReactNode; muted: string; children: React.ReactNode }) {
   return (
-    <div>
-      {records.map((r) => {
-        const raw = stripTaf
-          ? r.raw.replace(/^TAF\s+(AMD\s+|COR\s+)?/, "").replace(`${r.id} `, "")
-          : r.raw.replace(`${r.id} `, "");
+    <section style={{ marginBottom: 32 }}>
+      <h3 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>{title}</h3>
+      <p style={{ color: muted, fontSize: 13, margin: "0 0 12px" }}>{subtitle}</p>
+      {children}
+    </section>
+  );
+}
+
+function MiniCard({ title, body, extra, muted, dark }: { title: string; body: string; extra: string; muted: string; dark: boolean }) {
+  return (
+    <div style={{ padding: 14, borderRadius: 10, background: dark ? "rgba(255,255,255,0.03)" : "hsl(var(--muted))", border: dark ? "1px solid rgba(255,255,255,0.06)" : "1px solid hsl(var(--border))" }}>
+      <div style={{ fontSize: 11, color: muted, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>{body}</div>
+      <div style={{ fontSize: 12, color: muted, lineHeight: 1.45 }}>{extra}</div>
+    </div>
+  );
+}
+
+function DayPicker({ week, selected, onSelect, dark }: { week: Day[]; selected: Day; onSelect: (d: Day) => void; dark: boolean }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {week.map((d) => {
+        const active = d.key === selected.key;
         return (
-          <div key={r.id} style={{ background: cardBg, border: cardBorder, borderRadius: 10, padding: "12px 14px", marginBottom: 10 }}>
-            <div style={{ fontSize: 12, color: accent, fontWeight: 700, marginBottom: 4 }}>{r.id}</div>
-            <div style={{ fontFamily: "ui-monospace,monospace", fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{raw}</div>
-          </div>
+          <button
+            key={d.key}
+            onClick={() => onSelect(d)}
+            style={{
+              padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+              fontSize: 12, fontWeight: 600,
+              background: active ? "#38bdf8" : (dark ? "rgba(255,255,255,0.06)" : "hsl(var(--muted))"),
+              color: active ? "#0b0f19" : (dark ? "#f1f5f9" : "hsl(var(--foreground))"),
+            }}
+          >
+            {d.label}
+          </button>
         );
       })}
     </div>
   );
 }
 
-function RaspImg({ label, src, cardBg, cardBorder }: { label: string; src: string; cardBg: string; cardBorder: string }) {
+function ChartCard({ label, desc, src, cardBg, cardBorder, muted, tall }: { label: string; desc: string; src: string; cardBg: string; cardBorder: string; muted: string; tall?: boolean }) {
   return (
-    <div style={{ marginBottom: 14, background: cardBg, border: cardBorder, borderRadius: 10, padding: 10 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{label}</div>
+    <div style={{ background: cardBg, border: cardBorder, borderRadius: 10, padding: 12 }}>
+      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 12, color: muted, marginBottom: 8 }}>{desc}</div>
       <img
         src={src}
         alt={label}
-        style={{ width: "100%", borderRadius: 6, display: "block" }}
+        style={{ width: "100%", borderRadius: 6, display: "block", minHeight: tall ? 360 : 180, background: "rgba(0,0,0,0.2)" }}
+        loading="lazy"
         onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }}
       />
     </div>
