@@ -13,6 +13,7 @@ import {
   BookOpen,
   BarChart3,
   Map as MapIcon,
+  CloudSun,
   Settings as SettingsIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
