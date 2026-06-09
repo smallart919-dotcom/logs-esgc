@@ -711,7 +711,7 @@ function MapPage() {
         zoomControl={false}
       >
         <ZoomControl position="bottomleft" />
-        <MapViewSync onChange={setWindyView} />
+        <MapViewSync onChange={handleMapViewChange} />
         <TileLayer
           key={tileKey}
           url={TILES[tileKey].url}
