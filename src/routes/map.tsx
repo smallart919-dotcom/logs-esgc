@@ -189,7 +189,7 @@ function MapPage() {
           category: String(a.model ?? ""),
           source: "ogn" as const,
           isOwnFleet: flarmSet.has(flarm) || regSet.has(normReg),
-          isStale: nowSec - ts > 70,
+          isStale: nowSec - ts > 300,
           ts,
           _kind: kind,
         } as LiveAircraft & { _kind: number };
@@ -234,7 +234,7 @@ function MapPage() {
           squawk: a.squawk ? String(a.squawk) : undefined,
           source: "adsb",
           isOwnFleet: false,
-          isStale: seen > 70,
+          isStale: seen > 300,
           ts: serverNow - seen,
         };
       });
@@ -281,7 +281,7 @@ function MapPage() {
         if (latSame && lonSame && altSame && crseSame && staleSame && typeSame) return existing;
         return incoming;
       });
-      const cutoffTs = Date.now() / 1000 - 180;
+      const cutoffTs = Date.now() / 1000 - 600;
       return next.filter((a) => a.ts > cutoffTs);
     });
 
@@ -821,7 +821,7 @@ function MapPage() {
             [`NOTAMs / TRA (${notams.length})`, showNotams, setShowNotams, true],
             ["Show trails", showTrails, setShowTrails, true],
             ["Own fleet only", ownFleetOnly, setOwnFleetOnly, true],
-            ["Hide stale (>60s)", hideStale, setHideStale, true],
+            ["Hide stale (>5min)", hideStale, setHideStale, true],
             [`Alert on entry (${proximityNm}nm)`, notifyEnabled, setNotifyEnabled, true],
             ["Audio chime on proximity", audioChime, (v: boolean) => { setAudioChime(v); if (v) playChime(audioCtxRef, chimeVolume); }, true],
           ] as [string, boolean, (v: boolean) => void, boolean][]).map(([label, state, setter, enabled]) => {
