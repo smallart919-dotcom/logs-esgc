@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   BookOpen, Pencil, Save, X, CheckCircle2, ListChecks, Plus, Trash2,
-  Printer, ArrowUp, Type, Search,
+  Printer, ArrowUp, Type, Search, Sparkles, MapPin, FileText, HelpCircle,
 } from "lucide-react";
 import { todayUKDate } from "@/lib/uktime";
 
@@ -266,10 +266,52 @@ function HelpPage() {
   const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
   const printGuide = () => window.print();
 
+  const replayMapTour = () => {
+    try { localStorage.removeItem("esgc.map.tour.v1"); } catch { /* ignore */ }
+    toast.success("Tour will replay next time you open the Map.");
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-4">
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-6">
         <div className="space-y-4 min-w-0">
+          {/* Plain-language welcome — always visible at the top */}
+          {!editing && (
+            <Card className="liquid-glass print:hidden border-primary/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
+                  <Sparkles className="size-6 text-primary" /> Welcome — start here
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-base md:text-lg leading-relaxed text-foreground/90">
+                  This app helps the duty team at <strong>ESGC Ringmer</strong> log every flight,
+                  see what's flying nearby, and share the day's record with the office.
+                  Everything is written in plain English. If anything looks confusing,
+                  press the big <strong>A+</strong> button at the top to make the text larger.
+                </p>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <a href="/logbook" className="group rounded-xl border bg-background/40 p-4 hover:bg-primary/5 hover:border-primary/40 transition-colors block">
+                    <FileText className="size-6 text-primary mb-2" />
+                    <div className="font-semibold text-base mb-1">Log a flight</div>
+                    <div className="text-sm text-muted-foreground">Add launches, landings, who's on board.</div>
+                  </a>
+                  <a href="/map" className="group rounded-xl border bg-background/40 p-4 hover:bg-primary/5 hover:border-primary/40 transition-colors block">
+                    <MapPin className="size-6 text-primary mb-2" />
+                    <div className="font-semibold text-base mb-1">See the live map</div>
+                    <div className="text-sm text-muted-foreground">Aircraft nearby, weather, and NOTAMs.</div>
+                  </a>
+                  <button onClick={replayMapTour} className="group rounded-xl border bg-background/40 p-4 hover:bg-primary/5 hover:border-primary/40 transition-colors text-left">
+                    <HelpCircle className="size-6 text-primary mb-2" />
+                    <div className="font-semibold text-base mb-1">Replay map tour</div>
+                    <div className="text-sm text-muted-foreground">Re-show the welcome walkthrough.</div>
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+
           <Card className="liquid-glass print:shadow-none print:border-0">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">

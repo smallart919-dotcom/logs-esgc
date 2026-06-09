@@ -94,6 +94,7 @@ function MapPage() {
   const [photoCache, setPhotoCache] = useState<Map<string, { url: string; photographer?: string; link?: string } | null>>(new Map());
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
+  const [taf, setTaf] = useState<{ id: string; raw: string }[]>([]);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
   const [panelOpen, setPanelOpen] = useState(false);
@@ -465,6 +466,27 @@ function MapPage() {
     };
     fetchMetar();
     const id = setInterval(fetchMetar, 10 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  // TAF — refresh every 30 min for the same nearby aerodromes
+  useEffect(() => {
+    let cancelled = false;
+    const fetchTaf = async () => {
+      try {
+        const r = await fetch("https://aviationweather.gov/api/data/taf?ids=EGKB,EGKA,EGMD&format=json");
+        if (!r.ok) return;
+        const json = await r.json() as Array<{ icaoId: string; rawTAF: string }>;
+        if (cancelled || !Array.isArray(json)) return;
+        const latest = new Map<string, { id: string; raw: string }>();
+        for (const t of json) {
+          if (t.rawTAF && !latest.has(t.icaoId)) latest.set(t.icaoId, { id: t.icaoId, raw: t.rawTAF });
+        }
+        setTaf(Array.from(latest.values()));
+      } catch { /* noop */ }
+    };
+    fetchTaf();
+    const id = setInterval(fetchTaf, 30 * 60 * 1000);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
@@ -917,44 +939,65 @@ function MapPage() {
 
 
 
-        {/* Replay scrubber */}
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-            <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>
-              {isReplay ? `⏪ Replay −${Math.abs(Math.round(replayOffsetSec / 60))}m ${Math.abs(replayOffsetSec) % 60}s` : "▶ LIVE"}
-            </span>
+        {/* Replay scrubber — collapsed by default to reduce visual clutter */}
+        <details style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
+          <summary style={{ cursor: "pointer", fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span>{isReplay ? `⏪ Replay −${Math.abs(Math.round(replayOffsetSec / 60))}m ${Math.abs(replayOffsetSec) % 60}s` : "Replay ⏱"}</span>
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>▾</span>
+          </summary>
+          <div style={{ marginTop: "8px" }}>
             {isReplay && (
               <button
                 onClick={() => setReplayOffsetSec(0)}
-                style={{ background: "#38bdf8", color: "#0b0f19", border: "none", borderRadius: "4px", padding: "2px 7px", fontSize: "10px", fontWeight: 700, cursor: "pointer" }}
+                style={{ background: "#38bdf8", color: "#0b0f19", border: "none", borderRadius: "4px", padding: "2px 7px", fontSize: "10px", fontWeight: 700, cursor: "pointer", marginBottom: "6px" }}
               >
-                LIVE
+                Back to LIVE
               </button>
             )}
+            <input
+              type="range"
+              min={-7200}
+              max={0}
+              step={5}
+              value={replayOffsetSec}
+              onChange={(e) => setReplayOffsetSec(parseInt(e.target.value, 10))}
+              style={{ width: "100%", accentColor: "#38bdf8" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "rgba(255,255,255,0.35)" }}>
+              <span>−2h</span><span>now</span>
+            </div>
           </div>
-          <input
-            type="range"
-            min={-7200}
-            max={0}
-            step={5}
-            value={replayOffsetSec}
-            onChange={(e) => setReplayOffsetSec(parseInt(e.target.value, 10))}
-            style={{ width: "100%", accentColor: "#38bdf8" }}
-          />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "rgba(255,255,255,0.35)" }}>
-            <span>−2h</span><span>now</span>
-          </div>
-        </div>
+        </details>
 
-        {metar.length > 0 && (
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
-            <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, marginBottom: "4px" }}>METAR</div>
-            {metar.map((m) => (
-              <div key={m.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.65)", fontFamily: "ui-monospace,monospace", marginBottom: "3px", lineHeight: 1.35 }}>
-                <span style={{ color: "#38bdf8", fontWeight: 700 }}>{m.id}</span> {m.raw.replace(`${m.id} `, "")}
-              </div>
-            ))}
-          </div>
+        {(metar.length > 0 || taf.length > 0) && (
+          <details style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
+            <summary style={{ cursor: "pointer", fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Weather (METAR / TAF)</span>
+              <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>▾</span>
+            </summary>
+            <div style={{ marginTop: "8px" }}>
+              {metar.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>METAR</div>
+                  {metar.map((m) => (
+                    <div key={m.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.7)", fontFamily: "ui-monospace,monospace", marginBottom: "3px", lineHeight: 1.4 }}>
+                      <span style={{ color: "#38bdf8", fontWeight: 700 }}>{m.id}</span> {m.raw.replace(`${m.id} `, "")}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {taf.length > 0 && (
+                <div>
+                  <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>TAF</div>
+                  {taf.map((t) => (
+                    <div key={t.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.7)", fontFamily: "ui-monospace,monospace", marginBottom: "5px", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
+                      <span style={{ color: "#a3e635", fontWeight: 700 }}>{t.id}</span> {t.raw.replace(/^TAF\s+(AMD\s+|COR\s+)?/, "").replace(`${t.id} `, "")}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </details>
         )}
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "8px", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>
@@ -962,6 +1005,83 @@ function MapPage() {
             ? <span style={{ color: "#f87171" }}>⚠ {fetchError}</span>
             : <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#4ade80", marginRight: 6, boxShadow: "0 0 6px #4ade80", animation: "pulse 1.5s ease-in-out infinite" }} />LIVE · {lastUpdate ? lastUpdate.toLocaleTimeString("en-GB") : "connecting…"}</span>}
           <div style={{ marginTop: "3px" }}>OGN + ADS-B · 1.5s refresh</div>
+        </div>
+      </div>
+
+      <MapOnboarding />
+    </div>
+  );
+}
+
+/** First-visit walkthrough for the map. Plain language, large tap targets, dismissible. */
+function MapOnboarding() {
+  const KEY = "esgc.map.tour.v1";
+  const [step, setStep] = useState(0);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    try { if (!localStorage.getItem(KEY)) setOpen(true); } catch { /* ignore */ }
+  }, []);
+  if (!open) return null;
+  const steps = [
+    { title: "Welcome to the live map", body: "You're looking at every aircraft within range of Ringmer right now. Club aircraft are highlighted in blue, gliders in green, powered aircraft in white, and helicopters in orange." },
+    { title: "Tap any aircraft", body: "A side panel opens with the call sign, altitude, speed, where it was first seen, and a photo when we can find one. Use the close button on that panel to go back." },
+    { title: "Filters & weather, top-right", body: "Open the panel in the top-right to switch map style, hide stale traffic, turn on a proximity chime, or check the latest METAR and TAF for nearby airfields." },
+    { title: "Need help any time?", body: "The Help page has step-by-step guides written in plain English, with adjustable text size and a printable version. You can re-open this tour from there." },
+  ];
+  const s = steps[step];
+  const close = () => {
+    try { localStorage.setItem(KEY, "1"); } catch { /* ignore */ }
+    setOpen(false);
+  };
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Map welcome tour"
+      className="absolute inset-0 z-[2000] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+    >
+      <div
+        style={{
+          background: "rgba(14,18,28,0.98)",
+          color: "#f1f5f9",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 16,
+          padding: "22px 24px",
+          maxWidth: 460,
+          width: "100%",
+          fontFamily: "system-ui,-apple-system,sans-serif",
+          boxShadow: "0 30px 80px rgba(0,0,0,0.6)",
+        }}
+      >
+        <div style={{ fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase", color: "#38bdf8", marginBottom: 6 }}>
+          Step {step + 1} of {steps.length}
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10, lineHeight: 1.2 }}>{s.title}</h2>
+        <p style={{ fontSize: 16, lineHeight: 1.55, color: "rgba(241,245,249,0.85)", marginBottom: 20 }}>{s.body}</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={close}
+            style={{ background: "transparent", color: "rgba(255,255,255,0.55)", border: "none", padding: "10px 4px", fontSize: 14, cursor: "pointer" }}
+          >
+            Skip tour
+          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {step > 0 && (
+              <button
+                onClick={() => setStep((n) => n - 1)}
+                style={{ background: "rgba(255,255,255,0.08)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "10px 16px", fontSize: 15, fontWeight: 600, cursor: "pointer", minHeight: 44 }}
+              >
+                Back
+              </button>
+            )}
+            <button
+              onClick={() => (step === steps.length - 1 ? close() : setStep((n) => n + 1))}
+              style={{ background: "#38bdf8", color: "#0b0f19", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 15, fontWeight: 700, cursor: "pointer", minHeight: 44 }}
+            >
+              {step === steps.length - 1 ? "Got it" : "Next"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
