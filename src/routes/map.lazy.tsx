@@ -99,6 +99,8 @@ function MapPage() {
   const insideZoneRef = useRef<Map<string, number>>(new Map());
   const [panelOpen, setPanelOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
+  const [weatherOpen, setWeatherOpen] = useState(false);
+  const [weatherTab, setWeatherTab] = useState<"metar" | "taf" | "windy" | "rasp">("metar");
   // Per-aircraft trail history (full session, kept permanently like FR24)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   // Last-known meta per id so we can keep drawing trails after the aircraft
