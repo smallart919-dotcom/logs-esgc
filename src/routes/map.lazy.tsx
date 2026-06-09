@@ -1,7 +1,7 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, ImageOverlay, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, ImageOverlay, useMap, useMapEvents } from "react-leaflet";
 import { useServerFn } from "@tanstack/react-start";
 import jsPDF from "jspdf";
 import L from "leaflet";
@@ -89,6 +89,12 @@ function MapPage() {
   const [showTrails, setShowTrails] = useState(true);
   const [showThermals, setShowThermals] = useState(false);
   const [showWindy, setShowWindy] = useState(false);
+  const [windyView, setWindyView] = useState({ lat: AIRFIELD_LATLON[0], lon: AIRFIELD_LATLON[1], zoom: 10 });
+  const trafficViewRef = useRef({ lat: AIRFIELD_LATLON[0], lon: AIRFIELD_LATLON[1], zoom: 11 });
+  const handleMapViewChange = useCallback((view: { lat: number; lon: number; zoom: number }) => {
+    trafficViewRef.current = view;
+    setWindyView(view);
+  }, []);
   const [audioChime, setAudioChime] = useState(true);
   const [chimeVolume, setChimeVolume] = useState(0.9);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
@@ -209,7 +215,10 @@ function MapPage() {
     const nowSec = Date.now() / 1000;
 
     // Single proxied call — both feeds blocked by CORS in the browser.
-    const proxied = await getLiveTraffic().catch(() => null);
+    // Follow the current map centre so the feed matches the viewed area.
+    const view = trafficViewRef.current;
+    const distNm = Math.max(25, Math.min(180, 45 * 2 ** (11 - view.zoom)));
+    const proxied = await getLiveTraffic({ data: { lat: view.lat, lon: view.lon, distNm } }).catch(() => null);
 
     const parseOgn = (): LiveAircraft[] => {
       // GlideAndSeek shape: { success, message: [{ lat, lng, altitude(m),
@@ -262,10 +271,12 @@ function MapPage() {
       const json = proxied?.adsb as { ac?: unknown[]; aircraft?: unknown[]; now?: number } | null;
       if (!json) return [];
       const list = json.aircraft ?? json.ac ?? [];
-      const serverNow = json.now ?? nowSec;
+      const rawNow = json.now ?? nowSec;
+      const serverNow = rawNow > 10_000_000_000 ? rawNow / 1000 : rawNow;
       const mapped: (LiveAircraft | null)[] = list.map((raw) => {
         const a = raw as Record<string, unknown>;
         const cat = String(a.category ?? a.t ?? "");
+        const model = [a.t, a.desc].map((v) => String(v ?? "").trim()).filter(Boolean).join(" · ");
         const altFt = parseFloat(String(a.alt_baro ?? a.altitude ?? a.alt ?? 0)) || 0;
         const reg = String(a.flight ?? a.r ?? a.registration ?? "").trim();
         const normReg = reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -274,7 +285,7 @@ function MapPage() {
         const lat = parseFloat(String(a.lat));
         const lon = parseFloat(String(a.lon));
         if (isNaN(lat) || isNaN(lon)) return null;
-        if (lat < 50.4 || lat > 51.4 || lon < -0.6 || lon > 1.8) return null;
+        if (lat < 49 || lat > 59 || lon < -8 || lon > 4) return null;
         // ADS-B category codes: A1-A5 powered, A7 rotorcraft, B1 glider
         const catU = cat.toUpperCase();
         let type: AircraftType = "powered";
@@ -291,7 +302,7 @@ function MapPage() {
           climbMs: (parseFloat(String(a.baro_rate ?? a.vsi ?? 0)) || 0) * 0.00508,
           reg,
           type,
-          category: cat,
+          category: model || cat,
           squawk: a.squawk ? String(a.squawk) : undefined,
           source: "adsb",
           isOwnFleet: false,
@@ -570,6 +581,34 @@ function MapPage() {
   const visible = (ownFleetOnly ? displayAircraft.filter((a) => a.isOwnFleet) : displayAircraft)
     .filter((a) => !hideStale || !a.isStale);
 
+  const windySrc = useMemo(() => {
+    const lat = Number(windyView.lat.toFixed(3));
+    const lon = Number(windyView.lon.toFixed(3));
+    const zoom = Math.max(5, Math.min(12, Math.round(windyView.zoom - 1)));
+    const params = new URLSearchParams({
+      lat: String(lat),
+      lon: String(lon),
+      detailLat: String(lat),
+      detailLon: String(lon),
+      zoom: String(zoom),
+      level: "surface",
+      overlay: "wind",
+      product: "ecmwf",
+      menu: "",
+      message: "true",
+      marker: "",
+      calendar: "now",
+      pressure: "",
+      type: "map",
+      location: "coordinates",
+      detail: "",
+      metricWind: "kt",
+      metricTemp: "°C",
+      radarRange: "-1",
+    });
+    return `https://embed.windy.com/embed2.html?${params.toString()}`;
+  }, [windyView]);
+
   // Keep marker DOM stable: heading changes are applied directly to the
   // existing SVG wrapper instead of rebuilding Leaflet divIcons.
   useEffect(() => {
@@ -672,6 +711,7 @@ function MapPage() {
         zoomControl={false}
       >
         <ZoomControl position="bottomleft" />
+        <MapViewSync onChange={handleMapViewChange} />
         <TileLayer
           key={tileKey}
           url={TILES[tileKey].url}
@@ -797,19 +837,18 @@ function MapPage() {
 
       </MapContainer>
 
-      {/* Windy overlay — translucent iframe layered above the map.
-          When enabled, pointer events pass to Windy so user can pan/zoom Windy
-          independently. A small dismiss chip in the corner closes the overlay. */}
+      {/* Windy overlay — synced to the current Leaflet map centre/zoom. */}
       {showWindy && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 600, pointerEvents: "auto", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 600, pointerEvents: "none", borderRadius: 12, overflow: "hidden" }}>
           <iframe
+            key={`${windyView.lat.toFixed(2)}-${windyView.lon.toFixed(2)}-${Math.round(windyView.zoom)}`}
             title="Windy overlay"
-            src="https://embed.windy.com/embed2.html?lat=50.87&lon=0.10&detailLat=50.87&detailLon=0.10&zoom=9&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1"
+            src={windySrc}
             style={{ width: "100%", height: "100%", border: "none", opacity: 0.92 }}
           />
           <button
             onClick={() => setShowWindy(false)}
-            style={{ position: "absolute", top: 10, right: 10, zIndex: 601, background: "rgba(0,0,0,0.85)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            style={{ position: "absolute", top: 10, right: 10, zIndex: 601, pointerEvents: "auto", background: "rgba(0,0,0,0.85)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
           >
             ✕ Close Windy
           </button>
@@ -1082,8 +1121,6 @@ function MapPage() {
         </div>
       )}
 
-      <MapOnboarding />
-
     </div>
   );
 }
@@ -1161,6 +1198,27 @@ function MapOnboarding() {
       </div>
     </div>
   );
+}
+
+
+function MapViewSync({ onChange }: { onChange: (view: { lat: number; lon: number; zoom: number }) => void }) {
+  const map = useMapEvents({
+    moveend: () => {
+      const center = map.getCenter();
+      onChange({ lat: center.lat, lon: center.lng, zoom: map.getZoom() });
+    },
+    zoomend: () => {
+      const center = map.getCenter();
+      onChange({ lat: center.lat, lon: center.lng, zoom: map.getZoom() });
+    },
+  });
+
+  useEffect(() => {
+    const center = map.getCenter();
+    onChange({ lat: center.lat, lon: center.lng, zoom: map.getZoom() });
+  }, [map, onChange]);
+
+  return null;
 }
 
 
