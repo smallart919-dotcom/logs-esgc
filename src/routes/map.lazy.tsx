@@ -969,36 +969,37 @@ function MapPage() {
           </div>
         </details>
 
-        {(metar.length > 0 || taf.length > 0) && (
-          <details style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
-            <summary style={{ cursor: "pointer", fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span>Weather (METAR / TAF)</span>
-              <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>▾</span>
-            </summary>
-            <div style={{ marginTop: "8px" }}>
-              {metar.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>METAR</div>
-                  {metar.map((m) => (
-                    <div key={m.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.7)", fontFamily: "ui-monospace,monospace", marginBottom: "3px", lineHeight: 1.4 }}>
-                      <span style={{ color: "#38bdf8", fontWeight: 700 }}>{m.id}</span> {m.raw.replace(`${m.id} `, "")}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {taf.length > 0 && (
-                <div>
-                  <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>TAF</div>
-                  {taf.map((t) => (
-                    <div key={t.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.7)", fontFamily: "ui-monospace,monospace", marginBottom: "5px", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
-                      <span style={{ color: "#a3e635", fontWeight: 700 }}>{t.id}</span> {t.raw.replace(/^TAF\s+(AMD\s+|COR\s+)?/, "").replace(`${t.id} `, "")}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </details>
-        )}
+        <details open style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
+          <summary style={{ cursor: "pointer", fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span>🌦 Weather — EGKB · EGKA · EGMD</span>
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>▾</span>
+          </summary>
+          <div style={{ marginTop: "8px" }}>
+            {metar.length === 0 && taf.length === 0 && (
+              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.45)", fontStyle: "italic" }}>Fetching latest METAR / TAF…</div>
+            )}
+            {metar.length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>METAR</div>
+                {metar.map((m) => (
+                  <div key={m.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.78)", fontFamily: "ui-monospace,monospace", marginBottom: "3px", lineHeight: 1.45 }}>
+                    <span style={{ color: "#38bdf8", fontWeight: 700 }}>{m.id}</span> {m.raw.replace(`${m.id} `, "")}
+                  </div>
+                ))}
+              </div>
+            )}
+            {taf.length > 0 && (
+              <div>
+                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>TAF</div>
+                {taf.map((t) => (
+                  <div key={t.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.78)", fontFamily: "ui-monospace,monospace", marginBottom: "5px", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
+                    <span style={{ color: "#a3e635", fontWeight: 700 }}>{t.id}</span> {t.raw.replace(/^TAF\s+(AMD\s+|COR\s+)?/, "").replace(`${t.id} `, "")}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "8px", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>
           {fetchError
