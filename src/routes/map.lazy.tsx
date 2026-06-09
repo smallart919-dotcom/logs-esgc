@@ -16,6 +16,7 @@ import { nearestAirfield, distanceNm } from "@/lib/nearby-airfields";
 import { listActiveNotams, refreshNotamsNow, type NotamRecord } from "@/lib/notams.functions";
 import { firePush } from "@/lib/push.functions";
 import { PushToggle } from "@/components/PushToggle";
+import { WeatherView } from "@/components/weather-view";
 
 export const Route = createLazyFileRoute("/map")({
   component: MapPage,
