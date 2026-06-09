@@ -939,44 +939,65 @@ function MapPage() {
 
 
 
-        {/* Replay scrubber */}
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-            <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>
-              {isReplay ? `⏪ Replay −${Math.abs(Math.round(replayOffsetSec / 60))}m ${Math.abs(replayOffsetSec) % 60}s` : "▶ LIVE"}
-            </span>
+        {/* Replay scrubber — collapsed by default to reduce visual clutter */}
+        <details style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
+          <summary style={{ cursor: "pointer", fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span>{isReplay ? `⏪ Replay −${Math.abs(Math.round(replayOffsetSec / 60))}m ${Math.abs(replayOffsetSec) % 60}s` : "Replay ⏱"}</span>
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>▾</span>
+          </summary>
+          <div style={{ marginTop: "8px" }}>
             {isReplay && (
               <button
                 onClick={() => setReplayOffsetSec(0)}
-                style={{ background: "#38bdf8", color: "#0b0f19", border: "none", borderRadius: "4px", padding: "2px 7px", fontSize: "10px", fontWeight: 700, cursor: "pointer" }}
+                style={{ background: "#38bdf8", color: "#0b0f19", border: "none", borderRadius: "4px", padding: "2px 7px", fontSize: "10px", fontWeight: 700, cursor: "pointer", marginBottom: "6px" }}
               >
-                LIVE
+                Back to LIVE
               </button>
             )}
+            <input
+              type="range"
+              min={-7200}
+              max={0}
+              step={5}
+              value={replayOffsetSec}
+              onChange={(e) => setReplayOffsetSec(parseInt(e.target.value, 10))}
+              style={{ width: "100%", accentColor: "#38bdf8" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "rgba(255,255,255,0.35)" }}>
+              <span>−2h</span><span>now</span>
+            </div>
           </div>
-          <input
-            type="range"
-            min={-7200}
-            max={0}
-            step={5}
-            value={replayOffsetSec}
-            onChange={(e) => setReplayOffsetSec(parseInt(e.target.value, 10))}
-            style={{ width: "100%", accentColor: "#38bdf8" }}
-          />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "rgba(255,255,255,0.35)" }}>
-            <span>−2h</span><span>now</span>
-          </div>
-        </div>
+        </details>
 
-        {metar.length > 0 && (
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
-            <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, marginBottom: "4px" }}>METAR</div>
-            {metar.map((m) => (
-              <div key={m.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.65)", fontFamily: "ui-monospace,monospace", marginBottom: "3px", lineHeight: 1.35 }}>
-                <span style={{ color: "#38bdf8", fontWeight: 700 }}>{m.id}</span> {m.raw.replace(`${m.id} `, "")}
-              </div>
-            ))}
-          </div>
+        {(metar.length > 0 || taf.length > 0) && (
+          <details style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
+            <summary style={{ cursor: "pointer", fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Weather (METAR / TAF)</span>
+              <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>▾</span>
+            </summary>
+            <div style={{ marginTop: "8px" }}>
+              {metar.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>METAR</div>
+                  {metar.map((m) => (
+                    <div key={m.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.7)", fontFamily: "ui-monospace,monospace", marginBottom: "3px", lineHeight: 1.4 }}>
+                      <span style={{ color: "#38bdf8", fontWeight: 700 }}>{m.id}</span> {m.raw.replace(`${m.id} `, "")}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {taf.length > 0 && (
+                <div>
+                  <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>TAF</div>
+                  {taf.map((t) => (
+                    <div key={t.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.7)", fontFamily: "ui-monospace,monospace", marginBottom: "5px", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
+                      <span style={{ color: "#a3e635", fontWeight: 700 }}>{t.id}</span> {t.raw.replace(/^TAF\s+(AMD\s+|COR\s+)?/, "").replace(`${t.id} `, "")}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </details>
         )}
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "8px", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>
