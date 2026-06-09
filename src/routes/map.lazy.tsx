@@ -555,8 +555,8 @@ function MapPage() {
         : filtered;
 
       const isSelected = selectedId === id;
-      const weight = isSelected ? 4 : meta.isOwnFleet ? 3 : 2;
-      const opacity = isSelected ? 0.95 : meta.isOwnFleet ? 0.78 : 0.62;
+      const weight = isSelected ? 4 : meta.isOwnFleet ? 3 : 2.5;
+      const opacity = isSelected ? 0.95 : meta.isOwnFleet ? 0.85 : 0.8;
       const useAlt = meta.type === "glider" || meta.isOwnFleet;
       const flat = meta.type === "helicopter" ? "#fb923c" : "#f8fafc";
       const startColour = useAlt ? altColour(allPts[0].altFt) : flat;
