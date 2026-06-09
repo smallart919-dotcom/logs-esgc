@@ -1004,7 +1004,83 @@ function MapPage() {
           {fetchError
             ? <span style={{ color: "#f87171" }}>⚠ {fetchError}</span>
             : <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#4ade80", marginRight: 6, boxShadow: "0 0 6px #4ade80", animation: "pulse 1.5s ease-in-out infinite" }} />LIVE · {lastUpdate ? lastUpdate.toLocaleTimeString("en-GB") : "connecting…"}</span>}
-          <div style={{ marginTop: "3px" }}>OGN + ADS-B · 1.5s refresh</div>
+        </div>
+      </div>
+
+      <MapOnboarding />
+    </div>
+  );
+}
+
+/** First-visit walkthrough for the map. Plain language, large tap targets, dismissible. */
+function MapOnboarding() {
+  const KEY = "esgc.map.tour.v1";
+  const [step, setStep] = useState(0);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    try { if (!localStorage.getItem(KEY)) setOpen(true); } catch { /* ignore */ }
+  }, []);
+  if (!open) return null;
+  const steps = [
+    { title: "Welcome to the live map", body: "You're looking at every aircraft within range of Ringmer right now. Club aircraft are highlighted in blue, gliders in green, powered aircraft in white, and helicopters in orange." },
+    { title: "Tap any aircraft", body: "A side panel opens with the call sign, altitude, speed, where it was first seen, and a photo when we can find one. Use the close button on that panel to go back." },
+    { title: "Filters & weather, top-right", body: "Open the panel in the top-right to switch map style, hide stale traffic, turn on a proximity chime, or check the latest METAR and TAF for nearby airfields." },
+    { title: "Need help any time?", body: "The Help page has step-by-step guides written in plain English, with adjustable text size and a printable version. You can re-open this tour from there." },
+  ];
+  const s = steps[step];
+  const close = () => {
+    try { localStorage.setItem(KEY, "1"); } catch { /* ignore */ }
+    setOpen(false);
+  };
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Map welcome tour"
+      className="absolute inset-0 z-[2000] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+    >
+      <div
+        style={{
+          background: "rgba(14,18,28,0.98)",
+          color: "#f1f5f9",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 16,
+          padding: "22px 24px",
+          maxWidth: 460,
+          width: "100%",
+          fontFamily: "system-ui,-apple-system,sans-serif",
+          boxShadow: "0 30px 80px rgba(0,0,0,0.6)",
+        }}
+      >
+        <div style={{ fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase", color: "#38bdf8", marginBottom: 6 }}>
+          Step {step + 1} of {steps.length}
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10, lineHeight: 1.2 }}>{s.title}</h2>
+        <p style={{ fontSize: 16, lineHeight: 1.55, color: "rgba(241,245,249,0.85)", marginBottom: 20 }}>{s.body}</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={close}
+            style={{ background: "transparent", color: "rgba(255,255,255,0.55)", border: "none", padding: "10px 4px", fontSize: 14, cursor: "pointer" }}
+          >
+            Skip tour
+          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {step > 0 && (
+              <button
+                onClick={() => setStep((n) => n - 1)}
+                style={{ background: "rgba(255,255,255,0.08)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "10px 16px", fontSize: 15, fontWeight: 600, cursor: "pointer", minHeight: 44 }}
+              >
+                Back
+              </button>
+            )}
+            <button
+              onClick={() => (step === steps.length - 1 ? close() : setStep((n) => n + 1))}
+              style={{ background: "#38bdf8", color: "#0b0f19", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 15, fontWeight: 700, cursor: "pointer", minHeight: 44 }}
+            >
+              {step === steps.length - 1 ? "Got it" : "Next"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
