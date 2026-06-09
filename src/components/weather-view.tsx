@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * Ringmer Soarcast-style weather briefing.
@@ -76,17 +76,12 @@ export function WeatherView({ variant = "page" }: { variant?: "drawer" | "page" 
         </div>
       </section>
 
-      {/* METAR / TAF */}
+      {/* METAR / TAF — official metar-taf.com embed (landscape widget for EGKA/Ringmer) */}
       <Section title="✈ METAR / TAF" subtitle={`Live weather for Ringmer Glider Field (${METAR_ID}) · Runway 06/24 (not 7/25)`} muted={muted}>
-        <div style={{ background: cardBg, border: cardBorder, borderRadius: 12, padding: 12, display: "flex", justifyContent: "center" }}>
-          <iframe
-            title="METAR Ringmer"
-            src={`https://metar-taf.com/embed-widget/${METAR_ID}?bg=transparent`}
-            style={{ width: "100%", maxWidth: 460, height: 460, border: "none", borderRadius: 8 }}
-            loading="lazy"
-          />
+        <div style={{ background: cardBg, border: cardBorder, borderRadius: 12, padding: 14, display: "flex", justifyContent: "center" }}>
+          <MetarTafWidget dark={dark} />
         </div>
-        <a href={`https://metar-taf.com/metar/${METAR_ID}`} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 13, color: "#38bdf8" }}>
+        <a href={`https://metar-taf.com/metar/${METAR_ID}?station_id=EGKA`} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 13, color: "#38bdf8" }}>
           Open full METAR / TAF ↗
         </a>
       </Section>
@@ -191,5 +186,32 @@ function ChartCard({ label, desc, src, cardBg, cardBorder, muted, tall }: { labe
         onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }}
       />
     </div>
+  );
+}
+
+/**
+ * Official metar-taf.com landscape embed. Their script writes the widget
+ * into an anchor with a specific id, then attaches a global script tag.
+ * We render the anchor and inject the script once per mount.
+ */
+function MetarTafWidget({ dark }: { dark: boolean }) {
+  const targetId = useRef(`metartaf-${Math.random().toString(36).slice(2, 10)}`).current;
+  useEffect(() => {
+    const s = document.createElement("script");
+    s.async = true;
+    s.defer = true;
+    s.crossOrigin = "anonymous";
+    s.src = `https://metar-taf.com/embed-js/${METAR_ID}?bg_color=${dark ? "000000" : "ffffff"}&station_id=EGKA&layout=landscape&qnh=inHg&rh=rh&target=${targetId}`;
+    document.body.appendChild(s);
+    return () => { s.remove(); };
+  }, [dark, targetId]);
+  return (
+    <a
+      href={`https://metar-taf.com/metar/${METAR_ID}?station_id=EGKA`}
+      id={targetId}
+      style={{ fontSize: 18, fontWeight: 500, color: dark ? "#fff" : "#000", width: 350, height: 278, display: "block" }}
+    >
+      METAR Ringmer Glider Field
+    </a>
   );
 }
