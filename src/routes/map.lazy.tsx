@@ -797,6 +797,25 @@ function MapPage() {
 
       </MapContainer>
 
+      {/* Windy overlay — translucent iframe layered above the map.
+          When enabled, pointer events pass to Windy so user can pan/zoom Windy
+          independently. A small dismiss chip in the corner closes the overlay. */}
+      {showWindy && (
+        <div style={{ position: "absolute", inset: 0, zIndex: 600, pointerEvents: "auto", borderRadius: 12, overflow: "hidden" }}>
+          <iframe
+            title="Windy overlay"
+            src="https://embed.windy.com/embed2.html?lat=50.87&lon=0.10&detailLat=50.87&detailLon=0.10&zoom=9&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1"
+            style={{ width: "100%", height: "100%", border: "none", opacity: 0.92 }}
+          />
+          <button
+            onClick={() => setShowWindy(false)}
+            style={{ position: "absolute", top: 10, right: 10, zIndex: 601, background: "rgba(0,0,0,0.85)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            ✕ Close Windy
+          </button>
+        </div>
+      )}
+
       {/* Aircraft detail side panel (FR24-style) */}
       <AircraftPanel
         sel={selectedId ? visible.find((a) => a.id === selectedId) ?? null : null}
