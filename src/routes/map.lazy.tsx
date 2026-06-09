@@ -1,7 +1,7 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, ImageOverlay, useMap } from "react-leaflet";
 import { useServerFn } from "@tanstack/react-start";
 import jsPDF from "jspdf";
 import L from "leaflet";
