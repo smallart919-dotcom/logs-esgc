@@ -989,6 +989,16 @@ function MapPage() {
         </div>
       </div>
 
+      {weatherOpen && (
+        <WeatherPanel
+          metar={metar}
+          taf={taf}
+          tab={weatherTab}
+          setTab={setWeatherTab}
+          onClose={() => setWeatherOpen(false)}
+        />
+      )}
+
       <MapOnboarding />
     </div>
   );
