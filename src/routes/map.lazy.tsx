@@ -90,6 +90,11 @@ function MapPage() {
   const [showThermals, setShowThermals] = useState(false);
   const [showWindy, setShowWindy] = useState(false);
   const [windyView, setWindyView] = useState({ lat: AIRFIELD_LATLON[0], lon: AIRFIELD_LATLON[1], zoom: 10 });
+  const trafficViewRef = useRef({ lat: AIRFIELD_LATLON[0], lon: AIRFIELD_LATLON[1], zoom: 11 });
+  const handleMapViewChange = useCallback((view: { lat: number; lon: number; zoom: number }) => {
+    trafficViewRef.current = view;
+    setWindyView(view);
+  }, []);
   const [audioChime, setAudioChime] = useState(true);
   const [chimeVolume, setChimeVolume] = useState(0.9);
   const [replayOffsetSec, setReplayOffsetSec] = useState(0); // 0 = LIVE; negative = seconds back
@@ -210,7 +215,10 @@ function MapPage() {
     const nowSec = Date.now() / 1000;
 
     // Single proxied call — both feeds blocked by CORS in the browser.
-    const proxied = await getLiveTraffic().catch(() => null);
+    // Follow the current map centre so the feed matches the viewed area.
+    const view = trafficViewRef.current;
+    const distNm = Math.max(25, Math.min(180, 45 * 2 ** (11 - view.zoom)));
+    const proxied = await getLiveTraffic({ data: { lat: view.lat, lon: view.lon, distNm } }).catch(() => null);
 
     const parseOgn = (): LiveAircraft[] => {
       // GlideAndSeek shape: { success, message: [{ lat, lng, altitude(m),
@@ -263,10 +271,12 @@ function MapPage() {
       const json = proxied?.adsb as { ac?: unknown[]; aircraft?: unknown[]; now?: number } | null;
       if (!json) return [];
       const list = json.aircraft ?? json.ac ?? [];
-      const serverNow = json.now ?? nowSec;
+      const rawNow = json.now ?? nowSec;
+      const serverNow = rawNow > 10_000_000_000 ? rawNow / 1000 : rawNow;
       const mapped: (LiveAircraft | null)[] = list.map((raw) => {
         const a = raw as Record<string, unknown>;
         const cat = String(a.category ?? a.t ?? "");
+        const model = [a.t, a.desc].map((v) => String(v ?? "").trim()).filter(Boolean).join(" · ");
         const altFt = parseFloat(String(a.alt_baro ?? a.altitude ?? a.alt ?? 0)) || 0;
         const reg = String(a.flight ?? a.r ?? a.registration ?? "").trim();
         const normReg = reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -275,7 +285,7 @@ function MapPage() {
         const lat = parseFloat(String(a.lat));
         const lon = parseFloat(String(a.lon));
         if (isNaN(lat) || isNaN(lon)) return null;
-        if (lat < 50.4 || lat > 51.4 || lon < -0.6 || lon > 1.8) return null;
+        if (lat < 49 || lat > 59 || lon < -8 || lon > 4) return null;
         // ADS-B category codes: A1-A5 powered, A7 rotorcraft, B1 glider
         const catU = cat.toUpperCase();
         let type: AircraftType = "powered";
@@ -292,7 +302,7 @@ function MapPage() {
           climbMs: (parseFloat(String(a.baro_rate ?? a.vsi ?? 0)) || 0) * 0.00508,
           reg,
           type,
-          category: cat,
+          category: model || cat,
           squawk: a.squawk ? String(a.squawk) : undefined,
           source: "adsb",
           isOwnFleet: false,
