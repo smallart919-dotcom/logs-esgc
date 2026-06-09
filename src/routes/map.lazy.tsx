@@ -99,6 +99,8 @@ function MapPage() {
   const insideZoneRef = useRef<Map<string, number>>(new Map());
   const [panelOpen, setPanelOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
+  const [weatherOpen, setWeatherOpen] = useState(false);
+  const [weatherTab, setWeatherTab] = useState<"metar" | "taf" | "windy" | "rasp">("metar");
   // Per-aircraft trail history (full session, kept permanently like FR24)
   const trailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   // Last-known meta per id so we can keep drawing trails after the aircraft
@@ -969,37 +971,15 @@ function MapPage() {
           </div>
         </details>
 
-        <details open style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px" }}>
-          <summary style={{ cursor: "pointer", fontSize: "11px", color: "rgba(255,255,255,0.7)", fontWeight: 600, listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span>🌦 Weather — EGKB · EGKA · EGMD</span>
-            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>▾</span>
-          </summary>
-          <div style={{ marginTop: "8px" }}>
-            {metar.length === 0 && taf.length === 0 && (
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.45)", fontStyle: "italic" }}>Fetching latest METAR / TAF…</div>
-            )}
-            {metar.length > 0 && (
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>METAR</div>
-                {metar.map((m) => (
-                  <div key={m.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.78)", fontFamily: "ui-monospace,monospace", marginBottom: "3px", lineHeight: 1.45 }}>
-                    <span style={{ color: "#38bdf8", fontWeight: 700 }}>{m.id}</span> {m.raw.replace(`${m.id} `, "")}
-                  </div>
-                ))}
-              </div>
-            )}
-            {taf.length > 0 && (
-              <div>
-                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>TAF</div>
-                {taf.map((t) => (
-                  <div key={t.id} style={{ fontSize: "10px", color: "rgba(255,255,255,0.78)", fontFamily: "ui-monospace,monospace", marginBottom: "5px", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
-                    <span style={{ color: "#a3e635", fontWeight: 700 }}>{t.id}</span> {t.raw.replace(/^TAF\s+(AMD\s+|COR\s+)?/, "").replace(`${t.id} `, "")}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </details>
+        <button
+          type="button"
+          onClick={() => setWeatherOpen(true)}
+          style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px", marginBottom: "10px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", color: "#f1f5f9", fontSize: "12px", fontWeight: 600, fontFamily: "inherit", padding: "10px 0 0 0" }}
+        >
+          <span>🌦 Weather — METAR · TAF · Windy · RASP</span>
+          <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)" }}>Open ▸</span>
+        </button>
+
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "8px", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>
           {fetchError
@@ -1008,6 +988,16 @@ function MapPage() {
           <div style={{ marginTop: "3px" }}>OGN + ADS-B · 1.5s refresh</div>
         </div>
       </div>
+
+      {weatherOpen && (
+        <WeatherPanel
+          metar={metar}
+          taf={taf}
+          tab={weatherTab}
+          setTab={setWeatherTab}
+          onClose={() => setWeatherOpen(false)}
+        />
+      )}
 
       <MapOnboarding />
     </div>
@@ -1088,6 +1078,134 @@ function MapOnboarding() {
     </div>
   );
 }
+
+
+/** Dedicated weather panel — METAR / TAF / Windy / RASP for the day. */
+function WeatherPanel({
+  metar, taf, tab, setTab, onClose,
+}: {
+  metar: { id: string; raw: string; obs: string }[];
+  taf: { id: string; raw: string }[];
+  tab: "metar" | "taf" | "windy" | "rasp";
+  setTab: (t: "metar" | "taf" | "windy" | "rasp") => void;
+  onClose: () => void;
+}) {
+  // RASP UK South — Dr Jack's daily forecast. Image refreshes mid-morning UK time.
+  // Cache-bust per-day so it refreshes once a day without hammering the server.
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const raspImg = `https://rasp.stratus.org.uk/UK2/FCST/wstar_bsratio.curr.1300lst.d2.png?d=${dayKey}`;
+  const raspAlt = `https://rasp.stratus.org.uk/UK2/FCST/press1000.curr.1300lst.d2.png?d=${dayKey}`;
+  const raspLink = "https://rasp.stratus.org.uk/";
+
+  // Windy embed centred on EGMC / Ringmer area, surface wind by default.
+  const windySrc = "https://embed.windy.com/embed2.html?lat=50.87&lon=0.10&detailLat=50.87&detailLon=0.10&width=650&height=450&zoom=8&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1";
+
+  const tabs: { key: typeof tab; label: string }[] = [
+    { key: "metar", label: "METAR" },
+    { key: "taf", label: "TAF" },
+    { key: "windy", label: "Windy" },
+    { key: "rasp", label: "RASP" },
+  ];
+
+  return (
+    <div
+      role="dialog"
+      aria-label="Weather"
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "stretch", justifyContent: "flex-end", fontFamily: "system-ui,sans-serif" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "min(560px, 100vw)", height: "100%", background: "#0b0f19", color: "#f1f5f9", borderLeft: "1px solid rgba(255,255,255,0.1)", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.6)" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>🌦 Weather — for the day</div>
+          <button onClick={onClose} aria-label="Close weather" style={{ background: "rgba(255,255,255,0.08)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "6px 10px", cursor: "pointer", fontSize: 13 }}>✕</button>
+        </div>
+
+        <div style={{ display: "flex", gap: 4, padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer",
+                fontSize: 13, fontWeight: 600,
+                background: tab === t.key ? "#38bdf8" : "rgba(255,255,255,0.06)",
+                color: tab === t.key ? "#0b0f19" : "#f1f5f9",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px" }}>
+          {tab === "metar" && (
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Latest observations · EGKB · EGKA · EGMD</div>
+              {metar.length === 0 ? (
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontStyle: "italic" }}>Fetching latest METAR…</div>
+              ) : metar.map((m) => (
+                <div key={m.id} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 700, marginBottom: 4 }}>{m.id}</div>
+                  <div style={{ fontFamily: "ui-monospace,monospace", fontSize: 12, lineHeight: 1.5, color: "rgba(255,255,255,0.88)" }}>{m.raw.replace(`${m.id} `, "")}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab === "taf" && (
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Forecast · next ~24-30h</div>
+              {taf.length === 0 ? (
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontStyle: "italic" }}>Fetching latest TAF…</div>
+              ) : taf.map((t) => (
+                <div key={t.id} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: "#a3e635", fontWeight: 700, marginBottom: 4 }}>{t.id}</div>
+                  <div style={{ fontFamily: "ui-monospace,monospace", fontSize: 12, lineHeight: 1.5, color: "rgba(255,255,255,0.88)", whiteSpace: "pre-wrap" }}>
+                    {t.raw.replace(/^TAF\s+(AMD\s+|COR\s+)?/, "").replace(`${t.id} `, "")}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab === "windy" && (
+            <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 8 }}>Live wind & weather · scroll/zoom to explore</div>
+              <iframe
+                title="Windy"
+                src={windySrc}
+                style={{ flex: 1, width: "100%", minHeight: 420, border: "none", borderRadius: 8 }}
+                loading="lazy"
+              />
+              <a href="https://www.windy.com/?50.87,0.10,8" target="_blank" rel="noreferrer" style={{ marginTop: 8, fontSize: 12, color: "#38bdf8" }}>Open full Windy ↗</a>
+            </div>
+          )}
+
+          {tab === "rasp" && (
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Today's soaring forecast · 13:00 local</div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Thermal strength × B/S ratio</div>
+                <img src={raspImg} alt="RASP thermal forecast" style={{ width: "100%", borderRadius: 8, background: "rgba(255,255,255,0.04)" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }} />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Surface pressure</div>
+                <img src={raspAlt} alt="RASP surface pressure" style={{ width: "100%", borderRadius: 8, background: "rgba(255,255,255,0.04)" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }} />
+              </div>
+              <a href={raspLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#38bdf8" }}>Open full RASP UK ↗</a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
 
 
 
