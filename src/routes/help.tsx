@@ -8,7 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { BookOpen, Pencil, Save, X, CheckCircle2, ListChecks, Plus, Trash2 } from "lucide-react";
+import {
+  BookOpen, Pencil, Save, X, CheckCircle2, ListChecks, Plus, Trash2,
+  Printer, ArrowUp, Type, Search,
+} from "lucide-react";
 import { todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/help")({
@@ -59,21 +62,21 @@ function renderMarkdown(md: string): string {
       closeAll();
       const lvl = h[1].length;
       const sizes = [
-        "text-3xl font-bold tracking-tight mt-8 mb-4 pb-2 border-b scroll-mt-32",
-        "text-xl font-semibold tracking-tight mt-6 mb-2 text-primary scroll-mt-32",
-        "text-base font-semibold mt-4 mb-1.5 uppercase tracking-wide text-muted-foreground scroll-mt-32",
-        "text-sm font-semibold mt-3 mb-1 scroll-mt-32",
+        "text-3xl md:text-4xl font-bold tracking-tight mt-10 mb-5 pb-2 border-b scroll-mt-32",
+        "text-2xl md:text-3xl font-semibold tracking-tight mt-8 mb-3 text-primary scroll-mt-32",
+        "text-lg md:text-xl font-semibold mt-5 mb-2 uppercase tracking-wide text-muted-foreground scroll-mt-32",
+        "text-base md:text-lg font-semibold mt-4 mb-1.5 scroll-mt-32",
       ];
       const id = slugify(h[2]);
       html += `<h${lvl} id="${id}" class="${sizes[lvl - 1]}">${inline(h[2])}</h${lvl}>`;
       continue;
     }
     const ul = line.match(/^[-*]\s+(.*)$/);
-    if (ul) { closeP(); closeOl(); if (!inUl) { html += '<ul class="space-y-1.5 my-3 pl-1">'; inUl = true; } html += `<li class="flex gap-2 items-start"><span class="text-primary mt-1 shrink-0">▸</span><span>${inline(ul[1])}</span></li>`; continue; }
+    if (ul) { closeP(); closeOl(); if (!inUl) { html += '<ul class="space-y-2.5 my-4 pl-1">'; inUl = true; } html += `<li class="flex gap-2.5 items-start"><span class="text-primary mt-1 shrink-0">▸</span><span>${inline(ul[1])}</span></li>`; continue; }
     const ol = line.match(/^(\d+)\.\s+(.*)$/);
-    if (ol) { closeP(); closeUl(); if (!inOl) { html += '<ol class="space-y-1.5 my-3 pl-1 counter-reset:item">'; inOl = true; } html += `<li class="flex gap-2 items-start"><span class="text-primary font-semibold mt-0.5 shrink-0 min-w-[1.5rem]">${ol[1]}.</span><span>${inline(ol[2])}</span></li>`; continue; }
+    if (ol) { closeP(); closeUl(); if (!inOl) { html += '<ol class="space-y-2.5 my-4 pl-1 counter-reset:item">'; inOl = true; } html += `<li class="flex gap-2.5 items-start"><span class="text-primary font-semibold mt-0.5 shrink-0 min-w-[1.75rem]">${ol[1]}.</span><span>${inline(ol[2])}</span></li>`; continue; }
     closeUl(); closeOl();
-    if (!inP) { html += '<p class="my-2 leading-relaxed text-foreground/90">'; inP = true; } else { html += " "; }
+    if (!inP) { html += '<p class="my-3 leading-[1.75] text-foreground/90">'; inP = true; } else { html += " "; }
     html += inline(line);
   }
   closeAll();
@@ -105,6 +108,16 @@ const DEFAULT_CHECKLIST: ChecklistItem[] = [
   { id: "tow", label: "Tow height confirmed" },
 ];
 
+type TextSize = "sm" | "md" | "lg" | "xl";
+const TEXT_SIZE_KEY = "esgc.help.textSize";
+const SIZE_CLASS: Record<TextSize, string> = {
+  sm: "text-sm md:text-base",
+  md: "text-base md:text-lg",
+  lg: "text-lg md:text-xl",
+  xl: "text-xl md:text-2xl",
+};
+const SIZE_ORDER: TextSize[] = ["sm", "md", "lg", "xl"];
+
 function HelpPage() {
   const [body, setBody] = useState<string>("");
   const [draft, setDraft] = useState<string>("");
@@ -119,6 +132,9 @@ function HelpPage() {
   const [draftItems, setDraftItems] = useState<ChecklistItem[]>([]);
   const [draftEnabled, setDraftEnabled] = useState(true);
   const [savingChecklist, setSavingChecklist] = useState(false);
+  const [textSize, setTextSize] = useState<TextSize>("lg");
+  const [search, setSearch] = useState("");
+  const [showTop, setShowTop] = useState(false);
   const today = todayUKDate();
   const storageKey = `esgc.help.checklist.${today}`;
 
@@ -139,8 +155,27 @@ function HelpPage() {
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) setChecked(JSON.parse(raw));
+      const s = localStorage.getItem(TEXT_SIZE_KEY) as TextSize | null;
+      if (s && SIZE_ORDER.includes(s)) setTextSize(s);
     } catch { /* ignore */ }
   }, [storageKey]);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const changeSize = (s: TextSize) => {
+    setTextSize(s);
+    try { localStorage.setItem(TEXT_SIZE_KEY, s); } catch { /* ignore */ }
+  };
+  const bumpSize = (dir: 1 | -1) => {
+    const idx = SIZE_ORDER.indexOf(textSize);
+    const next = SIZE_ORDER[Math.min(SIZE_ORDER.length - 1, Math.max(0, idx + dir))];
+    changeSize(next);
+  };
 
   const toggle = (id: string) => {
     setChecked((prev) => {
@@ -198,6 +233,12 @@ function HelpPage() {
     });
   }, [headings]);
 
+  const filteredHeadings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return headings;
+    return headings.filter((h) => h.text.toLowerCase().includes(q));
+  }, [headings, search]);
+
   const allChecked = checklistItems.length > 0 && checklistItems.every((c) => checked[c.id]);
   const checkedCount = checklistItems.filter((c) => checked[c.id]).length;
 
@@ -222,176 +263,261 @@ function HelpPage() {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  const printGuide = () => window.print();
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
-      <Card className="liquid-glass">
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="size-5 text-primary" /> Help & Caravan guide
-          </CardTitle>
-          {isOffice && !editing && (
-            <Button size="sm" variant="outline" onClick={startEdit}>
-              <Pencil className="size-4 mr-1" /> Edit
-            </Button>
-          )}
-          {isOffice && editing && (
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" onClick={cancel} disabled={saving}>
-                <X className="size-4 mr-1" /> Cancel
-              </Button>
-              <Button size="sm" onClick={save} disabled={saving}>
-                <Save className="size-4 mr-1" /> {saving ? "Saving…" : "Save"}
-              </Button>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          {/* Jump-link bar — hidden while editing */}
-          {!editing && !loading && body.trim() && (
-            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border bg-background/40 p-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
-                Jump to
-              </span>
-              {jumpLinks.map((j) => (
-                <Button
-                  key={j.label}
-                  size="sm"
-                  variant={j.id ? "secondary" : "ghost"}
-                  className="h-7 text-xs"
-                  onClick={() => scrollTo(j.id)}
-                  disabled={!j.id}
-                  title={j.id ? `Jump to ${j.label}` : "No matching heading yet"}
+    <div className="max-w-7xl mx-auto px-2 sm:px-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-6">
+        <div className="space-y-4 min-w-0">
+          <Card className="liquid-glass print:shadow-none print:border-0">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
+                <BookOpen className="size-6 text-primary" /> Help &amp; Caravan guide
+              </CardTitle>
+              <div className="flex items-center gap-2 flex-wrap print:hidden">
+                {/* Text size control */}
+                <div
+                  role="group"
+                  aria-label="Adjust text size"
+                  className="flex items-center gap-0.5 rounded-md border bg-background/50 p-0.5"
                 >
-                  {j.label}
-                </Button>
-              ))}
-            </div>
-          )}
-
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : editing ? (
-            <div className="space-y-2">
-              <Textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                rows={24}
-                className="font-mono text-sm"
-                placeholder="Write the guide in markdown — # headings, **bold**, *italic*, - lists."
-              />
-              <p className="text-xs text-muted-foreground">
-                Markdown supported: <code>#</code> headings, <code>**bold**</code>, <code>*italic*</code>, <code>-</code> lists.
-                Jump links match headings named <em>Duty</em>, <em>Names sync</em>, and <em>Logging</em>.
-              </p>
-            </div>
-          ) : body.trim() ? (
-            <div
-              className="prose-sm max-w-none text-foreground"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">No help content yet.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Pre-publish checklist */}
-      {!editing && (checklistEnabled || isOffice) && (
-        <Card className={`liquid-glass transition-colors ${allChecked && checklistEnabled ? "ring-1 ring-emerald-500/40" : ""}`}>
-          <CardHeader className="flex flex-row items-center justify-between gap-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ListChecks className="size-5 text-primary" />
-              Pre-publish checklist
-              {checklistEnabled ? (
-                <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
-                  {checkedCount}/{checklistItems.length}
-                </span>
-              ) : (
-                <span className="ml-2 text-xs font-normal text-muted-foreground">(hidden — office only)</span>
-              )}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {checklistEnabled && checkedCount > 0 && !editingChecklist && (
-                <Button size="sm" variant="ghost" onClick={resetChecklist}>Reset</Button>
-              )}
-              {isOffice && !editingChecklist && (
-                <Button size="sm" variant="outline" onClick={startEditChecklist}>
-                  <Pencil className="size-4 mr-1" /> Edit
-                </Button>
-              )}
-              {isOffice && editingChecklist && (
-                <>
-                  <Button size="sm" variant="ghost" onClick={cancelEditChecklist} disabled={savingChecklist}>
-                    <X className="size-4 mr-1" /> Cancel
-                  </Button>
-                  <Button size="sm" onClick={saveChecklist} disabled={savingChecklist}>
-                    <Save className="size-4 mr-1" /> {savingChecklist ? "Saving…" : "Save"}
-                  </Button>
-                </>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {editingChecklist ? (
-              <>
-                <div className="flex items-center justify-between gap-3 rounded-md border bg-background/40 p-2.5">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-medium">Show checklist to caravan</div>
-                    <p className="text-xs text-muted-foreground">Turn off to hide it from everyone except office.</p>
-                  </div>
-                  <Switch checked={draftEnabled} onCheckedChange={setDraftEnabled} />
+                  <Button
+                    size="sm" variant="ghost"
+                    className="h-9 w-9 p-0 text-base font-semibold"
+                    onClick={() => bumpSize(-1)}
+                    disabled={textSize === SIZE_ORDER[0]}
+                    aria-label="Smaller text"
+                    title="Smaller text"
+                  >A−</Button>
+                  <Type className="size-4 text-muted-foreground mx-0.5" aria-hidden />
+                  <Button
+                    size="sm" variant="ghost"
+                    className="h-9 w-9 p-0 text-base font-semibold"
+                    onClick={() => bumpSize(1)}
+                    disabled={textSize === SIZE_ORDER[SIZE_ORDER.length - 1]}
+                    aria-label="Larger text"
+                    title="Larger text"
+                  >A+</Button>
                 </div>
-                <ul className="space-y-2">
-                  {draftItems.map((item, idx) => (
-                    <li key={item.id} className="flex items-center gap-2">
-                      <Input
-                        value={item.label}
-                        onChange={(e) => updateItem(idx, e.target.value)}
-                        placeholder="Checklist item"
-                      />
-                      <Button size="icon" variant="ghost" onClick={() => removeItem(idx)} aria-label="Remove">
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-                <Button size="sm" variant="outline" onClick={addItem} className="gap-1.5">
-                  <Plus className="size-4" /> Add item
+                <Button size="sm" variant="outline" onClick={printGuide} className="h-9" aria-label="Print this guide">
+                  <Printer className="size-4 sm:mr-1.5" /> <span className="hidden sm:inline">Print</span>
                 </Button>
-              </>
-            ) : checklistEnabled ? (
-              <>
-                <p className="text-xs text-muted-foreground">
-                  Tick each item before sending today's log. Saved locally for {today}.
-                </p>
-                <ul className="space-y-2">
-                  {checklistItems.map((item) => (
-                    <li key={item.id}>
-                      <label className="flex items-center gap-3 rounded-md border bg-background/40 p-2.5 cursor-pointer hover:bg-background/70 transition-colors">
-                        <Checkbox
-                          checked={!!checked[item.id]}
-                          onCheckedChange={() => toggle(item.id)}
-                        />
-                        <span className={`text-sm ${checked[item.id] ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                          {item.label}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-                {allChecked && (
-                  <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
-                    <CheckCircle2 className="size-4" />
-                    All checks complete — safe to publish today's log.
+                {isOffice && !editing && (
+                  <Button size="sm" variant="outline" onClick={startEdit} className="h-9">
+                    <Pencil className="size-4 mr-1" /> Edit
+                  </Button>
+                )}
+                {isOffice && editing && (
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={cancel} disabled={saving} className="h-9">
+                      <X className="size-4 mr-1" /> Cancel
+                    </Button>
+                    <Button size="sm" onClick={save} disabled={saving} className="h-9">
+                      <Save className="size-4 mr-1" /> {saving ? "Saving…" : "Save"}
+                    </Button>
                   </div>
                 )}
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground">Checklist is currently turned off.</p>
-            )}
-          </CardContent>
-        </Card>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Jump-link bar — hidden while editing */}
+              {!editing && !loading && body.trim() && (
+                <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border bg-background/40 p-2 print:hidden">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
+                    Jump to
+                  </span>
+                  {jumpLinks.map((j) => (
+                    <Button
+                      key={j.label}
+                      size="sm"
+                      variant={j.id ? "secondary" : "ghost"}
+                      className="h-9 text-sm"
+                      onClick={() => scrollTo(j.id)}
+                      disabled={!j.id}
+                      title={j.id ? `Jump to ${j.label}` : "No matching heading yet"}
+                    >
+                      {j.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : editing ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    rows={24}
+                    className="font-mono text-sm"
+                    placeholder="Write the guide in markdown — # headings, **bold**, *italic*, - lists."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Markdown supported: <code>#</code> headings, <code>**bold**</code>, <code>*italic*</code>, <code>-</code> lists.
+                    Jump links match headings named <em>Duty</em>, <em>Names sync</em>, and <em>Logging</em>.
+                  </p>
+                </div>
+              ) : body.trim() ? (
+                <div
+                  className={`prose-sm max-w-none text-foreground ${SIZE_CLASS[textSize]}`}
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">No help content yet.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pre-publish checklist */}
+          {!editing && (checklistEnabled || isOffice) && (
+            <Card className={`liquid-glass transition-colors print:hidden ${allChecked && checklistEnabled ? "ring-1 ring-emerald-500/40" : ""}`}>
+              <CardHeader className="flex flex-row items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <ListChecks className="size-5 text-primary" />
+                  Pre-publish checklist
+                  {checklistEnabled ? (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
+                      {checkedCount}/{checklistItems.length}
+                    </span>
+                  ) : (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">(hidden — office only)</span>
+                  )}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {checklistEnabled && checkedCount > 0 && !editingChecklist && (
+                    <Button size="sm" variant="ghost" onClick={resetChecklist} className="h-9">Reset</Button>
+                  )}
+                  {isOffice && !editingChecklist && (
+                    <Button size="sm" variant="outline" onClick={startEditChecklist} className="h-9">
+                      <Pencil className="size-4 mr-1" /> Edit
+                    </Button>
+                  )}
+                  {isOffice && editingChecklist && (
+                    <>
+                      <Button size="sm" variant="ghost" onClick={cancelEditChecklist} disabled={savingChecklist} className="h-9">
+                        <X className="size-4 mr-1" /> Cancel
+                      </Button>
+                      <Button size="sm" onClick={saveChecklist} disabled={savingChecklist} className="h-9">
+                        <Save className="size-4 mr-1" /> {savingChecklist ? "Saving…" : "Save"}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {editingChecklist ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3 rounded-md border bg-background/40 p-2.5">
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-medium">Show checklist to caravan</div>
+                        <p className="text-xs text-muted-foreground">Turn off to hide it from everyone except office.</p>
+                      </div>
+                      <Switch checked={draftEnabled} onCheckedChange={setDraftEnabled} />
+                    </div>
+                    <ul className="space-y-2">
+                      {draftItems.map((item, idx) => (
+                        <li key={item.id} className="flex items-center gap-2">
+                          <Input
+                            value={item.label}
+                            onChange={(e) => updateItem(idx, e.target.value)}
+                            placeholder="Checklist item"
+                          />
+                          <Button size="icon" variant="ghost" onClick={() => removeItem(idx)} aria-label="Remove">
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button size="sm" variant="outline" onClick={addItem} className="gap-1.5 h-9">
+                      <Plus className="size-4" /> Add item
+                    </Button>
+                  </>
+                ) : checklistEnabled ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Tick each item before sending today's log. Saved for {today}.
+                    </p>
+                    <ul className="space-y-2">
+                      {checklistItems.map((item) => (
+                        <li key={item.id}>
+                          <label className="flex items-center gap-3 rounded-md border bg-background/40 p-3 cursor-pointer hover:bg-background/70 transition-colors min-h-12">
+                            <Checkbox
+                              checked={!!checked[item.id]}
+                              onCheckedChange={() => toggle(item.id)}
+                              className="size-5"
+                            />
+                            <span className={`text-base ${checked[item.id] ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                              {item.label}
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                    {allChecked && (
+                      <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 className="size-4" />
+                        All checks complete — safe to publish today's log.
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Checklist is currently turned off.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Sticky Table of Contents (sidebar on xl+) */}
+        {!editing && !loading && headings.length > 0 && (
+          <aside className="hidden xl:block print:hidden">
+            <div className="sticky top-24 space-y-3">
+              <div className="rounded-lg border bg-background/40 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Search className="size-4 text-muted-foreground" aria-hidden />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Find a section…"
+                    className="h-9 text-sm"
+                    aria-label="Search sections"
+                  />
+                </div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 px-1">
+                  Contents
+                </div>
+                <nav className="space-y-0.5 max-h-[60vh] overflow-y-auto pr-1">
+                  {filteredHeadings.length === 0 ? (
+                    <p className="text-xs text-muted-foreground px-1 py-2">No matches.</p>
+                  ) : filteredHeadings.map((h) => (
+                    <button
+                      key={h.id + h.text}
+                      onClick={() => scrollTo(h.id)}
+                      className={`block w-full text-left rounded px-2 py-1.5 text-sm hover:bg-primary/10 hover:text-primary transition-colors ${h.level === 2 ? "pl-5 text-muted-foreground" : "font-medium"}`}
+                    >
+                      {h.text}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </div>
+          </aside>
+        )}
+      </div>
+
+      {/* Back to top */}
+      {showTop && (
+        <Button
+          size="icon"
+          onClick={scrollTop}
+          aria-label="Back to top"
+          title="Back to top"
+          className="fixed bottom-6 right-6 z-40 size-12 rounded-full shadow-lg print:hidden"
+        >
+          <ArrowUp className="size-5" />
+        </Button>
       )}
     </div>
   );
