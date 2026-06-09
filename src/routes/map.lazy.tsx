@@ -94,6 +94,7 @@ function MapPage() {
   const [photoCache, setPhotoCache] = useState<Map<string, { url: string; photographer?: string; link?: string } | null>>(new Map());
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [metar, setMetar] = useState<{ id: string; raw: string; obs: string }[]>([]);
+  const [taf, setTaf] = useState<{ id: string; raw: string }[]>([]);
   const [fleetGliders, setFleetGliders] = useState<{ flarm_id: string | null; registration: string }[]>([]);
   const insideZoneRef = useRef<Map<string, number>>(new Map());
   const [panelOpen, setPanelOpen] = useState(false);
