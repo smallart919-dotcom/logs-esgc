@@ -18,14 +18,6 @@ import { firePush } from "@/lib/push.functions";
 import { PushToggle } from "@/components/PushToggle";
 
 export const Route = createLazyFileRoute("/map")({
-  beforeLoad: requireAuth,
-  head: () => ({
-    meta: [
-      { title: "Live Map — ESGC Logs" },
-      { name: "description", content: "Live aircraft positions around Ringmer — OGN + ADS-B." },
-    ],
-  }),
-  ssr: false,
   component: MapPage,
 });
 
