@@ -679,6 +679,16 @@ function MapPage() {
           maxZoom={19}
         />
 
+        {/* Thermal overlay — RASP wstar BSRATIO for today, 13:00 local.
+            Rough UK2 domain bounds — sufficient for situational awareness. */}
+        {showThermals && (
+          <ImageOverlay
+            url={`https://rasp.stratus.org.uk/UK2/FCST/wstar_bsratio.curr.1300lst.d2.body.png?d=${new Date().toISOString().slice(0,10)}`}
+            bounds={[[49.0, -6.6], [55.8, 3.2]]}
+            opacity={0.55}
+          />
+        )}
+
         {showAirspace && <LiveAirspace />}
 
         {showAirspace && <AirspaceLabels />}
