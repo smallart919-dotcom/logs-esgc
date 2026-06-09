@@ -356,6 +356,7 @@ function MapPage() {
       trailMetaRef.current.set(a.id, { type: a.type, isOwnFleet: a.isOwnFleet, reg: a.reg });
     }
     setTrailsTick((t) => t + 1);
+    scheduleTrailSave();
   }, [flarmSet, regSet]);
 
   // Live updates: 500ms when visible, 15s in background
