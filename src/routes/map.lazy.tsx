@@ -995,6 +995,22 @@ function MapPage() {
                   >
                     ▶ Preview
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const msg = "Test alert · 800ft · 0.4nm";
+                      toast("✈ Aircraft near Ringmer (test)", { description: msg });
+                      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+                        try { new Notification("Aircraft near Ringmer (test)", { body: msg, tag: "test-prox" }); } catch { /* noop */ }
+                      }
+                      playSharedChime(chimeVolume);
+                      firePushFn({ data: { category: "proximity", title: "Aircraft near Ringmer (test)", body: msg, tag: "test-prox", url: "/map" } }).catch(() => {});
+                    }}
+                    style={{ background: "rgba(244,114,182,0.18)", color: "#f472b6", border: "1px solid rgba(244,114,182,0.4)", borderRadius: "4px", padding: "3px 8px", fontSize: "10px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                    title="Fire a test alert (chime + push to all devices)"
+                  >
+                    ⚑ Test alert
+                  </button>
                   <input
                     type="range"
                     min={0}
