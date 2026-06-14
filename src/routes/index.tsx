@@ -1208,10 +1208,13 @@ function FlightDialog({
     return members.find((m) => (m.membership_number || "").trim().toLowerCase() === k) ?? null;
   };
 
-  // Autosave state — only active for existing flights (edit mode).
+  // Autosave state — active for existing flights AND for manual-add once we've
+  // created the row (createdIdRef holds the new flight's id).
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error" | "dirty">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const lastPayloadRef = useRef<string>("");
+  const createdIdRef = useRef<string | null>(null);
+  const creatingRef = useRef<boolean>(false);
 
   const save = async () => {
     // GFE pilots still need a name recorded (the passenger flying the
