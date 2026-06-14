@@ -1386,7 +1386,7 @@ function FlightDialog({
       onSaved(payload.flight_date);
     }, 1500);
     return () => clearTimeout(t);
-  }, [open, flight?.id, buildAutosavePayload, dailyGfes, onSaved]);
+  }, [open, flight?.id, buildAutosavePayload, dailyGfes]);
 
   // Reset autosave baseline whenever a different flight is opened.
   useEffect(() => {
