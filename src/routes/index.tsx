@@ -1511,7 +1511,7 @@ function FlightDialog({
         <DialogHeader>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <DialogTitle>{flight ? "Edit flight" : "Add manual flight"}</DialogTitle>
-            {flight?.id && <SaveStatusPill status={saveStatus} lastSavedAt={lastSavedAt} />}
+            {(flight?.id || createdIdRef.current) && <SaveStatusPill status={saveStatus} lastSavedAt={lastSavedAt} />}
           </div>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
