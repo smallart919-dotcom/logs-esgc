@@ -270,6 +270,7 @@ function RootComponent() {
         ];
         return <MacDock items={items} />;
       })()}
+      {userEmail && <ProximityWatcher />}
       <Toaster />
     </div>
   );
