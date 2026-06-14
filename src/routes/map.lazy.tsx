@@ -17,6 +17,8 @@ import { listActiveNotams, refreshNotamsNow, type NotamRecord } from "@/lib/nota
 import { firePush } from "@/lib/push.functions";
 import { PushToggle } from "@/components/PushToggle";
 import { WeatherView } from "@/components/weather-view";
+import { saveProximityPrefs } from "@/lib/proximity-prefs";
+import { playChime as playSharedChime, primeChime } from "@/lib/chime";
 
 export const Route = createLazyFileRoute("/map")({
   component: MapPage,
