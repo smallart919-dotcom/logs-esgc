@@ -45,7 +45,7 @@ export function ProximityWatcher() {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const { data } = await supabase.from("gliders").select("flarm_id, registration");
+      const { data } = await supabase.from("fleet_gliders").select("flarm_id, registration");
       if (cancelled || !data) return;
       const flarm = new Set<string>();
       const reg = new Set<string>();
