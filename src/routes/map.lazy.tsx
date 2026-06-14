@@ -17,8 +17,6 @@ import { listActiveNotams, refreshNotamsNow, type NotamRecord } from "@/lib/nota
 import { firePush } from "@/lib/push.functions";
 import { PushToggle } from "@/components/PushToggle";
 import { WeatherView } from "@/components/weather-view";
-import { saveProximityPrefs } from "@/lib/proximity-prefs";
-import { playChime as playSharedChime, primeChime } from "@/lib/chime";
 
 export const Route = createLazyFileRoute("/map")({
   component: MapPage,
@@ -109,13 +107,6 @@ function MapPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [weatherOpen, setWeatherOpen] = useState(false);
-
-  // Persist proximity prefs so the global watcher (running on every page)
-  // uses the same settings. Also prime the AudioContext on mount.
-  useEffect(() => { primeChime(); }, []);
-  useEffect(() => {
-    saveProximityPrefs({ notifyEnabled, proximityNm, audioChime, chimeVolume });
-  }, [notifyEnabled, proximityNm, audioChime, chimeVolume]);
   // Per-aircraft trail history (persisted in localStorage, FR24-style).
   const TRAILS_LS_KEY = "esgc.map.trails.v1";
   const TRAILS_META_LS_KEY = "esgc.map.trails.meta.v1";
@@ -994,22 +985,6 @@ function MapPage() {
                     title="Preview chime"
                   >
                     ▶ Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const msg = "Test alert · 800ft · 0.4nm";
-                      toast("✈ Aircraft near Ringmer (test)", { description: msg });
-                      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-                        try { new Notification("Aircraft near Ringmer (test)", { body: msg, tag: "test-prox" }); } catch { /* noop */ }
-                      }
-                      playSharedChime(chimeVolume);
-                      firePushFn({ data: { category: "proximity", title: "Aircraft near Ringmer (test)", body: msg, tag: "test-prox", url: "/map" } }).catch(() => {});
-                    }}
-                    style={{ background: "rgba(244,114,182,0.18)", color: "#f472b6", border: "1px solid rgba(244,114,182,0.4)", borderRadius: "4px", padding: "3px 8px", fontSize: "10px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
-                    title="Fire a test alert (chime + push to all devices)"
-                  >
-                    ⚑ Test alert
                   </button>
                   <input
                     type="range"

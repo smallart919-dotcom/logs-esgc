@@ -1208,13 +1208,10 @@ function FlightDialog({
     return members.find((m) => (m.membership_number || "").trim().toLowerCase() === k) ?? null;
   };
 
-  // Autosave state — active for existing flights AND for manual-add once we've
-  // created the row (createdIdRef holds the new flight's id).
+  // Autosave state — only active for existing flights (edit mode).
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error" | "dirty">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const lastPayloadRef = useRef<string>("");
-  const createdIdRef = useRef<string | null>(null);
-  const creatingRef = useRef<boolean>(false);
 
   const save = async () => {
     // GFE pilots still need a name recorded (the passenger flying the
@@ -1309,6 +1306,7 @@ function FlightDialog({
   // user pauses typing. Skips when validation would fail; preserves drafts in
   // sessionStorage so a reload / network blip doesn't lose work.
   const buildAutosavePayload = useCallback(() => {
+    if (!flight?.id) return null;
     const p1k = (form.p1_kind ?? "member") as PilotKind;
     const p2k = (form.p2_kind ?? "member") as PilotKind;
     // Skip silent autosave if a required GFE name is still missing — let the
@@ -1336,54 +1334,33 @@ function FlightDialog({
       notes: (form.notes ?? "").trim() || null,
       logged_by: form.logged_by || null,
     };
-  }, [form, date]);
+  }, [flight?.id, form, date]);
 
   // Persist a local draft as the user types so an accidental close / reload
   // doesn't lose their changes.
   useEffect(() => {
-    if (!open) return;
-    const id = flight?.id ?? createdIdRef.current;
-    if (!id) return;
-    try { sessionStorage.setItem(`flight-draft:${id}`, JSON.stringify(form)); } catch { /* quota */ }
+    if (!open || !flight?.id) return;
+    try { sessionStorage.setItem(`flight-draft:${flight.id}`, JSON.stringify(form)); } catch { /* quota */ }
   }, [open, flight?.id, form]);
 
-  // Debounced autosave — for existing flights AND for manual-add (auto-creates
-  // the row on first save once minimum fields are present).
+  // Debounced autosave for edit mode.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !flight?.id) return;
     const payload = buildAutosavePayload();
     if (!payload) return;
-    // For a brand-new manual entry, require a glider registration before we
-    // create the row so we don't spam the DB with empty drafts.
-    const id = flight?.id ?? createdIdRef.current;
-    if (!id && !(payload.glider_registration && payload.glider_registration.trim())) return;
     const serialized = JSON.stringify(payload);
     if (serialized === lastPayloadRef.current) return;
     setSaveStatus("dirty");
     const t = setTimeout(async () => {
-      if (creatingRef.current) return;
       setSaveStatus("saving");
-      const currentId = flight?.id ?? createdIdRef.current;
-      if (currentId) {
-        const { error } = await supabase.from("flights").update(payload).eq("id", currentId);
-        if (error) { setSaveStatus("error"); return; }
-      } else {
-        creatingRef.current = true;
-        const { data: inserted, error } = await supabase
-          .from("flights").insert(payload).select("id").maybeSingle();
-        creatingRef.current = false;
-        if (error || !inserted?.id) { setSaveStatus("error"); return; }
-        createdIdRef.current = inserted.id;
-      }
+      const { error } = await supabase.from("flights").update(payload).eq("id", flight.id);
+      if (error) { setSaveStatus("error"); return; }
       lastPayloadRef.current = serialized;
       setSaveStatus("saved");
       setLastSavedAt(new Date());
+      // Auto-tick GFEs + fleet upserts run silently too.
       void autoTickDailyGfes(payload, dailyGfes);
-      const savedId = flight?.id ?? createdIdRef.current;
-      if (savedId) {
-        try { sessionStorage.removeItem(`flight-draft:${savedId}`); } catch { /* noop */ }
-      }
-      onSaved(payload.flight_date);
+      try { sessionStorage.removeItem(`flight-draft:${flight.id}`); } catch { /* noop */ }
     }, 1500);
     return () => clearTimeout(t);
   }, [open, flight?.id, buildAutosavePayload, dailyGfes]);
@@ -1392,8 +1369,6 @@ function FlightDialog({
   useEffect(() => {
     if (!open) return;
     lastPayloadRef.current = "";
-    createdIdRef.current = null;
-    creatingRef.current = false;
     setSaveStatus("idle");
     setLastSavedAt(null);
   }, [open, flight?.id]);
@@ -1511,7 +1486,7 @@ function FlightDialog({
         <DialogHeader>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <DialogTitle>{flight ? "Edit flight" : "Add manual flight"}</DialogTitle>
-            {(flight?.id || createdIdRef.current) && <SaveStatusPill status={saveStatus} lastSavedAt={lastSavedAt} />}
+            {flight?.id && <SaveStatusPill status={saveStatus} lastSavedAt={lastSavedAt} />}
           </div>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
