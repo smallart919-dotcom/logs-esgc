@@ -105,6 +105,26 @@ export const sendLogsEmail = createServerFn({ method: "POST" })
         idempotencyKey: `${idemBase}-to`,
       });
 
+      // Reserve today's UK date in auto_send_log so the midnight cron won't
+      // re-send the same logs. Derive the UK date from the human label first;
+      // fall back to today UTC if parsing fails. Upsert by primary key so a
+      // manual resend on the same day just refreshes the marker.
+      const ukDate = (() => {
+        const m = data.dateLabel.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+        if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+        return new Date().toISOString().slice(0, 10);
+      })();
+      await supabaseAdmin
+        .from("auto_send_log")
+        .upsert({
+          flight_date: ukDate,
+          sent_at: new Date().toISOString(),
+          flights_count: 0,
+          note: "sent:manual",
+          message_id: primary.message_id ?? null,
+          recipient: to,
+        }, { onConflict: "flight_date" });
+
       return {
         success: primary.success,
         messageId: primary.message_id,
