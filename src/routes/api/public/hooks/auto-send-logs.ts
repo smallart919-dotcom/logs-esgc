@@ -325,31 +325,22 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     const htmlBody = fillTokens(esc(bodyTpl), htmlTokens).replace(/\n/g, "<br/>");
     const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.55;color:#111"><p style="margin:0 0 12px;color:#666;font-size:12px">Auto-sent at midnight by Caravan.</p>${htmlBody}</div>`;
 
-    const idemBase = `auto-logs-${flightDate}`;
-    const tasks: Promise<Awaited<ReturnType<typeof sendOne>>>[] = [
-      sendOne({ recipient: to, from, subject, text, html, idemKey: `${idemBase}-to` }),
-    ];
-    if (cc && cc.toLowerCase() !== to.toLowerCase()) {
-      tasks.push(sendOne({ recipient: cc, from, subject, text, html, idemKey: `${idemBase}-cc` }));
-    }
-    const results = await Promise.allSettled(tasks);
-    const primary = results[0];
-    const copy = results[1];
-
-    if (primary.status === "rejected") {
-      const msg = primary.reason instanceof Error ? primary.reason.message : String(primary.reason);
-      throw new Error(`Send: ${msg}`);
-    }
+    // Single email with optional CC — Resend supports multi-recipient delivery in
+    // one send, which avoids the "two duplicate emails" symptom we used to get
+    // when this route fanned out into two separate sends.
+    const idemKey = `auto-logs-${flightDate}`;
+    const ccFinal = cc && cc.toLowerCase() !== to.toLowerCase() ? cc : null;
+    const primary = await sendOne({ recipient: to, cc: ccFinal, from, subject, text, html, idemKey });
 
     await supabaseAdmin.from("auto_send_log").update({
-      note: `sent:${reason}${copy && copy.status === "rejected" ? " (cc_failed)" : ""}`,
+      note: `sent:${reason}`,
       flights_count: flights.length,
-      message_id: primary.value.message_id ?? null,
+      message_id: primary.message_id ?? null,
       recipient: to,
       sent_at: new Date().toISOString(),
     }).eq("flight_date", flightDate);
 
-    return { status: "sent", detail: { to, messageId: primary.value.message_id, flights: flights.length } };
+    return { status: "sent", detail: { to, cc: ccFinal, messageId: primary.message_id, flights: flights.length } };
   } catch (err: any) {
     // Roll back the reservation so we'll retry on the next cron tick.
     await supabaseAdmin.from("auto_send_log").delete().eq("flight_date", flightDate);

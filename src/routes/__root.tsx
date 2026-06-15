@@ -23,6 +23,7 @@ import { AirborneBadge } from "@/components/airborne-badge";
 import { SkyStrip } from "@/components/sky-strip";
 import { HorizonGradient } from "@/components/horizon-gradient";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ProximityWatcher } from "@/components/ProximityWatcher";
 import esgcLogo from "@/assets/esgc-logo.png";
 
 /** Sailplane silhouette — long slender wings, slim fuselage, T-tail. */
@@ -269,6 +270,7 @@ function RootComponent() {
         ];
         return <MacDock items={items} />;
       })()}
+      {userEmail && <ProximityWatcher />}
       <Toaster />
     </div>
   );
