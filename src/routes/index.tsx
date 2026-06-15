@@ -862,6 +862,12 @@ function FlightsPage() {
           if (savedDate && savedDate !== date) setDate(savedDate);
           else await load();
         }}
+        onAutoSaved={async (savedDate) => {
+          // Silent autosave — keep the dialog open. Realtime sub will
+          // refresh rows, but trigger a load if the date changed so the
+          // page view matches.
+          if (savedDate && savedDate !== date) setDate(savedDate);
+        }}
       />
       <BulkAddDialog open={bulkOpen} onOpenChange={setBulkOpen} date={date} gliders={gliders} members={members} onSaved={() => { setBulkOpen(false); load(); }} />
     </div>
