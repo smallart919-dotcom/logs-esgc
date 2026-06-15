@@ -164,13 +164,41 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           const refTime = takeoff ?? landing;
           const refMs = refTime ? +new Date(refTime) : null;
           const regKey = normKey(matchedReg);
-          const existing = dayFlights.find((row) => {
+          const HALF_DAY_MS = 12 * 60 * 60 * 1000;
+          let existing = dayFlights.find((row) => {
             if (!sameAircraft(row, flarm, regKey)) return false;
             const rowRef = row.takeoff_time ?? row.landing_time;
             if (!rowRef && refMs === null) return true;
             if (!rowRef || refMs === null) return false;
             return Math.abs(+new Date(rowRef) - refMs) <= TIME_WINDOW_MS;
           });
+          // Fallback: incoming has landing-only -> match an in-air row
+          // (existing takeoff present, landing missing) for same aircraft
+          // where the existing takeoff is before incoming landing within
+          // a reasonable flight duration. Avoids creating a duplicate
+          // "landing-only" row.
+          if (!existing && landing && !takeoff) {
+            const lMs = +new Date(landing);
+            existing = dayFlights.find((row) => {
+              if (!sameAircraft(row, flarm, regKey)) return false;
+              if (row.landing_time) return false;
+              if (!row.takeoff_time) return false;
+              const tMs = +new Date(row.takeoff_time);
+              return tMs <= lMs && (lMs - tMs) <= HALF_DAY_MS;
+            });
+          }
+          // Symmetric fallback: incoming has takeoff-only -> match a row
+          // with landing only (rare but possible) for same aircraft.
+          if (!existing && takeoff && !landing) {
+            const tMs = +new Date(takeoff);
+            existing = dayFlights.find((row) => {
+              if (!sameAircraft(row, flarm, regKey)) return false;
+              if (row.takeoff_time) return false;
+              if (!row.landing_time) return false;
+              const lMs = +new Date(row.landing_time);
+              return tMs <= lMs && (lMs - tMs) <= HALF_DAY_MS;
+            });
+          }
 
           // Skip if a tombstone matches (deleted previously). Same rule: only
           // match a timeless tombstone to a timeless incoming row.

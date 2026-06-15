@@ -258,6 +258,7 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     throw new Error(`Reserve failed: ${insErr.message}`);
   }
 
+  let emailSent = false;
   try {
 
 
@@ -331,7 +332,10 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
     const idemKey = `auto-logs-${flightDate}`;
     const ccFinal = cc && cc.toLowerCase() !== to.toLowerCase() ? cc : null;
     const primary = await sendOne({ recipient: to, cc: ccFinal, from, subject, text, html, idemKey });
-
+    // Mark as sent IMMEDIATELY so any later failure (e.g. log update) does
+    // NOT roll back the dedup reservation and cause a duplicate send on the
+    // next cron tick.
+    emailSent = true;
     await supabaseAdmin.from("auto_send_log").update({
       note: `sent:${reason}`,
       flights_count: flights.length,
@@ -342,8 +346,15 @@ async function runForDate(flightDate: string, reason: string): Promise<{ status:
 
     return { status: "sent", detail: { to, cc: ccFinal, messageId: primary.message_id, flights: flights.length } };
   } catch (err: any) {
-    // Roll back the reservation so we'll retry on the next cron tick.
-    await supabaseAdmin.from("auto_send_log").delete().eq("flight_date", flightDate);
+    // Only roll back the reservation when the email did NOT actually go out.
+    // Otherwise the next cron tick would re-send the same logs.
+    if (!emailSent) {
+      await supabaseAdmin.from("auto_send_log").delete().eq("flight_date", flightDate);
+    } else {
+      await supabaseAdmin.from("auto_send_log")
+        .update({ note: `sent_but_log_failed:${reason}:${(err?.message ?? String(err)).slice(0, 200)}` })
+        .eq("flight_date", flightDate);
+    }
     throw err;
   }
 }
