@@ -177,27 +177,32 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           // where the existing takeoff is before incoming landing within
           // a reasonable flight duration. Avoids creating a duplicate
           // "landing-only" row.
+          // SAFETY: only match if there's exactly one candidate — multiple
+          // open in-air rows means we can't disambiguate, so create a new
+          // row rather than risk pairing the wrong flight.
           if (!existing && landing && !takeoff) {
             const lMs = +new Date(landing);
-            existing = dayFlights.find((row) => {
+            const candidates = dayFlights.filter((row) => {
               if (!sameAircraft(row, flarm, regKey)) return false;
               if (row.landing_time) return false;
               if (!row.takeoff_time) return false;
               const tMs = +new Date(row.takeoff_time);
               return tMs <= lMs && (lMs - tMs) <= HALF_DAY_MS;
             });
+            if (candidates.length === 1) existing = candidates[0];
           }
           // Symmetric fallback: incoming has takeoff-only -> match a row
           // with landing only (rare but possible) for same aircraft.
           if (!existing && takeoff && !landing) {
             const tMs = +new Date(takeoff);
-            existing = dayFlights.find((row) => {
+            const candidates = dayFlights.filter((row) => {
               if (!sameAircraft(row, flarm, regKey)) return false;
               if (row.takeoff_time) return false;
               if (!row.landing_time) return false;
               const lMs = +new Date(row.landing_time);
               return tMs <= lMs && (lMs - tMs) <= HALF_DAY_MS;
             });
+            if (candidates.length === 1) existing = candidates[0];
           }
 
           // Skip if a tombstone matches (deleted previously). Same rule: only
