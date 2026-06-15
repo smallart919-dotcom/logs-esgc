@@ -1144,11 +1144,11 @@ function PilotCell({ name, membership, kind }: { name: string | null; membership
 type DailyGfeLite = { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null };
 
 function FlightDialog({
-  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, offsetSec = 0, dayFlights = [], dailyGfes = [],
+  open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, onAutoSaved, offsetSec = 0, dayFlights = [], dailyGfes = [],
 }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   flight: Flight | null; manual: boolean; date: string;
-  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void; offsetSec?: number;
+  gliders: Glider[]; members: Member[]; previousInitials?: string[]; onSaved: (savedDate?: string) => void; onAutoSaved?: (savedDate?: string) => void; offsetSec?: number;
   dayFlights?: Flight[];
   dailyGfes?: DailyGfeLite[];
 }) {
