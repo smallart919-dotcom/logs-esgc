@@ -1383,7 +1383,7 @@ function FlightDialog({
       if (savedId) {
         try { sessionStorage.removeItem(`flight-draft:${savedId}`); } catch { /* noop */ }
       }
-      onSaved(payload.flight_date);
+      (onAutoSaved ?? onSaved)(payload.flight_date);
     }, 1500);
     return () => clearTimeout(t);
   }, [open, flight?.id, buildAutosavePayload, dailyGfes]);
