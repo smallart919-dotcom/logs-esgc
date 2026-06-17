@@ -12,6 +12,7 @@ import { Settings as SettingsIcon } from "lucide-react";
 import { fmtOffset } from "@/lib/clock-offset";
 import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 import { EmailSettingsCard } from "@/components/email-settings-card";
+import { QaChecklistCard } from "@/components/qa-checklist-card";
 
 export const Route = createFileRoute("/settings")({
   beforeLoad: async () => {
@@ -203,6 +204,7 @@ function SettingsPage() {
       </Card>
 
       <EmailSettingsCard />
+      <QaChecklistCard />
     </div>
   );
 }
