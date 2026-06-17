@@ -60,7 +60,7 @@ export function GfeCard({ date }: { date: string }) {
   // Realtime: keep tick-off state in sync across devices/sessions.
   useEffect(() => {
     const ch = supabase
-      .channel(`daily-gfes-rt-${date}-${Math.random().toString(36).slice(2)}`)
+      .channel(`daily-gfes-rt-${date}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "daily_gfes", filter: `flight_date=eq.${date}` },
