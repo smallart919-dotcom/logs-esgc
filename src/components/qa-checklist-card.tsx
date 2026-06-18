@@ -1,94 +1,168 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ClipboardCheck, Play, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Loader2, ChevronDown } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { runQaChecks, type QaReport, type QaCheck } from "@/lib/qa-runner.functions";
+import { toast } from "sonner";
 
-type Step = { do: string; expect: string };
-type Section = { title: string; tag?: string; steps: Step[] };
+const STATUS_META: Record<QaCheck["status"], { icon: typeof CheckCircle2; color: string; label: string }> = {
+  pass: { icon: CheckCircle2, color: "text-green-600", label: "PASS" },
+  fail: { icon: XCircle, color: "text-red-600", label: "FAIL" },
+  warn: { icon: AlertTriangle, color: "text-amber-600", label: "WARN" },
+  skip: { icon: MinusCircle, color: "text-muted-foreground", label: "SKIP" },
+};
 
-const SECTIONS: Section[] = [
+const MANUAL_STEPS: { title: string; tag: string; steps: { do: string; expect: string }[] }[] = [
   {
-    title: "Autosave (Flight dialog)",
+    title: "Autosave (Flight dialog) — manual UI check",
     tag: "Daily Logs",
     steps: [
-      { do: "Open the dialog on an existing flight and edit a field (e.g. P2 name).", expect: "Within ~1.5s the change persists silently; the dialog stays open and you can keep editing." },
-      { do: "Edit several fields in quick succession.", expect: "Only one save fires after you stop typing; no flicker, no dialog close." },
-      { do: "Press the ✅ Save button.", expect: "Final save runs and the dialog closes." },
-      { do: "Press Cancel/Escape after silent autosave.", expect: "The autosaved changes remain in the row (autosave is authoritative)." },
-      { do: "Manual Add → fill fields → tab between inputs.", expect: "Autosave creates / updates the draft as you type; ✅ Save closes." },
+      { do: "Open an existing flight, edit P2 name.", expect: "~1.5s later persists silently, dialog stays open." },
+      { do: "Edit several fields rapidly.", expect: "One save fires after typing stops; no flicker." },
+      { do: "Press ✅ Save.", expect: "Final save runs and dialog closes." },
+      { do: "Manual Add → type → tab between inputs.", expect: "Autosave creates/updates draft; ✅ closes." },
     ],
   },
   {
-    title: "OGN sync matching",
-    tag: "Flights",
-    steps: [
-      { do: "Trigger OGN sync with one open in-air row for a registration, then deliver a landing for that reg.", expect: "Landing is paired into the existing row (no duplicate created)." },
-      { do: "Create two open in-air rows for the same reg, then deliver a landing.", expect: "A NEW row is created for the landing (ambiguous match is not merged)." },
-      { do: "Deliver a takeoff for a reg with one open in-air row missing takeoff time.", expect: "Takeoff is paired into that row." },
-      { do: "Deliver a takeoff for a reg with multiple open in-air rows.", expect: "A new row is created — no risky merge." },
-      { do: "Check audit log after each.", expect: "An entry exists describing pair vs create." },
-    ],
-  },
-  {
-    title: "Midnight email dedup",
-    tag: "Auto-send",
-    steps: [
-      { do: "Hit /api/public/hooks/auto-send-logs twice in quick succession (cron retry simulation).", expect: "Second call sees the reservation and skips — only ONE email is sent." },
-      { do: "Check auto_send_log table.", expect: "One row per (flight_date, recipient) per day; status = sent." },
-      { do: "Disable auto-send in Email Settings, run hook.", expect: "Hook returns skipped (disabled)." },
-      { do: "Run hook for a date with zero flights.", expect: "Hook skips — no empty email sent." },
-    ],
-  },
-  {
-    title: "Click n' Glide sync",
-    tag: "GFE Card",
-    steps: [
-      { do: "Click \"Sync now\" on the GFE card.", expect: "Toast \"Synced N GFEs\"; list refreshes; \"Last sync\" timestamp updates." },
-      { do: "On a second device, tick off a GFE.", expect: "Tick appears on the first device within ~1s (realtime)." },
-      { do: "Tap a phone number badge.", expect: "OS dial prompt opens with the cleaned number." },
-      { do: "Sync a date that has both glider and TMG bookings.", expect: "TMG GFEs render in their own section under \"TMG GFEs (G-KIAU)\"." },
-      { do: "Trigger cron via /api/public/hooks/cng-sync with the CRON_SECRET header.", expect: "200 OK; without the header → 401." },
-    ],
-  },
-  {
-    title: "Proximity chime",
+    title: "Proximity chime — manual",
     tag: "Map + Global",
     steps: [
-      { do: "On account A enable proximity alerts; on account B fly (or simulate) within range.", expect: "Account A chimes + notification fires, even while on /logs or /history (not /map)." },
-      { do: "On /map page only.", expect: "Chime is suppressed (visual indicators handle it on-map)." },
+      { do: "Enable proximity on A; fly within range on B.", expect: "A chimes on /logs or /history (not /map)." },
       { do: "Trigger an aircraft from your own fleet.", expect: "No alert (own-fleet excluded)." },
     ],
   },
 ];
 
 export function QaChecklistCard() {
+  const run = useServerFn(runQaChecks);
+  const [report, setReport] = useState<QaReport | null>(null);
+  const [running, setRunning] = useState(false);
+  const [live, setLive] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+
+  const onRun = async () => {
+    setRunning(true);
+    try {
+      const res = await run({ data: { live } });
+      setReport(res);
+      if (res.fail > 0) toast.error(`QA: ${res.fail} failure${res.fail === 1 ? "" : "s"}`);
+      else if (res.warn > 0) toast.warning(`QA: ${res.warn} warning${res.warn === 1 ? "" : "s"}`);
+      else toast.success(`QA: all ${res.pass} checks passed`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "QA runner failed");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const byGroup = report
+    ? report.checks.reduce<Record<string, QaCheck[]>>((acc, c) => {
+        (acc[c.group] ||= []).push(c);
+        return acc;
+      }, {})
+    : null;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <ClipboardCheck className="size-4" />
-          End-to-end QA checklist
+          Automated QA
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
-          Run through this whenever something is changed in autosave, OGN, midnight email, or CnG sync.
+          Runs in-process checks against auth gates, dedup, schema, OGN and CnG. Office-only.
         </p>
       </CardHeader>
-      <CardContent className="space-y-5">
-        {SECTIONS.map((s) => (
-          <section key={s.title} className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold">{s.title}</h3>
-              {s.tag && <Badge variant="outline" className="text-[10px]">{s.tag}</Badge>}
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={onRun} disabled={running} size="sm" className="gap-2">
+            {running ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+            {running ? "Running…" : "Run all checks"}
+          </Button>
+          <div className="flex items-center gap-2">
+            <Switch id="qa-live" checked={live} onCheckedChange={setLive} disabled={running} />
+            <Label htmlFor="qa-live" className="text-xs cursor-pointer">
+              Live mode (hit OGN + CnG)
+            </Label>
+          </div>
+          {report && (
+            <div className="flex items-center gap-2 ml-auto text-xs">
+              <Badge variant="outline" className="text-green-700 border-green-400">{report.pass} pass</Badge>
+              {report.warn > 0 && <Badge variant="outline" className="text-amber-700 border-amber-400">{report.warn} warn</Badge>}
+              {report.fail > 0 && <Badge variant="outline" className="text-red-700 border-red-400">{report.fail} fail</Badge>}
+              {report.skip > 0 && <Badge variant="outline">{report.skip} skip</Badge>}
+              <span className="text-muted-foreground">{report.duration_ms}ms</span>
             </div>
-            <ol className="space-y-1.5 list-decimal list-inside text-sm">
-              {s.steps.map((st, i) => (
-                <li key={i} className="leading-snug">
-                  <span>{st.do}</span>
-                  <div className="ml-5 text-xs text-muted-foreground">→ {st.expect}</div>
-                </li>
+          )}
+        </div>
+
+        {byGroup && (
+          <div className="space-y-4">
+            {Object.entries(byGroup).map(([group, checks]) => (
+              <section key={group} className="space-y-1.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{group}</h3>
+                <ul className="space-y-1">
+                  {checks.map((c) => {
+                    const meta = STATUS_META[c.status];
+                    const Icon = meta.icon;
+                    return (
+                      <li key={c.id} className="flex items-start gap-2 text-sm rounded-md border border-border/60 px-2.5 py-1.5">
+                        <Icon className={`size-4 mt-0.5 shrink-0 ${meta.color}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-baseline gap-x-2">
+                            <span className="font-medium">{c.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{c.ms}ms</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground break-words">{c.detail}</div>
+                        </div>
+                        <Badge variant="outline" className={`text-[10px] ${meta.color}`}>{meta.label}</Badge>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+
+        {!report && !running && (
+          <p className="text-xs text-muted-foreground">No report yet — click "Run all checks".</p>
+        )}
+
+        <div className="pt-2 border-t">
+          <button
+            type="button"
+            onClick={() => setShowManual((s) => !s)}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+          >
+            <ChevronDown className={`size-3 transition-transform ${showManual ? "" : "-rotate-90"}`} />
+            Manual UI checks ({MANUAL_STEPS.length} sections)
+          </button>
+          {showManual && (
+            <div className="mt-3 space-y-4">
+              {MANUAL_STEPS.map((s) => (
+                <section key={s.title} className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-semibold">{s.title}</h4>
+                    <Badge variant="outline" className="text-[10px]">{s.tag}</Badge>
+                  </div>
+                  <ol className="space-y-1 list-decimal list-inside text-sm">
+                    {s.steps.map((st, i) => (
+                      <li key={i} className="leading-snug">
+                        <span>{st.do}</span>
+                        <div className="ml-5 text-xs text-muted-foreground">→ {st.expect}</div>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
               ))}
-            </ol>
-          </section>
-        ))}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
