@@ -123,6 +123,24 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           const flarm = dev?.address ? dev.address.toUpperCase() : null;
           const takeoff = parseTimeOnDate(date, f.start) ?? (f.start_tsp ? new Date(f.start_tsp * 1000).toISOString() : null);
           const landing = parseTimeOnDate(date, f.stop) ?? (f.stop_tsp ? new Date(f.stop_tsp * 1000).toISOString() : null);
+
+          // Sanity check: parsed times must fall on the requested UK calendar
+          // date. If not, the z-offset or HTML parse went wrong — skip and
+          // report rather than import a bad time.
+          const isOnRequestedDate = (iso: string | null) => {
+            if (!iso) return true;
+            const ukDateStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date(iso));
+            return ukDateStr === date;
+          };
+          if (!isOnRequestedDate(takeoff) || !isOnRequestedDate(landing)) {
+            errors.push({
+              flarm,
+              registration: dev?.registration ?? null,
+              message: `Parsed time fell outside ${date} (takeoff=${takeoff}, landing=${landing}) — likely a timezone offset issue, skipped.`,
+            });
+            skipped++;
+            continue;
+          }
           const fleetMatch =
             (flarm ? fleetByFlarm.get(flarm) : undefined) ??
             (dev?.registration ? fleetByReg.get(normReg(dev.registration)) : undefined);
