@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { fromUKLocalInput, todayUKDate } from "@/lib/uktime";
+import { fromUKLocalInput, todayUKDate, ukUtcOffsetHours } from "@/lib/uktime";
 import { authorizePublicHook } from "@/lib/public-hook-auth";
 
 // OGN Flightbook public API: https://flightbook.glidernet.org/api/logbook/{ICAO}/
