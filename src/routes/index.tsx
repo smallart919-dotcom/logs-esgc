@@ -350,7 +350,7 @@ function FlightsPage() {
       syncOgn(true).finally(() => {
         if (cancelled) return;
         const errs = syncErrorsRef.current;
-        const base = 10_000; // 10s steady-state cadence — live enough for landings, light on the worker
+        const base = 2_000; // 2s steady-state cadence — near-live landings without hammering the worker
         const delay = errs > 0 ? Math.min(base * Math.pow(2, errs), 120_000) : base;
         timer = setTimeout(tick, delay);
       });
