@@ -41,18 +41,20 @@ export function ProximityWatcher() {
     return () => { window.removeEventListener("storage", onStorage); clearInterval(t); };
   }, []);
 
-  // Load fleet for own-fleet exclusion.
+  // Load fleet for own-fleet exclusion (hard-code G-ESGC & G-KIAU as well).
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       const { data } = await supabase.from("fleet_gliders").select("flarm_id, registration");
-      if (cancelled || !data) return;
+      if (cancelled) return;
       const flarm = new Set<string>();
       const reg = new Set<string>();
-      for (const g of data) {
+      for (const g of data ?? []) {
         if (g.flarm_id) flarm.add(String(g.flarm_id).toUpperCase());
         if (g.registration) reg.add(String(g.registration).toUpperCase().replace(/[^A-Z0-9]/g, ""));
       }
+      reg.add("GESGC");
+      reg.add("GKIAU");
       fleetRef.current = { flarm, reg };
     };
     load();
@@ -129,7 +131,7 @@ export function ProximityWatcher() {
             out.push({
               id: hex || normReg || `adsb-${lat.toFixed(3)}-${lon.toFixed(3)}`,
               lat, lon, altFt: Math.round(altFt), reg,
-              isOwn: false,
+              isOwn: fleetRef.current.reg.has(normReg),
               isStale: (serverNow - seen) < 0 ? false : seen > 300,
             });
           }

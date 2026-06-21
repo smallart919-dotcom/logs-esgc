@@ -217,6 +217,8 @@ function MapPage() {
       if (g.flarm_id) flarmSet.add(g.flarm_id.toUpperCase());
       if (g.registration) regSet.add(g.registration.toUpperCase().replace(/[^A-Z0-9]/g, ""));
     }
+    regSet.add("GESGC");
+    regSet.add("GKIAU");
     return { flarmSet, regSet };
   }, [fleetGliders]);
 
@@ -314,7 +316,7 @@ function MapPage() {
           category: model || cat,
           squawk: a.squawk ? String(a.squawk) : undefined,
           source: "adsb",
-          isOwnFleet: false,
+          isOwnFleet: regSet.has(normReg),
           isStale: seen > 300,
           ts: serverNow - seen,
         };
