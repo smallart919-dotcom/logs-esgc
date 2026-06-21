@@ -156,27 +156,34 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
           seenInPayload.add(importKey);
 
-          // Dedupe within ±90s on takeoff (or landing if no takeoff), by flarm OR registration.
-          // CRITICAL: If a candidate row has NO times, only treat it as the same
-          // flight when the incoming row ALSO has no times — otherwise a single
-          // empty manual entry (or stale tombstone) would absorb every flight of
-          // that registration for the day.
-          const refTime = takeoff ?? landing;
-          const refMs = refTime ? +new Date(refTime) : null;
+          // Dedupe by flarm OR registration, comparing the incoming flight to
+          // any existing row that overlaps in time. We match incoming TAKEOFF
+          // against existing takeoff, and incoming LANDING against existing
+          // landing — never cross-comparing, which previously caused duplicates
+          // when OGN returned a landing-only row for a flight that already had
+          // a completed (takeoff+landing) row in the DB (the matcher compared
+          // incoming landing to existing takeoff and missed the match).
+          const takeoffMs = takeoff ? +new Date(takeoff) : null;
+          const landingMs = landing ? +new Date(landing) : null;
           const regKey = normKey(matchedReg);
           const HALF_DAY_MS = 12 * 60 * 60 * 1000;
+          const within = (a: number | null, b: string | null | undefined) => {
+            if (a === null || !b) return false;
+            return Math.abs(+new Date(b) - a) <= TIME_WINDOW_MS;
+          };
           let existing = dayFlights.find((row) => {
             if (!sameAircraft(row, flarm, regKey)) return false;
-            const rowRef = row.takeoff_time ?? row.landing_time;
-            if (!rowRef && refMs === null) return true;
-            if (!rowRef || refMs === null) return false;
-            return Math.abs(+new Date(rowRef) - refMs) <= TIME_WINDOW_MS;
+            // Both rows timeless → same.
+            if (!row.takeoff_time && !row.landing_time && takeoffMs === null && landingMs === null) return true;
+            // Match takeoff↔takeoff or landing↔landing within ±90s.
+            if (within(takeoffMs, row.takeoff_time)) return true;
+            if (within(landingMs, row.landing_time)) return true;
+            return false;
           });
           // Fallback: incoming has landing-only -> match an in-air row
           // (existing takeoff present, landing missing) for same aircraft
           // where the existing takeoff is before incoming landing within
-          // a reasonable flight duration. Avoids creating a duplicate
-          // "landing-only" row.
+          // a reasonable flight duration.
           // SAFETY: only match if there's exactly one candidate — multiple
           // open in-air rows means we can't disambiguate, so create a new
           // row rather than risk pairing the wrong flight.
@@ -210,10 +217,10 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           if (!existing) {
             const tombstoned = tombstones.find((t) => {
               if (!sameAircraft(t, flarm, regKey)) return false;
-              const tRef = t.takeoff_time ?? t.landing_time;
-              if (!tRef && refMs === null) return true;
-              if (!tRef || refMs === null) return false;
-              return Math.abs(+new Date(tRef) - refMs) <= TIME_WINDOW_MS;
+              if (!t.takeoff_time && !t.landing_time && takeoffMs === null && landingMs === null) return true;
+              if (within(takeoffMs, t.takeoff_time)) return true;
+              if (within(landingMs, t.landing_time)) return true;
+              return false;
             });
             if (tombstoned) {
               skipped++;
