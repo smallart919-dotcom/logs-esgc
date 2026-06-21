@@ -328,13 +328,22 @@ function MapPage() {
 
     // Dedupe: prefer OGN for gliders by reg
     const ognRegs = new Set(ogn.map((a) => a.reg.toUpperCase().replace(/[^A-Z0-9]/g, "")).filter(Boolean));
-    const merged = [
+    const rawMerged = [
       ...ogn,
       ...adsb.filter((a) => {
         const normReg = a.reg.toUpperCase().replace(/[^A-Z0-9]/g, "");
         return !normReg || !ognRegs.has(normReg);
       }),
     ];
+    // Final safety dedupe by id — upstream feeds can occasionally repeat the
+    // same hex/registration in one response; React requires unique keys.
+    const seenIds = new Set<string>();
+    const merged: LiveAircraft[] = [];
+    for (const a of rawMerged) {
+      if (seenIds.has(a.id)) continue;
+      seenIds.add(a.id);
+      merged.push(a);
+    }
 
     // Don't flap on transient empty responses — keep last data and only
     // surface "No data" after several consecutive empty fetches.
