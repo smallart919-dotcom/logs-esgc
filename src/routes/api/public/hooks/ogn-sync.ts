@@ -364,38 +364,24 @@ function parseHtmlLogbook(html: string): OgnPayload {
     const gliderReg = cells[3];
     const cn = cells[4];
     const gliderType = cells[5];
-    const gliderTakeoff = toHms(cells[6]);
-    const gliderLanding = toHms(cells[7]);
-    const planeLanding = toHms(cells[9]);
+    const takeoff = toHms(cells[6]);
+    const landing = toHms(cells[7]);
 
     // Skip rows without any aircraft registration in either column.
     if (!gliderReg && !towReg) continue;
+    // Use glider reg if present, otherwise the tug reg (so tug-only flights are captured).
+    const reg = gliderReg || towReg;
+    const aircraftType = (gliderReg ? gliderType : towType) || undefined;
 
-    // Glider row (if present): takeoff/landing from cells 6/7.
-    if (gliderReg) {
-      const deviceIndex = ensureDevice(gliderReg, cn || undefined, gliderType || undefined);
-      flights.push({
-        start: gliderTakeoff,
-        stop: gliderLanding,
-        device: deviceIndex,
-        start_tow: towReg ? 0 : null,
-        tow_height: null,
-      });
-    }
+    const deviceIndex = ensureDevice(reg, cn || undefined, aircraftType);
 
-    // Tug row (if present): takeoff = glider takeoff (same instant), landing
-    // from cells[9] ("Plane Landing"). Emit even when a glider row was also
-    // emitted, so the tug gets its own flight entry with its own landing time.
-    if (towReg) {
-      const tugDeviceIndex = ensureDevice(towReg, undefined, towType || undefined);
-      flights.push({
-        start: gliderTakeoff,
-        stop: planeLanding ?? (gliderReg ? undefined : gliderLanding),
-        device: tugDeviceIndex,
-        start_tow: null,
-        tow_height: null,
-      });
-    }
+    flights.push({
+      start: takeoff,
+      stop: landing,
+      device: deviceIndex,
+      start_tow: towReg ? 0 : null,
+      tow_height: null,
+    });
   }
 
   return { devices, flights };
