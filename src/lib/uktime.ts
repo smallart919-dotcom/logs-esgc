@@ -18,6 +18,26 @@ function londonParts(d: Date) {
   return parts;
 }
 
+/**
+ * Returns the UK clock's offset from UTC, in whole hours, for a given
+ * UTC instant. Returns 1 during British Summer Time, 0 during GMT.
+ * Used when querying glidernet's logbook, which takes a fixed-hour UTC
+ * offset (its `z` parameter) rather than a timezone name and has no
+ * DST awareness of its own.
+ */
+export function ukUtcOffsetHours(at: Date = new Date()): number {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: LONDON,
+    timeZoneName: "shortOffset",
+    hour: "2-digit",
+  });
+  const part = fmt.formatToParts(at).find((p) => p.type === "timeZoneName");
+  const m = part?.value.match(/GMT([+-]\d+)?/);
+  return m?.[1] ? parseInt(m[1], 10) : 0;
+}
+
+
+
 /** Format a UTC ISO string as UK local HH:mm (handles BST). Optional offsetSec is added to the instant before formatting (used to match an out-of-sync clubhouse clock). */
 export function fmtUKTime(iso: string | null | undefined, offsetSec = 0): string {
   if (!iso) return "—";

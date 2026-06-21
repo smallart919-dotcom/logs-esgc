@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { fromUKLocalInput, todayUKDate } from "@/lib/uktime";
+import { fromUKLocalInput, todayUKDate, ukUtcOffsetHours } from "@/lib/uktime";
 import { authorizePublicHook } from "@/lib/public-hook-auth";
 
 // OGN Flightbook public API: https://flightbook.glidernet.org/api/logbook/{ICAO}/
@@ -66,10 +66,12 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         const htmlIcao = icao.startsWith("UK") ? icao : `UK${icao}`;
         let payload: OgnPayload;
         const source: "html" = "html";
+        const [yy, mm, dd] = date.split("-").map(Number);
+        const noonOnDate = new Date(Date.UTC(yy, mm - 1, dd, 12, 0, 0));
+        const ukOffsetHours = ukUtcOffsetHours(noonOnDate);
         try {
-          const [y, m, d] = date.split("-");
-          const ddmmyyyy = `${d}${m}${y}`;
-          const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=1&p=&t=0&td=15&d=${ddmmyyyy}`;
+          const ddmmyyyy = `${String(dd).padStart(2, "0")}${String(mm).padStart(2, "0")}${yy}`;
+          const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=${ukOffsetHours}&p=&t=0&d=${ddmmyyyy}`;
           const hr = await fetch(htmlUrl);
           if (!hr.ok) throw new Error(`HTML ${hr.status}`);
           const html = await hr.text();
@@ -121,6 +123,24 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           const flarm = dev?.address ? dev.address.toUpperCase() : null;
           const takeoff = parseTimeOnDate(date, f.start) ?? (f.start_tsp ? new Date(f.start_tsp * 1000).toISOString() : null);
           const landing = parseTimeOnDate(date, f.stop) ?? (f.stop_tsp ? new Date(f.stop_tsp * 1000).toISOString() : null);
+
+          // Sanity check: parsed times must fall on the requested UK calendar
+          // date. If not, the z-offset or HTML parse went wrong — skip and
+          // report rather than import a bad time.
+          const isOnRequestedDate = (iso: string | null) => {
+            if (!iso) return true;
+            const ukDateStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date(iso));
+            return ukDateStr === date;
+          };
+          if (!isOnRequestedDate(takeoff) || !isOnRequestedDate(landing)) {
+            errors.push({
+              flarm,
+              registration: dev?.registration ?? null,
+              message: `Parsed time fell outside ${date} (takeoff=${takeoff}, landing=${landing}) — likely a timezone offset issue, skipped.`,
+            });
+            skipped++;
+            continue;
+          }
           const fleetMatch =
             (flarm ? fleetByFlarm.get(flarm) : undefined) ??
             (dev?.registration ? fleetByReg.get(normReg(dev.registration)) : undefined);
@@ -284,7 +304,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
         }
 
-        return Response.json({ ok: true, icao, date, source, created, updated, skipped, total: payload.flights?.length ?? 0, synced_at, matches, errors });
+        return Response.json({ ok: true, icao, date, source, created, updated, skipped, total: payload.flights?.length ?? 0, synced_at, matches, errors, uk_utc_offset_hours: ukOffsetHours });
       },
     },
   },
