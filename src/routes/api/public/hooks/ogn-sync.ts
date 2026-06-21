@@ -304,7 +304,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
         }
 
-        return Response.json({ ok: true, icao, date, source, created, updated, skipped, total: payload.flights?.length ?? 0, synced_at, matches, errors });
+        return Response.json({ ok: true, icao, date, source, created, updated, skipped, total: payload.flights?.length ?? 0, synced_at, matches, errors, uk_utc_offset_hours: ukOffsetHours });
       },
     },
   },
