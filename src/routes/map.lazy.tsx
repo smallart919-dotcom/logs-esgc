@@ -669,6 +669,7 @@ function MapPage() {
       if (!arr || arr.length < 2) continue;
       const meta = trailMetaRef.current.get(id);
       if (!meta) continue;
+      if (selectedId !== id) continue;
       if (ownFleetOnly && !meta.isOwnFleet && !visibleIds.has(id)) continue;
       const filtered = arr.filter((p) => p.ts <= cutoff);
       if (filtered.length < 2) continue;
