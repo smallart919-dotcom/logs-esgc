@@ -268,15 +268,22 @@ function FlightsPage() {
   // Reset tracking when the date changes so we don't fire animations for the whole new day.
   useEffect(() => { seenIdsRef.current = new Set(); inAirIdsRef.current = new Set(); }, [date]);
 
-  // Realtime updates for the day
+  // Realtime updates for the day — coalesce bursts (a single OGN sync can fire
+  // 10+ row events back-to-back) into one refetch so the table never thrashes.
   useEffect(() => {
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => {
+      if (pending) return;
+      pending = setTimeout(() => { pending = null; load(true).catch(() => undefined); }, 250);
+    };
     const ch = supabase.channel(`flights-rt-${Math.random().toString(36).slice(2)}`).on("postgres_changes",
-      { event: "*", schema: "public", table: "flights" }, () => { load(true).catch(() => undefined); }
+      { event: "*", schema: "public", table: "flights" }, schedule,
     ).subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { if (pending) clearTimeout(pending); supabase.removeChannel(ch); };
   }, [load]);
 
   const icao = "UKRIN"; // OGN airfield is fixed — Ringmer (UKRIN).
+  const syncErrorsRef = useRef(0);
 
   const syncOgn = useCallback(async (silent = false) => {
     const code = icao;
@@ -301,11 +308,17 @@ function FlightsPage() {
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Sync failed");
       if (!silent) setSyncResult(j);
-      await load(silent);
-    } catch (e: any) {
+      // Silent syncs rely on the realtime subscription above to refresh the
+      // table when anything actually changed — re-fetching unconditionally
+      // every few seconds makes the UI feel clunky.
+      if (!silent) await load(false);
+      syncErrorsRef.current = 0;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      syncErrorsRef.current += 1;
       if (!silent) {
-        toast.error(e.message);
-        setSyncResult({ icao: code, date, created: 0, updated: 0, skipped: 0, total: 0, synced_at: new Date().toISOString(), errors: [{ flarm: null, registration: null, message: e.message }], matches: [] });
+        toast.error(msg);
+        setSyncResult({ icao: code, date, created: 0, updated: 0, skipped: 0, total: 0, synced_at: new Date().toISOString(), errors: [{ flarm: null, registration: null, message: msg }], matches: [] });
       }
     }
     finally { syncInFlightRef.current = false; if (!silent) setSyncing(false); }
@@ -319,18 +332,27 @@ function FlightsPage() {
     });
   }, [syncOgn]);
 
-  // Silent auto-sync so landing times appear naturally. Fast cadence when the
-  // tab is visible, lighter cadence in the background to save bandwidth.
+  // Silent auto-sync so landing times appear naturally. Polls only when the
+  // tab is visible AND viewing today — past dates don't change, and a hidden
+  // tab catches up the moment the user returns (via visibilitychange below).
+  // Consecutive errors back off exponentially so an OGN outage can't hammer
+  // the worker or jam the UI.
   useEffect(() => {
     if (!icao || !autoSyncEnabled) return;
+    const isToday = date === todayUKDate();
+    if (!isToday) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const tick = () => {
       if (cancelled) return;
       const visible = typeof document !== "undefined" && document.visibilityState === "visible";
+      if (!visible) return; // resume scheduled by visibilitychange
       syncOgn(true).finally(() => {
         if (cancelled) return;
-        timer = setTimeout(tick, visible ? 3000 : 15000);
+        const errs = syncErrorsRef.current;
+        const base = 10_000; // 10s steady-state cadence — live enough for landings, light on the worker
+        const delay = errs > 0 ? Math.min(base * Math.pow(2, errs), 120_000) : base;
+        timer = setTimeout(tick, delay);
       });
     };
     tick();
@@ -339,7 +361,9 @@ function FlightsPage() {
     };
     document.addEventListener("visibilitychange", onVis);
     return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
-  }, [autoSyncEnabled, icao, syncOgn]);
+  }, [autoSyncEnabled, icao, syncOgn, date]);
+
+
 
 
   const remove = async (id: string) => {
