@@ -1,7 +1,6 @@
 // ⚠️ SITUATIONAL AWARENESS ONLY — not certified for navigation.
 // Verify against current UK AIP and NOTAMs before any flight operation.
-// Polygon coordinates are approximated. For a production-quality overlay,
-// replace this file with OpenAIP / OpenAIR data (see plan).
+// Polygon coordinates are approximated.
 
 export type AirspaceClass = "ATZ" | "CTR" | "CTA" | "TMA" | "MATZ" | "DANGER";
 
