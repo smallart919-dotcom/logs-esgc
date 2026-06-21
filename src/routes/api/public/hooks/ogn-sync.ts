@@ -36,18 +36,70 @@ function sameAircraft(row: { flarm_id?: string | null; glider_registration?: str
   return sameFlarm || sameReg;
 }
 
+// Robust fetch with timeout, retry on transient failures, browser-like UA, and
+// response-body sanity checks. Throws a descriptive Error on permanent failure.
+async function fetchOgnHtml(url: string): Promise<string> {
+  const attempts = 3;
+  let lastErr: unknown = null;
+  for (let i = 1; i <= attempts; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15_000);
+    try {
+      const res = await fetch(url, {
+        signal: ctrl.signal,
+        redirect: "follow",
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; ESGC-Logs-OGN-Sync/1.0)",
+          "Accept": "text/html,application/xhtml+xml",
+          "Accept-Language": "en-GB,en;q=0.9",
+        },
+      });
+      clearTimeout(timer);
+      if (res.status >= 500 && i < attempts) {
+        lastErr = new Error(`HTTP ${res.status}`);
+        await new Promise((r) => setTimeout(r, 500 * i));
+        continue;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const html = await res.text();
+      if (html.length < 200) throw new Error("response too short — OGN may be down");
+      // The logbook page always contains the <TABLE> structure even on empty days.
+      if (!/<table/i.test(html)) throw new Error("response is not the logbook page");
+      return html;
+    } catch (e) {
+      clearTimeout(timer);
+      lastErr = e;
+      if (i < attempts) {
+        await new Promise((r) => setTimeout(r, 500 * i));
+        continue;
+      }
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
 export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        try {
         const unauth = await authorizePublicHook(request);
         if (unauth) return unauth;
         let body: { icao?: string; date?: string } = {};
-        try { body = await request.json(); } catch {}
+        try { body = await request.json() as { icao?: string; date?: string }; } catch {}
         // ICAO is permanently fixed to UKRIN (Ringmer). Any client-supplied
         // value or OGN_AIRFIELD_ICAO env var is ignored.
         const icao = "UKRIN";
-        const date = body.date || todayUTC();
+        const date = body.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : todayUTC();
+        if (body.date && body.date !== date) {
+          return Response.json({ error: "date must be YYYY-MM-DD" }, { status: 400 });
+        }
+        // Reject dates absurdly far from today (guards against typos & misuse).
+        const dayMs = 24 * 60 * 60 * 1000;
+        const ageDays = Math.abs(+new Date(date) - +new Date(todayUTC())) / dayMs;
+        if (!Number.isFinite(ageDays) || ageDays > 31) {
+          return Response.json({ error: "date must be within 31 days of today" }, { status: 400 });
+        }
 
         // Fetch fleet to know which FLARM IDs belong to the club
         const { data: fleet, error: fleetErr } = await supabaseAdmin
@@ -72,12 +124,11 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         try {
           const ddmmyyyy = `${String(dd).padStart(2, "0")}${String(mm).padStart(2, "0")}${yy}`;
           const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=${ukOffsetHours}&p=&t=0&d=${ddmmyyyy}`;
-          const hr = await fetch(htmlUrl);
-          if (!hr.ok) throw new Error(`HTML ${hr.status}`);
-          const html = await hr.text();
+          const html = await fetchOgnHtml(htmlUrl);
           payload = parseHtmlLogbook(html);
-        } catch (e: any) {
-          return Response.json({ error: `OGN HTML fetch failed: ${e.message}` }, { status: 502 });
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
+          return Response.json({ error: `OGN HTML fetch failed: ${message}` }, { status: 502 });
         }
 
         if ((payload.flights?.length ?? 0) > 200) {
