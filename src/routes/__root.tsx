@@ -245,8 +245,31 @@ function RootComponent() {
       <main key={path} className="flex-1 container mx-auto px-4 py-6 pb-28 sm:pb-24 soft-rise" style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
         <Outlet />
       </main>
-      <footer className="container mx-auto px-4 pb-24 sm:pb-20 text-center text-[11px] text-muted-foreground/80">
-        © {new Date().getFullYear()} East Sussex Gliding Club. All rights reserved.
+      <footer className="container mx-auto px-4 pb-24 sm:pb-20 text-center text-[11px] text-muted-foreground/80 space-y-1">
+        <div>
+          ESGC Logs © {new Date().getFullYear()}. All rights reserved. Licensed to East Sussex Gliding Club.
+        </div>
+        <div>
+          Flight data via{" "}
+          <a
+            href="https://www.glidernet.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            Open Glider Network
+          </a>
+          . Airspace data ©{" "}
+          <a
+            href="https://www.openaip.net/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            OpenAIP
+          </a>{" "}
+          contributors (CC BY-NC-SA 4.0). Built with open-source software.
+        </div>
       </footer>
       {(() => {
         const email = (userEmail || "").toLowerCase();
