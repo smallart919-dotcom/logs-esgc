@@ -67,9 +67,11 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         let payload: OgnPayload;
         const source: "html" = "html";
         try {
-          const [y, m, d] = date.split("-");
-          const ddmmyyyy = `${d}${m}${y}`;
-          const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=1&p=&t=0&td=15&d=${ddmmyyyy}`;
+          const [yy, mm, dd] = date.split("-").map(Number);
+          const noonOnDate = new Date(Date.UTC(yy, mm - 1, dd, 12, 0, 0));
+          const ukOffsetHours = ukUtcOffsetHours(noonOnDate);
+          const ddmmyyyy = `${String(dd).padStart(2, "0")}${String(mm).padStart(2, "0")}${yy}`;
+          const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=${ukOffsetHours}&p=&t=0&d=${ddmmyyyy}`;
           const hr = await fetch(htmlUrl);
           if (!hr.ok) throw new Error(`HTML ${hr.status}`);
           const html = await hr.text();
