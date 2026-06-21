@@ -220,7 +220,15 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           }
 
           // Dedupe within the same OGN response before the database is touched.
-          const importKey = `${normKey(matchedReg)}|${takeoff ? `T:${takeoff}` : `L:${landing}`}`;
+          // Include flarm + device index so timeless / regless rows don't collapse
+          // into a single key when multiple aircraft share blank registrations.
+          const importKey = [
+            normKey(matchedReg),
+            flarm ?? "",
+            String(f.device),
+            takeoff ? `T:${takeoff}` : "",
+            landing ? `L:${landing}` : "",
+          ].join("|");
           if (seenInPayload.has(importKey)) {
             skipped++;
             continue;
