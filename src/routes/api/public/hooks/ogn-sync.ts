@@ -356,6 +356,11 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         }
 
         return Response.json({ ok: true, icao, date, source, created, updated, skipped, total: payload.flights?.length ?? 0, synced_at, matches, errors, uk_utc_offset_hours: ukOffsetHours });
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
+          console.error("[ogn-sync] unhandled error", e);
+          return Response.json({ error: `OGN sync crashed: ${message}` }, { status: 500 });
+        }
       },
     },
   },
