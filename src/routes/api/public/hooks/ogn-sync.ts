@@ -217,10 +217,10 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           if (!existing) {
             const tombstoned = tombstones.find((t) => {
               if (!sameAircraft(t, flarm, regKey)) return false;
-              const tRef = t.takeoff_time ?? t.landing_time;
-              if (!tRef && refMs === null) return true;
-              if (!tRef || refMs === null) return false;
-              return Math.abs(+new Date(tRef) - refMs) <= TIME_WINDOW_MS;
+              if (!t.takeoff_time && !t.landing_time && takeoffMs === null && landingMs === null) return true;
+              if (within(takeoffMs, t.takeoff_time)) return true;
+              if (within(landingMs, t.landing_time)) return true;
+              return false;
             });
             if (tombstoned) {
               skipped++;
