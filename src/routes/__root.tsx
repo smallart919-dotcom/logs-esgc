@@ -250,7 +250,7 @@ function RootComponent() {
           ESGC Logs © {new Date().getFullYear()}. All rights reserved. Licensed to East Sussex Gliding Club.
         </div>
         <div>
-          Flight data via{" "}
+          Flight position data courtesy of the{" "}
           <a
             href="https://www.glidernet.org/"
             target="_blank"
@@ -258,8 +258,8 @@ function RootComponent() {
             className="underline hover:text-foreground"
           >
             Open Glider Network
-          </a>
-          . Airspace data ©{" "}
+          </a>{" "}
+          community. Airspace data ©{" "}
           <a
             href="https://www.openaip.net/"
             target="_blank"
@@ -268,7 +268,19 @@ function RootComponent() {
           >
             OpenAIP
           </a>{" "}
-          contributors (CC BY-NC-SA 4.0). Built with open-source software.
+          contributors, licensed under{" "}
+          <a
+            href="https://creativecommons.org/licenses/by-nc-sa/4.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            CC BY-NC-SA 4.0
+          </a>
+          . Built with open-source software; third-party libraries remain the property of their respective owners and are used under their original licences.
+        </div>
+        <div className="italic">
+          Not for navigation. Information is provided "as is" without warranty of any kind; always cross-check against official sources (AIP, NOTAMs, ATC) before flight. Pilots in command are solely responsible for the safe conduct of every flight.
         </div>
       </footer>
       {(() => {
