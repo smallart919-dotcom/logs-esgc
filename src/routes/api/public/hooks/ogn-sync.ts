@@ -66,10 +66,10 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         const htmlIcao = icao.startsWith("UK") ? icao : `UK${icao}`;
         let payload: OgnPayload;
         const source: "html" = "html";
+        const [yy, mm, dd] = date.split("-").map(Number);
+        const noonOnDate = new Date(Date.UTC(yy, mm - 1, dd, 12, 0, 0));
+        const ukOffsetHours = ukUtcOffsetHours(noonOnDate);
         try {
-          const [yy, mm, dd] = date.split("-").map(Number);
-          const noonOnDate = new Date(Date.UTC(yy, mm - 1, dd, 12, 0, 0));
-          const ukOffsetHours = ukUtcOffsetHours(noonOnDate);
           const ddmmyyyy = `${String(dd).padStart(2, "0")}${String(mm).padStart(2, "0")}${yy}`;
           const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=${ukOffsetHours}&p=&t=0&d=${ddmmyyyy}`;
           const hr = await fetch(htmlUrl);
