@@ -439,12 +439,26 @@ function parseHtmlLogbook(html: string): OgnPayload {
 
     const deviceIndex = ensureDevice(reg, cn || undefined, aircraftType);
 
+    // TowMaxAlt column (cells[11]) — values like "550m", "1800ft", or empty.
+    let towHeightFt: number | null = null;
+    if (towReg) {
+      const altRaw = (cells[11] || "").trim();
+      const altMatch = altRaw.match(/(\d+(?:\.\d+)?)\s*(m|ft)?/i);
+      if (altMatch) {
+        const n = parseFloat(altMatch[1]);
+        const unit = (altMatch[2] || "m").toLowerCase();
+        if (Number.isFinite(n) && n > 0 && n < 30000) {
+          towHeightFt = unit === "ft" ? Math.round(n) : Math.round(n * 3.28084);
+        }
+      }
+    }
+
     flights.push({
       start: takeoff,
       stop: landing,
       device: deviceIndex,
       start_tow: towReg ? 0 : null,
-      tow_height: null,
+      tow_height: towHeightFt,
     });
   }
 
