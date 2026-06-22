@@ -319,7 +319,7 @@ function FlightsPage() {
       let j: { error?: string; [k: string]: unknown } = {};
       try { j = text ? JSON.parse(text) : {}; } catch { j = { error: text.slice(0, 200) || `HTTP ${res.status}` }; }
       if (!res.ok) throw new Error(j.error || `Sync failed (HTTP ${res.status})`);
-      if (!silent) setSyncResult(j);
+      if (!silent) setSyncResult(j as unknown as NonNullable<typeof syncResult>);
       // Silent syncs rely on the realtime subscription above to refresh the
       // table when anything actually changed — re-fetching unconditionally
       // every few seconds makes the UI feel clunky.
