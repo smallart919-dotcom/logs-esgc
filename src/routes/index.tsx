@@ -296,17 +296,29 @@ function FlightsPage() {
       const token =
         sess.session?.access_token ??
         (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined);
-      const res = await fetch("/api/public/hooks/ogn-sync", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ icao: code, date }),
-      });
+      // Hard cap the request so a wedged worker can never freeze auto-sync.
+      const ctrl = new AbortController();
+      const abortTimer = setTimeout(() => ctrl.abort(), 20_000);
+      let res: Response;
+      try {
+        res = await fetch("/api/public/hooks/ogn-sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ icao: code, date }),
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(abortTimer);
+      }
 
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Sync failed");
+      // Tolerate non-JSON error bodies (e.g. an HTML 502 from the edge).
+      const text = await res.text();
+      let j: { error?: string; [k: string]: unknown } = {};
+      try { j = text ? JSON.parse(text) : {}; } catch { j = { error: text.slice(0, 200) || `HTTP ${res.status}` }; }
+      if (!res.ok) throw new Error(j.error || `Sync failed (HTTP ${res.status})`);
       if (!silent) setSyncResult(j);
       // Silent syncs rely on the realtime subscription above to refresh the
       // table when anything actually changed — re-fetching unconditionally
