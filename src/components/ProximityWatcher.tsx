@@ -83,7 +83,12 @@ export function ProximityWatcher() {
       if (activeRef.current && prefs.notifyEnabled) {
         try {
           const [alat, alon] = AIRFIELD_LATLON;
-          const proxied = await getLiveTraffic({ data: { lat: alat, lon: alon, distNm: 40 } });
+          // Cap the upstream call so a stalled traffic provider can't wedge
+          // the polling loop (next tick is scheduled in setTimeout below).
+          const proxied = await Promise.race([
+            getLiveTraffic({ data: { lat: alat, lon: alon, distNm: 40 } }),
+            new Promise((_, rej) => setTimeout(() => rej(new Error("traffic timeout")), 12_000)),
+          ]) as Awaited<ReturnType<typeof getLiveTraffic>>;
 
           type Plain = { id: string; lat: number; lon: number; altFt: number; reg: string; isOwn: boolean; isStale: boolean };
           const out: Plain[] = [];
