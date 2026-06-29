@@ -1666,13 +1666,13 @@ function FlightDialog({
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const tag = "Sim Launch";
+                    const tag = "Simulated Launch Failure";
                     const cur = form.notes ?? "";
                     if (cur.includes(tag)) return;
                     setForm({ ...form, notes: cur ? `${cur.trim()} · ${tag}` : tag });
                   }}
                 >
-                  🛠 Sim Launch
+                  🛠 Simulated Launch Failure
                 </Button>
               </div>
             )}
