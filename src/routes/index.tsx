@@ -378,7 +378,13 @@ function FlightsPage() {
     };
     tick();
     const onVis = () => {
-      if (document.visibilityState === "visible") { if (timer) clearTimeout(timer); tick(); }
+      if (document.visibilityState === "visible") {
+        // Returning to the tab should resume immediately, not stay backed-off
+        // from earlier errors while we were hidden.
+        syncErrorsRef.current = 0;
+        if (timer) clearTimeout(timer);
+        tick();
+      }
     };
     document.addEventListener("visibilitychange", onVis);
     return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
