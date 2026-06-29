@@ -376,7 +376,22 @@ function FlightsPage() {
     };
     document.addEventListener("visibilitychange", onVis);
     return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
-  }, [autoSyncEnabled, icao, syncOgn, date]);
+  }, [autoSyncEnabled, icao, syncOgn, date, autoSyncIntervalSec]);
+
+  // Load the office-configured OGN auto-sync interval; refresh when another
+  // tab updates it so changes apply without a hard reload.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase.from("clock_settings").select("ogn_sync_interval_seconds").eq("id", 1).maybeSingle();
+      if (cancelled) return;
+      const n = data?.ogn_sync_interval_seconds;
+      if (typeof n === "number" && n >= 2 && n <= 120) setAutoSyncIntervalSec(n);
+    };
+    load();
+    const t = setInterval(load, 60_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
 
 
 
