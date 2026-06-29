@@ -433,9 +433,24 @@ function parseHtmlLogbook(html: string): OgnPayload {
 
     // Skip rows without any aircraft registration in either column.
     if (!gliderReg && !towReg) continue;
+    // Reject FLARM-only / hex device IDs that occasionally land in the reg
+    // column when OGN can't resolve the device to a registration (e.g.
+    // "5af5aa3f", "dd1234"). A real aircraft registration always contains
+    // at least one letter — pure hex strings are device addresses, not regs.
+    const looksLikeRegistration = (s: string) => {
+      const t = s.trim();
+      if (!t) return false;
+      if (/^[0-9a-f]{6,8}$/i.test(t)) return false; // FLARM/ICAO hex address
+      if (!/[A-Za-z]/.test(t)) return false; // must have at least one letter
+      if (t.length < 3) return false;
+      return true;
+    };
+    const validGlider = gliderReg && looksLikeRegistration(gliderReg) ? gliderReg : "";
+    const validTow = towReg && looksLikeRegistration(towReg) ? towReg : "";
+    if (!validGlider && !validTow) continue;
     // Use glider reg if present, otherwise the tug reg (so tug-only flights are captured).
-    const reg = gliderReg || towReg;
-    const aircraftType = (gliderReg ? gliderType : towType) || undefined;
+    const reg = validGlider || validTow;
+    const aircraftType = (validGlider ? gliderType : towType) || undefined;
 
     const deviceIndex = ensureDevice(reg, cn || undefined, aircraftType);
 
