@@ -456,7 +456,7 @@ function parseHtmlLogbook(html: string): OgnPayload {
 
     // TowMaxAlt column (cells[11]) — values like "550m", "1800ft", or empty.
     let towHeightFt: number | null = null;
-    if (towReg) {
+    if (validTow) {
       const altRaw = (cells[11] || "").trim();
       const altMatch = altRaw.match(/(\d+(?:\.\d+)?)\s*(m|ft)?/i);
       if (altMatch) {
