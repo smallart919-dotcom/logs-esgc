@@ -369,7 +369,10 @@ function FlightsPage() {
         // Cadence configured in Settings → "OGN auto-sync interval" (office only).
         // Clamp to a safe range so a bad value can never hammer the worker or stall it.
         const base = Math.max(2, Math.min(120, autoSyncIntervalSec)) * 1000;
-        const delay = errs > 0 ? Math.min(base * Math.pow(2, errs), 120_000) : base;
+        // Cap backoff at 30s (not 2min) so a brief OGN blip can't leave the
+        // sync silently paused — the user noticed they had to press manual
+        // sync every time when this got stuck after errors.
+        const delay = errs > 0 ? Math.min(base * Math.pow(2, Math.min(errs, 4)), 30_000) : base;
         timer = setTimeout(tick, delay);
       });
     };
