@@ -209,6 +209,57 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">OGN auto-sync interval</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-sm text-muted-foreground">
+            How often the Daily Log re-polls OGN for live take-offs and landings on today's date.
+            Currently: <Badge variant="default">{ognInterval}s</Badge>
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <Label className="text-xs">Interval (seconds, 2–120)</Label>
+              <Input
+                type="number"
+                min={2}
+                max={120}
+                value={ognInput}
+                onChange={(e) => setOgnInput(e.target.value)}
+                className="w-40"
+              />
+            </div>
+            <Button
+              size="sm"
+              disabled={savingOgn}
+              onClick={async () => {
+                const n = parseInt(ognInput, 10);
+                if (Number.isNaN(n) || n < 2 || n > 120) { toast.error("Enter a number between 2 and 120"); return; }
+                setSavingOgn(true);
+                const { data: u } = await supabase.auth.getUser();
+                const { error } = await supabase.from("clock_settings").update({
+                  ogn_sync_interval_seconds: n,
+                  updated_by: u.user?.id ?? null,
+                  updated_at: new Date().toISOString(),
+                }).eq("id", 1);
+                setSavingOgn(false);
+                if (error) toast.error(error.message); else { toast.success(`OGN auto-sync set to ${n}s`); loadPerm(); }
+              }}
+            >Save</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={savingOgn}
+              onClick={() => setOgnInput("2")}
+            >Reset to 2s</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Lower = closer to live, higher = lighter on the worker. Errors back off automatically.
+          </p>
+        </CardContent>
+      </Card>
+
       <EmailSettingsCard />
       <QaChecklistCard />
     </div>
