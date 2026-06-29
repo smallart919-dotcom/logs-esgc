@@ -1,37 +1,55 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { todayUKDate } from "@/lib/uktime";
 
+const normReg = (s: string | null | undefined) =>
+  (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
 /**
- * Live count of gliders currently in the air — flights where takeoff_time is
- * set, landing_time is null, and flight_date == today (UK). Subscribes to the
- * flights table so the count updates the instant a landing time is stamped
- * (manually or via OGN sync).
+ * Live count of CLUB FLEET gliders currently in the air. A flight counts when
+ * takeoff_time is set, landing_time is null, flight_date is today (UK), AND
+ * the glider_registration matches an entry in fleet_gliders. Updates live via
+ * realtime subscriptions on both flights and fleet_gliders.
  */
 export function AirborneBadge() {
   const [count, setCount] = useState<number | null>(null);
+  const fleetRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
+
+    const loadFleet = async () => {
+      const { data } = await supabase.from("fleet_gliders").select("registration");
+      fleetRef.current = new Set((data ?? []).map((r) => normReg(r.registration)));
+    };
+
     const fetchCount = async () => {
       const today = todayUKDate();
-      const { count: c, error } = await supabase
+      const { data, error } = await supabase
         .from("flights")
-        .select("id", { head: true, count: "exact" })
+        .select("glider_registration")
         .eq("flight_date", today)
         .not("takeoff_time", "is", null)
         .is("landing_time", null);
-      if (active && !error) setCount(c ?? 0);
+      if (!active || error) return;
+      const fleet = fleetRef.current;
+      const n = (data ?? []).filter((r) => fleet.has(normReg(r.glider_registration))).length;
+      setCount(n);
     };
-    fetchCount();
+
+    (async () => {
+      await loadFleet();
+      await fetchCount();
+    })();
+
     const interval = setInterval(fetchCount, 30_000);
     const ch = supabase
       .channel(`airborne-badge-${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "flights" },
-        fetchCount,
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "flights" }, fetchCount)
+      .on("postgres_changes", { event: "*", schema: "public", table: "fleet_gliders" }, async () => {
+        await loadFleet();
+        await fetchCount();
+      })
       .subscribe();
     return () => {
       active = false;
@@ -47,8 +65,8 @@ export function AirborneBadge() {
       className={`hidden xs:inline-flex sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold liquid-glass ${isEmpty ? "airborne-empty" : ""}`}
       title={
         isEmpty
-          ? "No gliders currently airborne"
-          : `${count} ${count === 1 ? "glider is" : "gliders are"} currently airborne`
+          ? "No club fleet gliders currently airborne"
+          : `${count} club ${count === 1 ? "glider is" : "gliders are"} currently airborne`
       }
       aria-live="polite"
     >
