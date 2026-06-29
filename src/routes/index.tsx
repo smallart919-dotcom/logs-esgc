@@ -271,11 +271,12 @@ function FlightsPage() {
 
   // Realtime updates for the day — coalesce bursts (a single OGN sync can fire
   // 10+ row events back-to-back) into one refetch so the table never thrashes.
+  // 100ms window keeps landings feeling instant while still collapsing bursts.
   useEffect(() => {
     let pending: ReturnType<typeof setTimeout> | null = null;
     const schedule = () => {
       if (pending) return;
-      pending = setTimeout(() => { pending = null; load(true).catch(() => undefined); }, 250);
+      pending = setTimeout(() => { pending = null; load(true).catch(() => undefined); }, 100);
     };
     const ch = supabase.channel(`flights-rt-${Math.random().toString(36).slice(2)}`).on("postgres_changes",
       { event: "*", schema: "public", table: "flights" }, schedule,
