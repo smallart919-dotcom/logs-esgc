@@ -472,7 +472,7 @@ function parseHtmlLogbook(html: string): OgnPayload {
       start: takeoff,
       stop: landing,
       device: deviceIndex,
-      start_tow: towReg ? 0 : null,
+      start_tow: validTow ? 0 : null,
       tow_height: towHeightFt,
     });
   }
