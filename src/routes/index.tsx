@@ -363,7 +363,9 @@ function FlightsPage() {
       syncOgn(true).finally(() => {
         if (cancelled) return;
         const errs = syncErrorsRef.current;
-        const base = 2_000; // 2s steady-state cadence — near-live landings without hammering the worker
+        // Cadence configured in Settings → "OGN auto-sync interval" (office only).
+        // Clamp to a safe range so a bad value can never hammer the worker or stall it.
+        const base = Math.max(2, Math.min(120, autoSyncIntervalSec)) * 1000;
         const delay = errs > 0 ? Math.min(base * Math.pow(2, errs), 120_000) : base;
         timer = setTimeout(tick, delay);
       });
