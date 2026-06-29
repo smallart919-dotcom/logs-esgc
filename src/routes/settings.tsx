@@ -33,6 +33,9 @@ function SettingsPage() {
   const [caravanCanEdit, setCaravanCanEdit] = useState(true);
   const [savingCaravan, setSavingCaravan] = useState(false);
   const [caravanAudit, setCaravanAudit] = useState<{ at: string | null; by: string | null }>({ at: null, by: null });
+  const [ognInterval, setOgnInterval] = useState(2);
+  const [ognInput, setOgnInput] = useState("2");
+  const [savingOgn, setSavingOgn] = useState(false);
 
   const todayStr = todayUKDate();
   const [date, setDate] = useState(todayStr);
