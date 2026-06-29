@@ -1,32 +1,53 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { todayUKDate } from "@/lib/uktime";
 
+const normReg = (s: string | null | undefined) =>
+  (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
 /**
- * Thin live "sky strip" rendered next to the airborne badge in the header.
- * One dot per glider currently in the air, each drifting horizontally at a
- * slightly different pace to feel alive. Hidden when nothing is flying.
+ * Thin live "sky strip" — one dot per CLUB FLEET glider currently in the air.
+ * Hidden when no club aircraft are flying.
  */
 export function SkyStrip() {
   const [count, setCount] = useState<number>(0);
+  const fleetRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
+
+    const loadFleet = async () => {
+      const { data } = await supabase.from("fleet_gliders").select("registration");
+      fleetRef.current = new Set((data ?? []).map((r) => normReg(r.registration)));
+    };
+
     const fetchCount = async () => {
       const today = todayUKDate();
-      const { count: c } = await supabase
+      const { data } = await supabase
         .from("flights")
-        .select("id", { head: true, count: "exact" })
+        .select("glider_registration")
         .eq("flight_date", today)
         .not("takeoff_time", "is", null)
         .is("landing_time", null);
-      if (active) setCount(c ?? 0);
+      if (!active) return;
+      const fleet = fleetRef.current;
+      const n = (data ?? []).filter((r) => fleet.has(normReg(r.glider_registration))).length;
+      setCount(n);
     };
-    fetchCount();
+
+    (async () => {
+      await loadFleet();
+      await fetchCount();
+    })();
+
     const interval = setInterval(fetchCount, 30_000);
     const ch = supabase
       .channel(`sky-strip-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "flights" }, fetchCount)
+      .on("postgres_changes", { event: "*", schema: "public", table: "fleet_gliders" }, async () => {
+        await loadFleet();
+        await fetchCount();
+      })
       .subscribe();
     return () => {
       active = false;
@@ -41,7 +62,7 @@ export function SkyStrip() {
     <span
       aria-hidden
       className="hidden sm:inline-block relative h-3 w-24 overflow-hidden rounded-full liquid-glass ml-1"
-      title={`${count} airborne`}
+      title={`${count} club fleet airborne`}
     >
       {dots.map((_, i) => (
         <span
