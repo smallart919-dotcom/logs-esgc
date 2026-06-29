@@ -1,0 +1,1 @@
+ALTER TABLE public.clock_settings ADD COLUMN IF NOT EXISTS ogn_sync_interval_seconds integer NOT NULL DEFAULT 2 CHECK (ogn_sync_interval_seconds >= 2 AND ogn_sync_interval_seconds <= 120);
