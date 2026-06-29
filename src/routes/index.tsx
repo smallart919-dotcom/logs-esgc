@@ -329,6 +329,9 @@ function FlightsPage() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       syncErrorsRef.current += 1;
+      // Always log to console so silent auto-sync failures are diagnosable
+      // even when the user has no toast visible.
+      console.warn("[ogn-sync] failed:", msg);
       if (!silent) {
         toast.error(msg);
         setSyncResult({ icao: code, date, created: 0, updated: 0, skipped: 0, total: 0, synced_at: new Date().toISOString(), errors: [{ flarm: null, registration: null, message: msg }], matches: [] });
