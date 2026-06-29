@@ -329,6 +329,9 @@ function FlightsPage() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       syncErrorsRef.current += 1;
+      // Always log to console so silent auto-sync failures are diagnosable
+      // even when the user has no toast visible.
+      console.warn("[ogn-sync] failed:", msg);
       if (!silent) {
         toast.error(msg);
         setSyncResult({ icao: code, date, created: 0, updated: 0, skipped: 0, total: 0, synced_at: new Date().toISOString(), errors: [{ flarm: null, registration: null, message: msg }], matches: [] });
@@ -366,13 +369,22 @@ function FlightsPage() {
         // Cadence configured in Settings → "OGN auto-sync interval" (office only).
         // Clamp to a safe range so a bad value can never hammer the worker or stall it.
         const base = Math.max(2, Math.min(120, autoSyncIntervalSec)) * 1000;
-        const delay = errs > 0 ? Math.min(base * Math.pow(2, errs), 120_000) : base;
+        // Cap backoff at 30s (not 2min) so a brief OGN blip can't leave the
+        // sync silently paused — the user noticed they had to press manual
+        // sync every time when this got stuck after errors.
+        const delay = errs > 0 ? Math.min(base * Math.pow(2, Math.min(errs, 4)), 30_000) : base;
         timer = setTimeout(tick, delay);
       });
     };
     tick();
     const onVis = () => {
-      if (document.visibilityState === "visible") { if (timer) clearTimeout(timer); tick(); }
+      if (document.visibilityState === "visible") {
+        // Returning to the tab should resume immediately, not stay backed-off
+        // from earlier errors while we were hidden.
+        syncErrorsRef.current = 0;
+        if (timer) clearTimeout(timer);
+        tick();
+      }
     };
     document.addEventListener("visibilitychange", onVis);
     return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
