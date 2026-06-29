@@ -33,6 +33,9 @@ function SettingsPage() {
   const [caravanCanEdit, setCaravanCanEdit] = useState(true);
   const [savingCaravan, setSavingCaravan] = useState(false);
   const [caravanAudit, setCaravanAudit] = useState<{ at: string | null; by: string | null }>({ at: null, by: null });
+  const [ognInterval, setOgnInterval] = useState(2);
+  const [ognInput, setOgnInput] = useState("2");
+  const [savingOgn, setSavingOgn] = useState(false);
 
   const todayStr = todayUKDate();
   const [date, setDate] = useState(todayStr);
@@ -41,11 +44,14 @@ function SettingsPage() {
   const [savingOver, setSavingOver] = useState(false);
 
   const loadPerm = async () => {
-    const { data } = await supabase.from("clock_settings").select("permanent_offset_seconds, caravan_can_edit, updated_at, updated_by").eq("id", 1).maybeSingle();
+    const { data } = await supabase.from("clock_settings").select("permanent_offset_seconds, caravan_can_edit, updated_at, updated_by, ogn_sync_interval_seconds").eq("id", 1).maybeSingle();
     const sec = data?.permanent_offset_seconds ?? 0;
     setPermanent(sec);
     setPermInput(String(Math.round(sec / 60)));
     setCaravanCanEdit(data?.caravan_can_edit ?? true);
+    const ogn = data?.ogn_sync_interval_seconds ?? 2;
+    setOgnInterval(ogn);
+    setOgnInput(String(ogn));
     let byName: string | null = null;
     if (data?.updated_by) {
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", data.updated_by).maybeSingle();
@@ -200,6 +206,57 @@ function SettingsPage() {
               ? `No override for ${fmtUKDate(date)} — falls back to permanent (${fmtOffset(permanent)}).`
               : `Override active for ${fmtUKDate(date)}: ${fmtOffset(override)}.`}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">OGN auto-sync interval</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-sm text-muted-foreground">
+            How often the Daily Log re-polls OGN for live take-offs and landings on today's date.
+            Currently: <Badge variant="default">{ognInterval}s</Badge>
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <Label className="text-xs">Interval (seconds, 2–120)</Label>
+              <Input
+                type="number"
+                min={2}
+                max={120}
+                value={ognInput}
+                onChange={(e) => setOgnInput(e.target.value)}
+                className="w-40"
+              />
+            </div>
+            <Button
+              size="sm"
+              disabled={savingOgn}
+              onClick={async () => {
+                const n = parseInt(ognInput, 10);
+                if (Number.isNaN(n) || n < 2 || n > 120) { toast.error("Enter a number between 2 and 120"); return; }
+                setSavingOgn(true);
+                const { data: u } = await supabase.auth.getUser();
+                const { error } = await supabase.from("clock_settings").update({
+                  ogn_sync_interval_seconds: n,
+                  updated_by: u.user?.id ?? null,
+                  updated_at: new Date().toISOString(),
+                }).eq("id", 1);
+                setSavingOgn(false);
+                if (error) toast.error(error.message); else { toast.success(`OGN auto-sync set to ${n}s`); loadPerm(); }
+              }}
+            >Save</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={savingOgn}
+              onClick={() => setOgnInput("2")}
+            >Reset to 2s</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Lower = closer to live, higher = lighter on the worker. Errors back off automatically.
+          </p>
         </CardContent>
       </Card>
 

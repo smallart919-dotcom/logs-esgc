@@ -199,6 +199,7 @@ function FlightsPage() {
   const [dailyGfes, setDailyGfes] = useState<{ id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  const [autoSyncIntervalSec, setAutoSyncIntervalSec] = useState(2);
   const [loadingFlights, setLoadingFlights] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [syncResult, setSyncResult] = useState<null | { icao: string; date: string; created: number; updated: number; skipped: number; total: number; synced_at: string; errors: Array<{ flarm: string | null; registration: string | null; message: string }>; matches: Array<any> }>(null);
@@ -362,7 +363,9 @@ function FlightsPage() {
       syncOgn(true).finally(() => {
         if (cancelled) return;
         const errs = syncErrorsRef.current;
-        const base = 2_000; // 2s steady-state cadence — near-live landings without hammering the worker
+        // Cadence configured in Settings → "OGN auto-sync interval" (office only).
+        // Clamp to a safe range so a bad value can never hammer the worker or stall it.
+        const base = Math.max(2, Math.min(120, autoSyncIntervalSec)) * 1000;
         const delay = errs > 0 ? Math.min(base * Math.pow(2, errs), 120_000) : base;
         timer = setTimeout(tick, delay);
       });
@@ -373,7 +376,22 @@ function FlightsPage() {
     };
     document.addEventListener("visibilitychange", onVis);
     return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
-  }, [autoSyncEnabled, icao, syncOgn, date]);
+  }, [autoSyncEnabled, icao, syncOgn, date, autoSyncIntervalSec]);
+
+  // Load the office-configured OGN auto-sync interval; refresh when another
+  // tab updates it so changes apply without a hard reload.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase.from("clock_settings").select("ogn_sync_interval_seconds").eq("id", 1).maybeSingle();
+      if (cancelled) return;
+      const n = data?.ogn_sync_interval_seconds;
+      if (typeof n === "number" && n >= 2 && n <= 120) setAutoSyncIntervalSec(n);
+    };
+    load();
+    const t = setInterval(load, 60_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
 
 
 
@@ -1648,13 +1666,13 @@ function FlightDialog({
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const tag = "Sim Launch";
+                    const tag = "Simulated Launch Failure";
                     const cur = form.notes ?? "";
                     if (cur.includes(tag)) return;
                     setForm({ ...form, notes: cur ? `${cur.trim()} · ${tag}` : tag });
                   }}
                 >
-                  🛠 Sim Launch
+                  🛠 Simulated Launch Failure
                 </Button>
               </div>
             )}
