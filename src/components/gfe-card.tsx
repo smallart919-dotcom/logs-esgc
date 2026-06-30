@@ -59,15 +59,27 @@ export function GfeCard({ date }: { date: string }) {
 
   // Realtime: keep tick-off state in sync across devices/sessions.
   useEffect(() => {
+    // Coalesce bursts (a CNG sync can fire many row events in a row) into one
+    // refetch so the list never thrashes, while still feeling instant.
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => {
+      if (pending) return;
+      pending = setTimeout(() => { pending = null; void load(); }, 100);
+    };
     const ch = supabase
-      .channel(`daily-gfes-rt-${date}`)
+      .channel(`daily-gfes-rt-${date}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "daily_gfes", filter: `flight_date=eq.${date}` },
+        schedule,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cng_settings" },
         () => { void load(); },
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { if (pending) clearTimeout(pending); supabase.removeChannel(ch); };
   }, [date, load]);
 
   const onSync = async () => {
