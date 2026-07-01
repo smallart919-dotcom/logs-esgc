@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAviationWeather } from "@/lib/use-aviation-weather";
+
 
 /**
  * Ringmer Soarcast-style weather briefing.
@@ -85,6 +87,17 @@ export function WeatherView({ variant = "page" }: { variant?: "drawer" | "page" 
           Open full METAR / TAF ↗
         </a>
       </Section>
+
+      {/* Nearby aerodromes — Deanland & Kitty Hawk (both use Shoreham EGKA as the nearest reporting station) */}
+      <Section
+        title="🛩 Nearby fields — Deanland & Kitty Hawk"
+        subtitle="Neither field has its own METAR/TAF. Closest official observations are Shoreham (EGKA) and Headcorn (EGKH)."
+        muted={muted}
+      >
+        <NearbyFieldsCard cardBg={cardBg} cardBorder={cardBorder} muted={muted} />
+      </Section>
+
+
 
       {/* RASP BlipSpot */}
       <Section
@@ -190,28 +203,99 @@ function ChartCard({ label, desc, src, cardBg, cardBorder, muted, tall }: { labe
 }
 
 /**
- * Official metar-taf.com landscape embed. Their script writes the widget
- * into an anchor with a specific id, then attaches a global script tag.
- * We render the anchor and inject the script once per mount.
+ * Official metar-taf.com landscape embed with an iframe fallback so the
+ * widget still renders if the third-party script is blocked (adblock,
+ * CSP, offline). We mount both and let whichever loads first fill the box.
  */
 function MetarTafWidget({ dark }: { dark: boolean }) {
   const targetId = useRef(`metartaf-${Math.random().toString(36).slice(2, 10)}`).current;
+  const [scriptOk, setScriptOk] = useState(false);
   useEffect(() => {
     const s = document.createElement("script");
     s.async = true;
     s.defer = true;
     s.crossOrigin = "anonymous";
     s.src = `https://metar-taf.com/embed-js/${METAR_ID}?bg_color=${dark ? "000000" : "ffffff"}&station_id=EGKA&layout=landscape&qnh=inHg&rh=rh&target=${targetId}`;
+    s.onload = () => setScriptOk(true);
+    s.onerror = () => setScriptOk(false);
     document.body.appendChild(s);
-    return () => { s.remove(); };
+    // If the script hasn't populated the anchor in 2.5s, show the iframe fallback.
+    const t = setTimeout(() => {
+      const el = document.getElementById(targetId);
+      if (el && el.childElementCount === 0) setScriptOk(false);
+    }, 2500);
+    return () => { s.remove(); clearTimeout(t); };
   }, [dark, targetId]);
   return (
-    <a
-      href={`https://metar-taf.com/metar/${METAR_ID}?station_id=EGKA`}
-      id={targetId}
-      style={{ fontSize: 18, fontWeight: 500, color: dark ? "#fff" : "#000", width: 350, height: 278, display: "block" }}
-    >
-      METAR Ringmer Glider Field
-    </a>
+    <div style={{ width: 350, maxWidth: "100%" }}>
+      <a
+        href={`https://metar-taf.com/metar/${METAR_ID}?station_id=EGKA`}
+        id={targetId}
+        style={{ fontSize: 14, fontWeight: 500, color: dark ? "#fff" : "#000", width: "100%", minHeight: scriptOk ? 278 : 0, display: "block" }}
+      >
+        METAR Ringmer Glider Field
+      </a>
+      {!scriptOk && (
+        <iframe
+          title="METAR Ringmer fallback"
+          src={`https://metar-taf.com/embed/${METAR_ID}?bg_color=${dark ? "000000" : "ffffff"}&station_id=EGKA&layout=landscape&qnh=inHg&rh=rh`}
+          style={{ width: "100%", height: 278, border: 0, borderRadius: 8, background: dark ? "#000" : "#fff" }}
+          loading="lazy"
+        />
+      )}
+    </div>
   );
 }
+
+/**
+ * Deanland (EGML) and Kitty Hawk (Ashford) have no official METAR/TAF.
+ * We show the nearest reporting stations — Shoreham EGKA (25 nm west of
+ * Deanland / 40 nm from Kitty Hawk) and Headcorn EGKH (closer to Kitty
+ * Hawk) — plus a plain-language card per field with runway + elevation.
+ */
+function NearbyFieldsCard({ cardBg, cardBorder, muted }: { cardBg: string; cardBorder: string; muted: string }) {
+  const { metar, taf } = useAviationWeather(["EGKA", "EGKH"]);
+  const byId = (id: string) => ({
+    metar: metar.find((m) => m.id === id)?.raw ?? "Fetching…",
+    taf: taf.find((t) => t.id === id)?.raw ?? "Fetching…",
+  });
+  const egka = byId("EGKA");
+  const egkh = byId("EGKH");
+
+  const fields = [
+    {
+      name: "Deanland (EGML)",
+      blurb: "Grass strip, elevation ~52 ft. Runway 06/24. Sits ~2 nm ENE of Ringmer — expect broadly similar surface wind and cloudbase. PPR only.",
+      station: "Shoreham (EGKA)",
+      metar: egka.metar,
+      taf: egka.taf,
+    },
+    {
+      name: "Kitty Hawk (Ashford)",
+      blurb: "Farm strip near Ashford, Kent. Grass, elevation ~200 ft. Uncontrolled — use Headcorn observations as the closest proxy for wind and visibility.",
+      station: "Headcorn (EGKH)",
+      metar: egkh.metar,
+      taf: egkh.taf,
+    },
+  ];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 12 }}>
+      {fields.map((f) => (
+        <div key={f.name} style={{ background: cardBg, border: cardBorder, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{f.name}</div>
+          <div style={{ fontSize: 12, color: muted, marginBottom: 10, lineHeight: 1.5 }}>{f.blurb}</div>
+          <div style={{ fontSize: 11, color: muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
+            Nearest METAR · {f.station}
+          </div>
+          <pre style={{ fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace", fontSize: 12, background: "rgba(0,0,0,0.25)", color: "#e2e8f0", padding: 8, borderRadius: 6, whiteSpace: "pre-wrap", margin: "0 0 8px" }}>{f.metar}</pre>
+          <div style={{ fontSize: 11, color: muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
+            TAF · {f.station}
+          </div>
+          <pre style={{ fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace", fontSize: 12, background: "rgba(0,0,0,0.25)", color: "#e2e8f0", padding: 8, borderRadius: 6, whiteSpace: "pre-wrap", margin: 0 }}>{f.taf}</pre>
+        </div>
+      ))}
+    </div>
+  );
+}
+
