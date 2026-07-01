@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAviationWeather } from "@/lib/use-aviation-weather";
+
 
 /**
  * Ringmer Soarcast-style weather briefing.
