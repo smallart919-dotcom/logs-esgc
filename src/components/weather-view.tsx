@@ -88,6 +88,17 @@ export function WeatherView({ variant = "page" }: { variant?: "drawer" | "page" 
         </a>
       </Section>
 
+      {/* Nearby aerodromes — Deanland & Kitty Hawk (both use Shoreham EGKA as the nearest reporting station) */}
+      <Section
+        title="🛩 Nearby fields — Deanland & Kitty Hawk"
+        subtitle="Neither field has its own METAR/TAF. Closest official observations are Shoreham (EGKA) and Headcorn (EGKH)."
+        muted={muted}
+      >
+        <NearbyFieldsCard cardBg={cardBg} cardBorder={cardBorder} muted={muted} />
+      </Section>
+
+
+
       {/* RASP BlipSpot */}
       <Section
         title={`☁ RASP BlipSpot — Ringmer (${RIN_TRIGRAPH})`}
