@@ -39,6 +39,33 @@ function SettingsPage() {
   const [ognSource, setOgnSource] = useState<"html" | "flightbook">("flightbook");
   const [savingSource, setSavingSource] = useState(false);
 
+  const switchSource = async (next: "html" | "flightbook") => {
+    if (savingSource) return;
+    const prev = ognSource;
+    setSavingSource(true);
+    setOgnSource(next); // optimistic
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("clock_settings").update({
+      ogn_source: next, updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
+    } as any).eq("id", 1);
+    if (error) {
+      setOgnSource(prev);
+      setSavingSource(false);
+      toast.error(error.message);
+      return;
+    }
+    // Kick an immediate resync so the log reflects the newly selected source
+    // instead of waiting for the next auto-poll tick.
+    const label = next === "flightbook" ? "Flightbook (JSON)" : "Logbook (HTML)";
+    toast.success(`Switched to ${label} — resyncing…`);
+    try {
+      const today = todayUKDate();
+      await fetch(`/api/public/hooks/ogn-sync?icao=RIN&date=${today}`, { method: "POST" });
+    } catch { /* non-fatal — auto-poll will retry */ }
+    setSavingSource(false);
+    loadPerm();
+  };
+
 
   const todayStr = todayUKDate();
   const [date, setDate] = useState(todayStr);
@@ -227,30 +254,14 @@ function SettingsPage() {
             <Button
               size="sm"
               variant={ognSource === "html" ? "default" : "outline"}
-              disabled={savingSource}
-              onClick={async () => {
-                setSavingSource(true);
-                const { data: u } = await supabase.auth.getUser();
-                const { error } = await supabase.from("clock_settings").update({
-                  ogn_source: "html", updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
-                } as any).eq("id", 1);
-                setSavingSource(false);
-                if (error) toast.error(error.message); else { toast.success("Using OGN Logbook (HTML)"); loadPerm(); }
-              }}
+              disabled={savingSource || ognSource === "html"}
+              onClick={() => switchSource("html")}
             >Logbook (HTML)</Button>
             <Button
               size="sm"
               variant={ognSource === "flightbook" ? "default" : "outline"}
-              disabled={savingSource}
-              onClick={async () => {
-                setSavingSource(true);
-                const { data: u } = await supabase.auth.getUser();
-                const { error } = await supabase.from("clock_settings").update({
-                  ogn_source: "flightbook", updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
-                } as any).eq("id", 1);
-                setSavingSource(false);
-                if (error) toast.error(error.message); else { toast.success("Using OGN Flightbook (JSON)"); loadPerm(); }
-              }}
+              disabled={savingSource || ognSource === "flightbook"}
+              onClick={() => switchSource("flightbook")}
             >Flightbook (JSON)</Button>
           </div>
           <p className="text-xs text-muted-foreground">
