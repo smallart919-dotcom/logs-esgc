@@ -270,6 +270,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           const confidence: "high" | "low" = fleetMatch ? "high" : "low";
           const sourceMeta = {
             airfield: icao, raw: f, device: dev, synced_at,
+            provider: usedSource, requested: source,
             match: { flarm, registration: matchedReg, confidence },
           };
 
