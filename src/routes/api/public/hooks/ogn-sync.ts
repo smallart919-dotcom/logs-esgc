@@ -147,23 +147,35 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
           (fleet ?? []).filter((g) => g.registration).map((g) => [normReg(g.registration), g])
         );
 
-        // Always use the public HTML logbook so the times exactly match
-        // https://logbook.glidernet.org/index.php?a=UKRIN&s=QFE&u=M&z=1&p=&t=0&td=15&d=DDMMYYYY
+        // Read source preference from clock_settings (html = logbook.glidernet.org scraper,
+        // flightbook = flightbook.glidernet.org JSON API — more reliable, real FLARM IDs).
+        const { data: settingsRow } = await supabaseAdmin
+          .from("clock_settings").select("ogn_source").eq("id", 1).maybeSingle();
+        const source: "html" | "flightbook" = (settingsRow?.ogn_source === "flightbook") ? "flightbook" : "html";
         const htmlIcao = icao.startsWith("UK") ? icao : `UK${icao}`;
+        const fbCode = icao.replace(/^UK/, ""); // Flightbook uses "RIN", not "UKRIN"
         let payload: OgnPayload;
-        const source: "html" = "html";
         const [yy, mm, dd] = date.split("-").map(Number);
         const noonOnDate = new Date(Date.UTC(yy, mm - 1, dd, 12, 0, 0));
         const ukOffsetHours = ukUtcOffsetHours(noonOnDate);
         try {
-          const ddmmyyyy = `${String(dd).padStart(2, "0")}${String(mm).padStart(2, "0")}${yy}`;
-          const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=${ukOffsetHours}&p=&t=0&d=${ddmmyyyy}`;
-          const html = await fetchOgnHtml(htmlUrl);
-          payload = parseHtmlLogbook(html);
+          if (source === "flightbook") {
+            const isToday = date === todayUTC();
+            const url = isToday
+              ? `https://flightbook.glidernet.org/api/logbook/${encodeURIComponent(fbCode)}/`
+              : `https://flightbook.glidernet.org/api/logbook/${encodeURIComponent(fbCode)}/${date}/`;
+            payload = await fetchOgnJson(url);
+          } else {
+            const ddmmyyyy = `${String(dd).padStart(2, "0")}${String(mm).padStart(2, "0")}${yy}`;
+            const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=${ukOffsetHours}&p=&t=0&d=${ddmmyyyy}`;
+            const html = await fetchOgnHtml(htmlUrl);
+            payload = parseHtmlLogbook(html);
+          }
         } catch (e: unknown) {
           const message = e instanceof Error ? e.message : String(e);
-          return Response.json({ error: `OGN HTML fetch failed: ${message}` }, { status: 502 });
+          return Response.json({ error: `OGN ${source} fetch failed: ${message}` }, { status: 502 });
         }
+
 
         if ((payload.flights?.length ?? 0) > 200) {
           return Response.json({ error: `OGN returned ${payload.flights.length} rows, so import was stopped to prevent duplicate or malformed flights.` }, { status: 422 });
