@@ -227,30 +227,14 @@ function SettingsPage() {
             <Button
               size="sm"
               variant={ognSource === "html" ? "default" : "outline"}
-              disabled={savingSource}
-              onClick={async () => {
-                setSavingSource(true);
-                const { data: u } = await supabase.auth.getUser();
-                const { error } = await supabase.from("clock_settings").update({
-                  ogn_source: "html", updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
-                } as any).eq("id", 1);
-                setSavingSource(false);
-                if (error) toast.error(error.message); else { toast.success("Using OGN Logbook (HTML)"); loadPerm(); }
-              }}
+              disabled={savingSource || ognSource === "html"}
+              onClick={() => switchSource("html")}
             >Logbook (HTML)</Button>
             <Button
               size="sm"
               variant={ognSource === "flightbook" ? "default" : "outline"}
-              disabled={savingSource}
-              onClick={async () => {
-                setSavingSource(true);
-                const { data: u } = await supabase.auth.getUser();
-                const { error } = await supabase.from("clock_settings").update({
-                  ogn_source: "flightbook", updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
-                } as any).eq("id", 1);
-                setSavingSource(false);
-                if (error) toast.error(error.message); else { toast.success("Using OGN Flightbook (JSON)"); loadPerm(); }
-              }}
+              disabled={savingSource || ognSource === "flightbook"}
+              onClick={() => switchSource("flightbook")}
             >Flightbook (JSON)</Button>
           </div>
           <p className="text-xs text-muted-foreground">
