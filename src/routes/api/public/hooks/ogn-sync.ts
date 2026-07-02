@@ -151,7 +151,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         // flightbook = flightbook.glidernet.org JSON API — more reliable, real FLARM IDs).
         const { data: settingsRow } = await supabaseAdmin
           .from("clock_settings").select("ogn_source").eq("id", 1).maybeSingle();
-        const source: "html" | "flightbook" = (settingsRow?.ogn_source === "flightbook") ? "flightbook" : "html";
+        const source: "html" | "flightbook" = (settingsRow?.ogn_source === "html") ? "html" : "flightbook";
         const htmlIcao = icao.startsWith("UK") ? icao : `UK${icao}`;
         const fbCode = icao.replace(/^UK/, ""); // Flightbook uses "RIN", not "UKRIN"
         let payload: OgnPayload;
