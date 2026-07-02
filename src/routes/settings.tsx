@@ -36,7 +36,7 @@ function SettingsPage() {
   const [ognInterval, setOgnInterval] = useState(2);
   const [ognInput, setOgnInput] = useState("2");
   const [savingOgn, setSavingOgn] = useState(false);
-  const [ognSource, setOgnSource] = useState<"html" | "flightbook">("html");
+  const [ognSource, setOgnSource] = useState<"html" | "flightbook">("flightbook");
   const [savingSource, setSavingSource] = useState(false);
 
 
@@ -52,7 +52,7 @@ function SettingsPage() {
     setPermanent(sec);
     setPermInput(String(Math.round(sec / 60)));
     setCaravanCanEdit(data?.caravan_can_edit ?? true);
-    setOgnSource((data as any)?.ogn_source === "flightbook" ? "flightbook" : "html");
+    setOgnSource((data as any)?.ogn_source === "html" ? "html" : "flightbook");
 
     const ogn = data?.ogn_sync_interval_seconds ?? 2;
     setOgnInterval(ogn);
