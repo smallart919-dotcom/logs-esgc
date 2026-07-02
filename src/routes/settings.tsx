@@ -36,6 +36,9 @@ function SettingsPage() {
   const [ognInterval, setOgnInterval] = useState(2);
   const [ognInput, setOgnInput] = useState("2");
   const [savingOgn, setSavingOgn] = useState(false);
+  const [ognSource, setOgnSource] = useState<"html" | "flightbook">("html");
+  const [savingSource, setSavingSource] = useState(false);
+
 
   const todayStr = todayUKDate();
   const [date, setDate] = useState(todayStr);
