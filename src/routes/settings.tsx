@@ -216,6 +216,53 @@ function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">OGN data source</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-sm text-muted-foreground">
+            Which OGN feed the Daily Log pulls from. Currently:{" "}
+            <Badge variant="default">{ognSource === "flightbook" ? "Flightbook (JSON)" : "Logbook (HTML)"}</Badge>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={ognSource === "html" ? "default" : "outline"}
+              disabled={savingSource}
+              onClick={async () => {
+                setSavingSource(true);
+                const { data: u } = await supabase.auth.getUser();
+                const { error } = await supabase.from("clock_settings").update({
+                  ogn_source: "html", updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
+                } as any).eq("id", 1);
+                setSavingSource(false);
+                if (error) toast.error(error.message); else { toast.success("Using OGN Logbook (HTML)"); loadPerm(); }
+              }}
+            >Logbook (HTML)</Button>
+            <Button
+              size="sm"
+              variant={ognSource === "flightbook" ? "default" : "outline"}
+              disabled={savingSource}
+              onClick={async () => {
+                setSavingSource(true);
+                const { data: u } = await supabase.auth.getUser();
+                const { error } = await supabase.from("clock_settings").update({
+                  ogn_source: "flightbook", updated_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
+                } as any).eq("id", 1);
+                setSavingSource(false);
+                if (error) toast.error(error.message); else { toast.success("Using OGN Flightbook (JSON)"); loadPerm(); }
+              }}
+            >Flightbook (JSON)</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <strong>Logbook (HTML)</strong> scrapes logbook.glidernet.org — matches what you see on the site exactly but has no FLARM IDs.<br />
+            <strong>Flightbook (JSON)</strong> uses flightbook.glidernet.org's newer API — more reliable, includes real FLARM addresses, better fleet matching.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+
+        <CardHeader>
           <CardTitle className="text-base">OGN auto-sync interval</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
