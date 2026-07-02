@@ -66,6 +66,7 @@ export type Database = {
         Row: {
           caravan_can_edit: boolean
           id: number
+          ogn_source: string
           ogn_sync_interval_seconds: number
           permanent_offset_seconds: number
           updated_at: string
@@ -74,6 +75,7 @@ export type Database = {
         Insert: {
           caravan_can_edit?: boolean
           id?: number
+          ogn_source?: string
           ogn_sync_interval_seconds?: number
           permanent_offset_seconds?: number
           updated_at?: string
@@ -82,6 +84,7 @@ export type Database = {
         Update: {
           caravan_can_edit?: boolean
           id?: number
+          ogn_source?: string
           ogn_sync_interval_seconds?: number
           permanent_offset_seconds?: number
           updated_at?: string
