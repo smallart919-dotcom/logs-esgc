@@ -155,25 +155,39 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         const htmlIcao = icao.startsWith("UK") ? icao : `UK${icao}`;
         const fbCode = icao.replace(/^UK/, ""); // Flightbook uses "RIN", not "UKRIN"
         let payload: OgnPayload;
+        let usedSource: "html" | "flightbook" = source;
         const [yy, mm, dd] = date.split("-").map(Number);
         const noonOnDate = new Date(Date.UTC(yy, mm - 1, dd, 12, 0, 0));
         const ukOffsetHours = ukUtcOffsetHours(noonOnDate);
+
+        const fetchFlightbook = async (): Promise<OgnPayload> => {
+          const isToday = date === todayUTC();
+          const url = isToday
+            ? `https://flightbook.glidernet.org/api/logbook/${encodeURIComponent(fbCode)}/`
+            : `https://flightbook.glidernet.org/api/logbook/${encodeURIComponent(fbCode)}/${date}/`;
+          return await fetchOgnJson(url);
+        };
+        const fetchHtml = async (): Promise<OgnPayload> => {
+          const ddmmyyyy = `${String(dd).padStart(2, "0")}${String(mm).padStart(2, "0")}${yy}`;
+          const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=${ukOffsetHours}&p=&t=0&d=${ddmmyyyy}`;
+          const html = await fetchOgnHtml(htmlUrl);
+          return parseHtmlLogbook(html);
+        };
+
         try {
-          if (source === "flightbook") {
-            const isToday = date === todayUTC();
-            const url = isToday
-              ? `https://flightbook.glidernet.org/api/logbook/${encodeURIComponent(fbCode)}/`
-              : `https://flightbook.glidernet.org/api/logbook/${encodeURIComponent(fbCode)}/${date}/`;
-            payload = await fetchOgnJson(url);
-          } else {
-            const ddmmyyyy = `${String(dd).padStart(2, "0")}${String(mm).padStart(2, "0")}${yy}`;
-            const htmlUrl = `https://logbook.glidernet.org/index.php?a=${encodeURIComponent(htmlIcao)}&s=QFE&u=M&z=${ukOffsetHours}&p=&t=0&d=${ddmmyyyy}`;
-            const html = await fetchOgnHtml(htmlUrl);
-            payload = parseHtmlLogbook(html);
+          payload = source === "flightbook" ? await fetchFlightbook() : await fetchHtml();
+        } catch (primaryErr: unknown) {
+          // Automatic fallback to the other source so a temporary outage on one
+          // provider doesn't stall live sync. Users can still pin their preference.
+          const primaryMsg = primaryErr instanceof Error ? primaryErr.message : String(primaryErr);
+          try {
+            payload = source === "flightbook" ? await fetchHtml() : await fetchFlightbook();
+            usedSource = source === "flightbook" ? "html" : "flightbook";
+            console.warn(`[ogn-sync] ${source} failed (${primaryMsg}); fell back to ${usedSource}`);
+          } catch (fallbackErr: unknown) {
+            const fbMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+            return Response.json({ error: `OGN fetch failed on both sources — ${source}: ${primaryMsg}; fallback: ${fbMsg}` }, { status: 502 });
           }
-        } catch (e: unknown) {
-          const message = e instanceof Error ? e.message : String(e);
-          return Response.json({ error: `OGN ${source} fetch failed: ${message}` }, { status: 502 });
         }
 
 
