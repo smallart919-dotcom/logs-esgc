@@ -47,11 +47,13 @@ function SettingsPage() {
   const [savingOver, setSavingOver] = useState(false);
 
   const loadPerm = async () => {
-    const { data } = await supabase.from("clock_settings").select("permanent_offset_seconds, caravan_can_edit, updated_at, updated_by, ogn_sync_interval_seconds").eq("id", 1).maybeSingle();
+    const { data } = await supabase.from("clock_settings").select("permanent_offset_seconds, caravan_can_edit, updated_at, updated_by, ogn_sync_interval_seconds, ogn_source").eq("id", 1).maybeSingle();
     const sec = data?.permanent_offset_seconds ?? 0;
     setPermanent(sec);
     setPermInput(String(Math.round(sec / 60)));
     setCaravanCanEdit(data?.caravan_can_edit ?? true);
+    setOgnSource((data as any)?.ogn_source === "flightbook" ? "flightbook" : "html");
+
     const ogn = data?.ogn_sync_interval_seconds ?? 2;
     setOgnInterval(ogn);
     setOgnInput(String(ogn));
