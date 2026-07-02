@@ -38,7 +38,7 @@ function sameAircraft(row: { flarm_id?: string | null; glider_registration?: str
 
 // Robust fetch with timeout, retry on transient failures, browser-like UA, and
 // response-body sanity checks. Throws a descriptive Error on permanent failure.
-async function fetchOgnHtml(url: string): Promise<string> {
+async function fetchWithRetry(url: string, accept: string, minLen: number, contentCheck?: (body: string) => boolean): Promise<string> {
   const attempts = 3;
   let lastErr: unknown = null;
   for (let i = 1; i <= attempts; i++) {
@@ -50,7 +50,7 @@ async function fetchOgnHtml(url: string): Promise<string> {
         redirect: "follow",
         headers: {
           "User-Agent": "Mozilla/5.0 (compatible; ESGC-Logs-OGN-Sync/1.0)",
-          "Accept": "text/html,application/xhtml+xml",
+          "Accept": accept,
           "Accept-Language": "en-GB,en;q=0.9",
         },
       });
@@ -61,11 +61,10 @@ async function fetchOgnHtml(url: string): Promise<string> {
         continue;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
-      if (html.length < 200) throw new Error("response too short — OGN may be down");
-      // The logbook page always contains the <TABLE> structure even on empty days.
-      if (!/<table/i.test(html)) throw new Error("response is not the logbook page");
-      return html;
+      const body = await res.text();
+      if (body.length < minLen) throw new Error("response too short — OGN may be down");
+      if (contentCheck && !contentCheck(body)) throw new Error("unexpected response body");
+      return body;
     } catch (e) {
       clearTimeout(timer);
       lastErr = e;
@@ -77,6 +76,41 @@ async function fetchOgnHtml(url: string): Promise<string> {
   }
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
+
+async function fetchOgnHtml(url: string): Promise<string> {
+  return fetchWithRetry(url, "text/html,application/xhtml+xml", 200, (b) => /<table/i.test(b));
+}
+
+async function fetchOgnJson(url: string): Promise<OgnPayload> {
+  const body = await fetchWithRetry(url, "application/json", 20, (b) => b.trim().startsWith("{"));
+  const data = JSON.parse(body) as {
+    devices?: Array<{ address?: string; registration?: string; competition?: string; aircraft?: string }>;
+    flights?: Array<{
+      device: number;
+      start?: string; stop?: string;
+      start_tsp?: number | null; stop_tsp?: number | null;
+      tow?: number | null;
+      max_height?: number | null;
+    }>;
+  };
+  const devices: OgnDevice[] = (data.devices ?? []).map((d) => ({
+    address: (d.address ?? "").toUpperCase(),
+    registration: d.registration,
+    cn: d.competition,
+    aircraft: d.aircraft,
+  }));
+  const flights: OgnFlight[] = (data.flights ?? []).map((f) => ({
+    start: f.start ? f.start.replace("h", ":") + ":00" : undefined,
+    stop: f.stop ? f.stop.replace("h", ":") + ":00" : undefined,
+    start_tsp: f.start_tsp ?? null,
+    stop_tsp: f.stop_tsp ?? null,
+    device: f.device,
+    tow: f.tow ?? null,
+    tow_height: null,
+  }));
+  return { devices, flights };
+}
+
 
 export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
   server: {
