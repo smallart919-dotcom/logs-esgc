@@ -739,6 +739,24 @@ function MapPage() {
           attribution={TILES[tileKey].attribution}
           maxZoom={19}
         />
+        {tileKey === "satellite" && (
+          <>
+            <TileLayer
+              key="sat-labels"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+              attribution="Labels &copy; Esri"
+              maxZoom={19}
+              zIndex={400}
+            />
+            <TileLayer
+              key="sat-transport"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+              attribution=""
+              maxZoom={19}
+              zIndex={401}
+            />
+          </>
+        )}
 
         {/* Thermal overlay — RASP wstar BSRATIO for today, 13:00 local.
             Rough UK2 domain bounds — sufficient for situational awareness. */}
