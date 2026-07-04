@@ -72,7 +72,7 @@ function MapPage() {
   const [aircraft, setAircraft] = useState<LiveAircraft[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [tileKey, setTileKey] = useState<TileKey>("dark");
+  const [tileKey, setTileKey] = useState<TileKey>("light");
   const [showAirspace, setShowAirspace] = useState(true);
   const [ownFleetOnly, setOwnFleetOnly] = useState(false);
   const [hideStale, setHideStale] = useState(true);
