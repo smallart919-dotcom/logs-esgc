@@ -27,6 +27,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendLogsEmail } from "@/lib/send-logs-email.functions";
 
 import { GfeCard } from "@/components/gfe-card";
+import { cngSyncNow } from "@/lib/cng-sync.functions";
 
 
 
