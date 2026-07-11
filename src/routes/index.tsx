@@ -1214,23 +1214,28 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
   useEffect(() => {
     if (date !== todayUKDate()) return;
     let cancelled = false;
+    let inFlight = false;
     const run = async () => {
-      if (cancelled) return;
+      if (cancelled || inFlight) return;
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       const { data: sess } = await supabase.auth.getSession();
       if (!sess.session) return;
+      inFlight = true;
       try { await cngSync({ data: { date } }); } catch { /* silent */ }
+      finally { inFlight = false; }
     };
-    const first = setTimeout(run, 1500);
-    const iv = setInterval(run, 60_000);
+    // Fire immediately on mount so DI/DP appear without waiting a full cycle,
+    // then poll every 15s so anything typed into CnG shows up almost instantly.
+    void run();
+    const iv = setInterval(run, 15_000);
     const onVis = () => { if (document.visibilityState === "visible") void run(); };
     if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVis);
-
     return () => {
-      cancelled = true; clearTimeout(first); clearInterval(iv);
+      cancelled = true; clearInterval(iv);
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVis);
     };
   }, [date, cngSync]);
+
 
   return (
     <Card>
