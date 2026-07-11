@@ -27,6 +27,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendLogsEmail } from "@/lib/send-logs-email.functions";
 
 import { GfeCard } from "@/components/gfe-card";
+import { cngSyncNow } from "@/lib/cng-sync.functions";
 
 
 
@@ -1098,24 +1099,57 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [syncingCng, setSyncingCng] = useState(false);
+  const cngSync = useServerFn(cngSyncNow);
+  const lastSavedRef = useRef<{ di: string; dp: string; notes: string }>({ di: "", dp: "", notes: "" });
+  // Skip autosave when values arrived from the DB (initial load / realtime pull).
+  const skipAutosaveRef = useRef(true);
+
+  const applyRow = useCallback((data: { duty_instructor?: string | null; duty_pilot?: string | null; notes?: string | null } | null) => {
+    const di = data?.duty_instructor ?? "";
+    const dp = data?.duty_pilot ?? "";
+    const n = data?.notes ?? "";
+    lastSavedRef.current = { di, dp, notes: n };
+    skipAutosaveRef.current = true;
+    setDI(di); setDP(dp); setNotes(n);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    const { data } = await supabase.from("daily_logs").select("duty_instructor,duty_pilot,notes").eq("flight_date", date).maybeSingle();
+    applyRow(data);
+  }, [date, applyRow]);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     supabase.from("daily_logs").select("*").eq("flight_date", date).maybeSingle().then(({ data }) => {
       if (!active) return;
-      setDI(data?.duty_instructor ?? "");
-      setDP(data?.duty_pilot ?? "");
-      setNotes(data?.notes ?? "");
+      applyRow(data);
       setLoading(false);
     });
     return () => { active = false; };
-  }, [date]);
+  }, [date, applyRow]);
+
+  // Realtime — DI/DP/notes appear instantly across devices and after a CnG sync.
+  useEffect(() => {
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => {
+      if (pending) return;
+      pending = setTimeout(() => { pending = null; void refresh(); }, 80);
+    };
+    const ch = supabase
+      .channel(`daily-logs-rt-${date}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "daily_logs", filter: `flight_date=eq.${date}` },
+        schedule,
+      )
+      .subscribe();
+    return () => { if (pending) clearTimeout(pending); supabase.removeChannel(ch); };
+  }, [date, refresh]);
 
   const save = useCallback(async (silent = false) => {
     if (loading) return;
-    // Daily log writes require auth (RLS). Quietly skip for anonymous viewers
-    // so the page doesn't spam 401s in the background.
     const { data: sess } = await supabase.auth.getSession();
     if (!sess.session) { if (!silent) toast.error("Sign in to save the daily log"); return; }
     setSaving(true);
@@ -1124,24 +1158,64 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
     }, { onConflict: "flight_date" });
     setSaving(false);
     if (error) { if (!silent) toast.error(error.message); }
-    else if (!silent) toast.success("Daily log saved");
+    else {
+      lastSavedRef.current = { di: duty_instructor, dp: duty_pilot, notes };
+      if (!silent) toast.success("Daily log saved");
+    }
   }, [loading, date, duty_instructor, duty_pilot, notes]);
 
+  // Pull DI/DP straight from Click n' Glide and update daily_logs immediately.
+  const pullFromCng = useCallback(async () => {
+    if (syncingCng) return;
+    setSyncingCng(true);
+    try {
+      const res = await cngSync({ data: { date } });
+      if (res.skipped) toast.info(res.reason ?? "CnG sync disabled");
+      else toast.success(`DI/DP synced from Click n' Glide${res.duty_instructor ? ` — ${res.duty_instructor}` : ""}`);
+      await refresh();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "CnG sync failed");
+    } finally {
+      setSyncingCng(false);
+    }
+  }, [cngSync, date, refresh, syncingCng]);
 
-  // Debounced autosave whenever any field changes.
+  // Debounced autosave — skips when values just came from the DB, so we don't
+  // loop-write on every realtime pull.
   useEffect(() => {
     if (loading) return;
-    const id = setTimeout(() => { save(true); }, 1500);
+    if (skipAutosaveRef.current) { skipAutosaveRef.current = false; return; }
+    const last = lastSavedRef.current;
+    if (last.di === duty_instructor && last.dp === duty_pilot && last.notes === notes) return;
+    const id = setTimeout(() => { save(true); }, 700);
     return () => clearTimeout(id);
   }, [duty_instructor, duty_pilot, notes, loading, save]);
 
-  // Force-save at midnight so the day's log is always persisted.
   useEffect(() => {
     const now = new Date();
     const next = new Date(now); next.setHours(24, 0, 5, 0);
     const id = setTimeout(() => { save(true); }, next.getTime() - now.getTime());
     return () => clearTimeout(id);
   }, [save]);
+
+  // Auto-pull DI/DP + GFEs from CnG when viewing today so it stays fresh
+  // without anyone having to press a button. Silent on failure.
+  useEffect(() => {
+    if (date !== todayUKDate()) return;
+    let cancelled = false;
+    const run = async () => {
+      if (cancelled || (typeof document !== "undefined" && document.visibilityState !== "visible")) return;
+      try { await cngSync({ data: { date } }); } catch { /* silent */ }
+    };
+    const first = setTimeout(run, 1500);
+    const iv = setInterval(run, 60_000);
+    const onVis = () => { if (document.visibilityState === "visible") void run(); };
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true; clearTimeout(first); clearInterval(iv);
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [date, cngSync]);
 
   return (
     <Card>
@@ -1150,11 +1224,11 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => save(false)}
-          disabled={loading || saving}
-          title="Save & sync Duty Instructor and Duty Pilot names now"
+          onClick={pullFromCng}
+          disabled={loading || syncingCng}
+          title="Pull Duty Instructor and Duty Pilot from Click n' Glide right now"
         >
-          <RefreshCw className={`size-4 mr-1 ${saving ? "animate-spin" : ""}`} />
+          <RefreshCw className={`size-4 mr-1 ${syncingCng ? "animate-spin" : ""}`} />
           DI &amp; DP Sync
         </Button>
       </CardHeader>
@@ -1172,7 +1246,7 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
           <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={loading} />
         </div>
         <div className="md:col-span-2 flex justify-end items-center gap-2 text-xs text-muted-foreground">
-          {saving ? "Syncing…" : "Auto-saved — tap DI & DP Sync to push now"}
+          {saving ? "Saving…" : syncingCng ? "Syncing from CnG…" : "Auto-saved · live from Click n' Glide"}
         </div>
       </CardContent>
     </Card>
