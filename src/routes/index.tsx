@@ -400,7 +400,7 @@ function FlightsPage() {
       const { data } = await supabase.from("clock_settings").select("ogn_sync_interval_seconds").eq("id", 1).maybeSingle();
       if (cancelled) return;
       const n = data?.ogn_sync_interval_seconds;
-      if (typeof n === "number" && n >= 2 && n <= 120) setAutoSyncIntervalSec(n);
+      if (typeof n === "number" && n >= 1 && n <= 120) setAutoSyncIntervalSec(n);
     };
     load();
     const t = setInterval(load, 60_000);
