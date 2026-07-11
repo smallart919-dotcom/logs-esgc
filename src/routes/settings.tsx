@@ -33,8 +33,8 @@ function SettingsPage() {
   const [caravanCanEdit, setCaravanCanEdit] = useState(true);
   const [savingCaravan, setSavingCaravan] = useState(false);
   const [caravanAudit, setCaravanAudit] = useState<{ at: string | null; by: string | null }>({ at: null, by: null });
-  const [ognInterval, setOgnInterval] = useState(2);
-  const [ognInput, setOgnInput] = useState("2");
+  const [ognInterval, setOgnInterval] = useState(1);
+  const [ognInput, setOgnInput] = useState("1");
   const [savingOgn, setSavingOgn] = useState(false);
   const [ognSource, setOgnSource] = useState<"html" | "flightbook">("flightbook");
   const [savingSource, setSavingSource] = useState(false);
@@ -81,7 +81,7 @@ function SettingsPage() {
     setCaravanCanEdit(data?.caravan_can_edit ?? true);
     setOgnSource((data as any)?.ogn_source === "html" ? "html" : "flightbook");
 
-    const ogn = data?.ogn_sync_interval_seconds ?? 2;
+    const ogn = data?.ogn_sync_interval_seconds ?? 1;
     setOgnInterval(ogn);
     setOgnInput(String(ogn));
     let byName: string | null = null;
@@ -283,10 +283,10 @@ function SettingsPage() {
           </div>
           <div className="flex flex-wrap items-end gap-2">
             <div>
-              <Label className="text-xs">Interval (seconds, 2–120)</Label>
+              <Label className="text-xs">Interval (seconds, 1–120)</Label>
               <Input
                 type="number"
-                min={2}
+                min={1}
                 max={120}
                 value={ognInput}
                 onChange={(e) => setOgnInput(e.target.value)}
@@ -298,7 +298,7 @@ function SettingsPage() {
               disabled={savingOgn}
               onClick={async () => {
                 const n = parseInt(ognInput, 10);
-                if (Number.isNaN(n) || n < 2 || n > 120) { toast.error("Enter a number between 2 and 120"); return; }
+                if (Number.isNaN(n) || n < 1 || n > 120) { toast.error("Enter a number between 1 and 120"); return; }
                 setSavingOgn(true);
                 const { data: u } = await supabase.auth.getUser();
                 const { error } = await supabase.from("clock_settings").update({
@@ -314,8 +314,8 @@ function SettingsPage() {
               size="sm"
               variant="outline"
               disabled={savingOgn}
-              onClick={() => setOgnInput("2")}
-            >Reset to 2s</Button>
+              onClick={() => setOgnInput("1")}
+            >Reset to 1s</Button>
           </div>
           <p className="text-xs text-muted-foreground">
             Lower = closer to live, higher = lighter on the worker. Errors back off automatically.

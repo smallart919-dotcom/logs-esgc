@@ -200,7 +200,7 @@ function FlightsPage() {
   const [dailyGfes, setDailyGfes] = useState<{ id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
-  const [autoSyncIntervalSec, setAutoSyncIntervalSec] = useState(2);
+  const [autoSyncIntervalSec, setAutoSyncIntervalSec] = useState(1);
   const [loadingFlights, setLoadingFlights] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [syncResult, setSyncResult] = useState<null | { icao: string; date: string; created: number; updated: number; skipped: number; total: number; synced_at: string; errors: Array<{ flarm: string | null; registration: string | null; message: string }>; matches: Array<any> }>(null);
@@ -400,7 +400,7 @@ function FlightsPage() {
       const { data } = await supabase.from("clock_settings").select("ogn_sync_interval_seconds").eq("id", 1).maybeSingle();
       if (cancelled) return;
       const n = data?.ogn_sync_interval_seconds;
-      if (typeof n === "number" && n >= 2 && n <= 120) setAutoSyncIntervalSec(n);
+      if (typeof n === "number" && n >= 1 && n <= 120) setAutoSyncIntervalSec(n);
     };
     load();
     const t = setInterval(load, 60_000);
