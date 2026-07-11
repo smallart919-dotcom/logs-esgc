@@ -33,8 +33,8 @@ function SettingsPage() {
   const [caravanCanEdit, setCaravanCanEdit] = useState(true);
   const [savingCaravan, setSavingCaravan] = useState(false);
   const [caravanAudit, setCaravanAudit] = useState<{ at: string | null; by: string | null }>({ at: null, by: null });
-  const [ognInterval, setOgnInterval] = useState(2);
-  const [ognInput, setOgnInput] = useState("2");
+  const [ognInterval, setOgnInterval] = useState(1);
+  const [ognInput, setOgnInput] = useState("1");
   const [savingOgn, setSavingOgn] = useState(false);
   const [ognSource, setOgnSource] = useState<"html" | "flightbook">("flightbook");
   const [savingSource, setSavingSource] = useState(false);
