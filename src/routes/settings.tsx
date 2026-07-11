@@ -81,7 +81,7 @@ function SettingsPage() {
     setCaravanCanEdit(data?.caravan_can_edit ?? true);
     setOgnSource((data as any)?.ogn_source === "html" ? "html" : "flightbook");
 
-    const ogn = data?.ogn_sync_interval_seconds ?? 2;
+    const ogn = data?.ogn_sync_interval_seconds ?? 1;
     setOgnInterval(ogn);
     setOgnInput(String(ogn));
     let byName: string | null = null;
