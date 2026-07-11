@@ -83,6 +83,8 @@ export function GfeCard({ date }: { date: string }) {
   }, [date, load]);
 
   const onSync = async () => {
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) { toast.error("Sign in to sync from Click n' Glide"); return; }
     setSyncing(true);
     try {
       const res = await sync({ data: { date } });
@@ -93,7 +95,12 @@ export function GfeCard({ date }: { date: string }) {
       }
       await load();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Sync failed");
+      const msg = e instanceof Error
+        ? e.message
+        : (e && typeof e === "object" && "status" in e && (e as { status?: number }).status === 401)
+          ? "Session expired — sign in again"
+          : "Sync failed";
+      toast.error(msg);
     } finally {
       setSyncing(false);
     }

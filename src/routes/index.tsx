@@ -1167,6 +1167,8 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
   // Pull DI/DP straight from Click n' Glide and update daily_logs immediately.
   const pullFromCng = useCallback(async () => {
     if (syncingCng) return;
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) { toast.error("Sign in to sync from Click n' Glide"); return; }
     setSyncingCng(true);
     try {
       const res = await cngSync({ data: { date } });
@@ -1174,7 +1176,14 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
       else toast.success(`DI/DP synced from Click n' Glide${res.duty_instructor ? ` — ${res.duty_instructor}` : ""}`);
       await refresh();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "CnG sync failed");
+      // requireSupabaseAuth throws a raw Response(401); surface a friendly message
+      // instead of the useless "[object Response]" string.
+      const msg = e instanceof Error
+        ? e.message
+        : (e && typeof e === "object" && "status" in e && (e as { status?: number }).status === 401)
+          ? "Session expired — sign in again"
+          : "CnG sync failed";
+      toast.error(msg);
     } finally {
       setSyncingCng(false);
     }
@@ -1199,18 +1208,24 @@ function DailyLogCard({ date, members }: { date: string; members: Member[] }) {
   }, [save]);
 
   // Auto-pull DI/DP + GFEs from CnG when viewing today so it stays fresh
-  // without anyone having to press a button. Silent on failure.
+  // without anyone having to press a button. Silent on failure, and skipped
+  // entirely when there's no session (the server fn requires auth and would
+  // otherwise throw a raw Response, blanking the page).
   useEffect(() => {
     if (date !== todayUKDate()) return;
     let cancelled = false;
     const run = async () => {
-      if (cancelled || (typeof document !== "undefined" && document.visibilityState !== "visible")) return;
+      if (cancelled) return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) return;
       try { await cngSync({ data: { date } }); } catch { /* silent */ }
     };
     const first = setTimeout(run, 1500);
     const iv = setInterval(run, 60_000);
     const onVis = () => { if (document.visibilityState === "visible") void run(); };
     if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVis);
+
     return () => {
       cancelled = true; clearTimeout(first); clearInterval(iv);
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVis);
