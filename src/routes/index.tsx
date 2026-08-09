@@ -1646,27 +1646,32 @@ function FlightDialog({
             <Input
               list={`gfe-suggest-${which}`}
               value={name}
-              placeholder={gfeSuggestions.length ? `e.g. ${gfeSuggestions[0]}` : "Voucher passenger name"}
-              onChange={(e) => setForm({ ...form, [`p${which}_name`]: e.target.value })}
+              placeholder={gfeSuggestions.length ? `e.g. ${gfeSuggestions[0]!.name}` : "Voucher passenger name"}
+              onChange={(e) => {
+                const v = e.target.value;
+                const hit = gfeSuggestions.find((g) => g.name.toLowerCase() === v.trim().toLowerCase());
+                if (hit) pickGfe(hit.name, hit.voucher);
+                else setForm({ ...form, [`p${which}_name`]: v });
+              }}
             />
             {gfeSuggestions.length > 0 && (
               <>
                 <datalist id={`gfe-suggest-${which}`}>
-                  {gfeSuggestions.map((n) => <option key={n} value={n} />)}
+                  {gfeSuggestions.map((g) => <option key={g.name} value={g.name} />)}
                 </datalist>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {gfeSuggestions.slice(0, 6).map((n) => (
+                  {gfeSuggestions.slice(0, 6).map((g) => (
                     <button
-                      key={n}
+                      key={g.name}
                       type="button"
-                      onClick={() => setForm({ ...form, [`p${which}_name`]: n })}
+                      onClick={() => pickGfe(g.name, g.voucher)}
                       className="text-[11px] px-2 py-0.5 rounded-full bg-background hover:bg-primary hover:text-primary-foreground border border-border transition"
                     >
-                      {n}
+                      {g.name}{g.voucher ? ` · ${g.voucher}` : ""}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">From C&amp;G ({gfeSourceWanted === "cng-tmg" ? "TMG" : "glider"} bookings)</p>
+                <p className="text-[10px] text-muted-foreground mt-1">From C&amp;G ({gfeSourceWanted === "cng-tmg" ? "TMG" : "glider"} bookings) — tapping a name fills the voucher number into Comments</p>
               </>
             )}
           </div>
