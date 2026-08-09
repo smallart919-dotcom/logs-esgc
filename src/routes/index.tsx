@@ -197,7 +197,7 @@ function FlightsPage() {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [dailyGfes, setDailyGfes] = useState<{ id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]>([]);
+  const [dailyGfes, setDailyGfes] = useState<DailyGfeLite[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [autoSyncIntervalSec, setAutoSyncIntervalSec] = useState(1);
@@ -224,7 +224,7 @@ function FlightsPage() {
         supabase.from("fleet_gliders").select("*").order("registration"),
         supabase.from("club_members").select("*").order("full_name"),
         supabase.from("daily_gfes")
-          .select("id,passenger_name,source,checked,time_text")
+          .select("id,passenger_name,source,checked,time_text,ref")
           .eq("flight_date", date)
           .order("time_text", { ascending: true, nullsFirst: false }),
       ]);
@@ -259,7 +259,7 @@ function FlightsPage() {
       }
       setGliders((g as Glider[]) ?? []);
       setMembers((m as Member[]) ?? []);
-      setDailyGfes((gfeData ?? []) as { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]);
+      setDailyGfes((gfeData ?? []) as DailyGfeLite[]);
     } finally {
       if (!silent) setLoadingFlights(false);
     }
@@ -1308,7 +1308,7 @@ function PilotCell({ name, membership, kind }: { name: string | null; membership
   return <div><div>{name}</div><div className="text-xs text-muted-foreground">{membership}</div></div>;
 }
 
-type DailyGfeLite = { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null };
+type DailyGfeLite = { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null; ref?: string | null };
 
 function FlightDialog({
   open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, onAutoSaved, offsetSec = 0, dayFlights = [], dailyGfes = [],
