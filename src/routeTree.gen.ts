@@ -9,83 +9,28 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WeatherRouteImport } from './routes/weather'
-import { Route as StatsRouteImport } from './routes/stats'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as MembersRouteImport } from './routes/members'
-import { Route as MapRouteImport } from './routes/map'
-import { Route as LogbookRouteImport } from './routes/logbook'
-import { Route as HistoryRouteImport } from './routes/history'
-import { Route as HelpRouteImport } from './routes/help'
-import { Route as FleetRouteImport } from './routes/fleet'
-import { Route as CurrencyRouteImport } from './routes/currency'
-import { Route as BillingRouteImport } from './routes/billing'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuditRouteImport } from './routes/audit'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiPublicHooksRefreshNotamsRouteImport } from './routes/api/public/hooks/refresh-notams'
-import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/hooks/ogn-sync'
-import { Route as ApiPublicHooksCngSyncRouteImport } from './routes/api/public/hooks/cng-sync'
+import { Route as AuditRouteImport } from './routes/audit'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BillingRouteImport } from './routes/billing'
+import { Route as CurrencyRouteImport } from './routes/currency'
+import { Route as FleetRouteImport } from './routes/fleet'
+import { Route as HelpRouteImport } from './routes/help'
+import { Route as HistoryRouteImport } from './routes/history'
+import { Route as LogbookRouteImport } from './routes/logbook'
+import { Route as MapRouteImport } from './routes/map'
+import { Route as MembersRouteImport } from './routes/members'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as StatsRouteImport } from './routes/stats'
+import { Route as WeatherRouteImport } from './routes/weather'
 import { Route as ApiPublicHooksAutoSendLogsRouteImport } from './routes/api/public/hooks/auto-send-logs'
+import { Route as ApiPublicHooksCngSyncRouteImport } from './routes/api/public/hooks/cng-sync'
+import { Route as ApiPublicHooksOgnSyncRouteImport } from './routes/api/public/hooks/ogn-sync'
+import { Route as ApiPublicHooksRefreshNotamsRouteImport } from './routes/api/public/hooks/refresh-notams'
 
-const WeatherRoute = WeatherRouteImport.update({
-  id: '/weather',
-  path: '/weather',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StatsRoute = StatsRouteImport.update({
-  id: '/stats',
-  path: '/stats',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MembersRoute = MembersRouteImport.update({
-  id: '/members',
-  path: '/members',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MapRoute = MapRouteImport.update({
-  id: '/map',
-  path: '/map',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/map.lazy').then((d) => d.Route))
-const LogbookRoute = LogbookRouteImport.update({
-  id: '/logbook',
-  path: '/logbook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoryRoute = HistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HelpRoute = HelpRouteImport.update({
-  id: '/help',
-  path: '/help',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FleetRoute = FleetRouteImport.update({
-  id: '/fleet',
-  path: '/fleet',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CurrencyRoute = CurrencyRouteImport.update({
-  id: '/currency',
-  path: '/currency',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BillingRoute = BillingRouteImport.update({
-  id: '/billing',
-  path: '/billing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuditRoute = AuditRouteImport.update({
@@ -93,31 +38,86 @@ const AuditRoute = AuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicHooksRefreshNotamsRoute =
-  ApiPublicHooksRefreshNotamsRouteImport.update({
-    id: '/api/public/hooks/refresh-notams',
-    path: '/api/public/hooks/refresh-notams',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksOgnSyncRoute = ApiPublicHooksOgnSyncRouteImport.update({
-  id: '/api/public/hooks/ogn-sync',
-  path: '/api/public/hooks/ogn-sync',
+const BillingRoute = BillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicHooksCngSyncRoute = ApiPublicHooksCngSyncRouteImport.update({
-  id: '/api/public/hooks/cng-sync',
-  path: '/api/public/hooks/cng-sync',
+const CurrencyRoute = CurrencyRouteImport.update({
+  id: '/currency',
+  path: '/currency',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FleetRoute = FleetRouteImport.update({
+  id: '/fleet',
+  path: '/fleet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogbookRoute = LogbookRouteImport.update({
+  id: '/logbook',
+  path: '/logbook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/map.lazy').then((d) => d.Route))
+const MembersRoute = MembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WeatherRoute = WeatherRouteImport.update({
+  id: '/weather',
+  path: '/weather',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicHooksAutoSendLogsRoute =
   ApiPublicHooksAutoSendLogsRouteImport.update({
     id: '/api/public/hooks/auto-send-logs',
     path: '/api/public/hooks/auto-send-logs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksCngSyncRoute = ApiPublicHooksCngSyncRouteImport.update({
+  id: '/api/public/hooks/cng-sync',
+  path: '/api/public/hooks/cng-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksOgnSyncRoute = ApiPublicHooksOgnSyncRouteImport.update({
+  id: '/api/public/hooks/ogn-sync',
+  path: '/api/public/hooks/ogn-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksRefreshNotamsRoute =
+  ApiPublicHooksRefreshNotamsRouteImport.update({
+    id: '/api/public/hooks/refresh-notams',
+    path: '/api/public/hooks/refresh-notams',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -268,88 +268,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/weather': {
-      id: '/weather'
-      path: '/weather'
-      fullPath: '/weather'
-      preLoaderRoute: typeof WeatherRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stats': {
-      id: '/stats'
-      path: '/stats'
-      fullPath: '/stats'
-      preLoaderRoute: typeof StatsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/members': {
-      id: '/members'
-      path: '/members'
-      fullPath: '/members'
-      preLoaderRoute: typeof MembersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/map': {
-      id: '/map'
-      path: '/map'
-      fullPath: '/map'
-      preLoaderRoute: typeof MapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/logbook': {
-      id: '/logbook'
-      path: '/logbook'
-      fullPath: '/logbook'
-      preLoaderRoute: typeof LogbookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/history': {
-      id: '/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof HistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/help': {
-      id: '/help'
-      path: '/help'
-      fullPath: '/help'
-      preLoaderRoute: typeof HelpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/fleet': {
-      id: '/fleet'
-      path: '/fleet'
-      fullPath: '/fleet'
-      preLoaderRoute: typeof FleetRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/currency': {
-      id: '/currency'
-      path: '/currency'
-      fullPath: '/currency'
-      preLoaderRoute: typeof CurrencyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/billing': {
-      id: '/billing'
-      path: '/billing'
-      fullPath: '/billing'
-      preLoaderRoute: typeof BillingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audit': {
@@ -359,25 +282,95 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuditRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/refresh-notams': {
-      id: '/api/public/hooks/refresh-notams'
-      path: '/api/public/hooks/refresh-notams'
-      fullPath: '/api/public/hooks/refresh-notams'
-      preLoaderRoute: typeof ApiPublicHooksRefreshNotamsRouteImport
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/ogn-sync': {
-      id: '/api/public/hooks/ogn-sync'
-      path: '/api/public/hooks/ogn-sync'
-      fullPath: '/api/public/hooks/ogn-sync'
-      preLoaderRoute: typeof ApiPublicHooksOgnSyncRouteImport
+    '/currency': {
+      id: '/currency'
+      path: '/currency'
+      fullPath: '/currency'
+      preLoaderRoute: typeof CurrencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fleet': {
+      id: '/fleet'
+      path: '/fleet'
+      fullPath: '/fleet'
+      preLoaderRoute: typeof FleetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logbook': {
+      id: '/logbook'
+      path: '/logbook'
+      fullPath: '/logbook'
+      preLoaderRoute: typeof LogbookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/members': {
+      id: '/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof MembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/weather': {
+      id: '/weather'
+      path: '/weather'
+      fullPath: '/weather'
+      preLoaderRoute: typeof WeatherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/auto-send-logs': {
+      id: '/api/public/hooks/auto-send-logs'
+      path: '/api/public/hooks/auto-send-logs'
+      fullPath: '/api/public/hooks/auto-send-logs'
+      preLoaderRoute: typeof ApiPublicHooksAutoSendLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/cng-sync': {
@@ -387,11 +380,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksCngSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/auto-send-logs': {
-      id: '/api/public/hooks/auto-send-logs'
-      path: '/api/public/hooks/auto-send-logs'
-      fullPath: '/api/public/hooks/auto-send-logs'
-      preLoaderRoute: typeof ApiPublicHooksAutoSendLogsRouteImport
+    '/api/public/hooks/ogn-sync': {
+      id: '/api/public/hooks/ogn-sync'
+      path: '/api/public/hooks/ogn-sync'
+      fullPath: '/api/public/hooks/ogn-sync'
+      preLoaderRoute: typeof ApiPublicHooksOgnSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/refresh-notams': {
+      id: '/api/public/hooks/refresh-notams'
+      path: '/api/public/hooks/refresh-notams'
+      fullPath: '/api/public/hooks/refresh-notams'
+      preLoaderRoute: typeof ApiPublicHooksRefreshNotamsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -420,3 +420,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
