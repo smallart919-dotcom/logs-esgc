@@ -197,7 +197,7 @@ function FlightsPage() {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [dailyGfes, setDailyGfes] = useState<{ id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]>([]);
+  const [dailyGfes, setDailyGfes] = useState<DailyGfeLite[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [autoSyncIntervalSec, setAutoSyncIntervalSec] = useState(1);
@@ -224,7 +224,7 @@ function FlightsPage() {
         supabase.from("fleet_gliders").select("*").order("registration"),
         supabase.from("club_members").select("*").order("full_name"),
         supabase.from("daily_gfes")
-          .select("id,passenger_name,source,checked,time_text")
+          .select("id,passenger_name,source,checked,time_text,ref")
           .eq("flight_date", date)
           .order("time_text", { ascending: true, nullsFirst: false }),
       ]);
@@ -259,7 +259,7 @@ function FlightsPage() {
       }
       setGliders((g as Glider[]) ?? []);
       setMembers((m as Member[]) ?? []);
-      setDailyGfes((gfeData ?? []) as { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null }[]);
+      setDailyGfes((gfeData ?? []) as DailyGfeLite[]);
     } finally {
       if (!silent) setLoadingFlights(false);
     }
@@ -1308,7 +1308,7 @@ function PilotCell({ name, membership, kind }: { name: string | null; membership
   return <div><div>{name}</div><div className="text-xs text-muted-foreground">{membership}</div></div>;
 }
 
-type DailyGfeLite = { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null };
+type DailyGfeLite = { id: string; passenger_name: string | null; source: string; checked: boolean; time_text: string | null; ref?: string | null };
 
 function FlightDialog({
   open, onOpenChange, flight, manual, date, gliders, members, previousInitials = [], onSaved, onAutoSaved, offsetSec = 0, dayFlights = [], dailyGfes = [],
@@ -1607,8 +1607,23 @@ function FlightDialog({
     const gfeSourceWanted = currentReg === "G-KIAU" ? "cng-tmg" : "cng";
     const gfeSuggestions = dailyGfes
       .filter((g) => g.source === gfeSourceWanted && !g.checked && g.passenger_name)
-      .map((g) => g.passenger_name!.trim())
-      .filter(Boolean);
+      .map((g) => ({
+        name: g.passenger_name!.trim(),
+        voucher: (g.ref ?? "").match(/\d{3,}/)?.[0] ?? "",
+      }))
+      .filter((g) => g.name);
+    // Pick a GFE passenger: sets the name and auto-fills their voucher number
+    // into the comments box (only if that number isn't already there).
+    const pickGfe = (name: string, voucher: string) => {
+      setForm((f) => {
+        const cur = (f.notes ?? "").trim();
+        const nextNotes = voucher && !cur.includes(voucher)
+          ? (cur ? `${cur} ${voucher}` : voucher)
+          : f.notes;
+        return { ...f, [`p${which}_name`]: name, notes: nextNotes };
+      });
+    };
+
     return (
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
@@ -1631,27 +1646,32 @@ function FlightDialog({
             <Input
               list={`gfe-suggest-${which}`}
               value={name}
-              placeholder={gfeSuggestions.length ? `e.g. ${gfeSuggestions[0]}` : "Voucher passenger name"}
-              onChange={(e) => setForm({ ...form, [`p${which}_name`]: e.target.value })}
+              placeholder={gfeSuggestions.length ? `e.g. ${gfeSuggestions[0]!.name}` : "Voucher passenger name"}
+              onChange={(e) => {
+                const v = e.target.value;
+                const hit = gfeSuggestions.find((g) => g.name.toLowerCase() === v.trim().toLowerCase());
+                if (hit) pickGfe(hit.name, hit.voucher);
+                else setForm({ ...form, [`p${which}_name`]: v });
+              }}
             />
             {gfeSuggestions.length > 0 && (
               <>
                 <datalist id={`gfe-suggest-${which}`}>
-                  {gfeSuggestions.map((n) => <option key={n} value={n} />)}
+                  {gfeSuggestions.map((g) => <option key={g.name} value={g.name} />)}
                 </datalist>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {gfeSuggestions.slice(0, 6).map((n) => (
+                  {gfeSuggestions.slice(0, 6).map((g) => (
                     <button
-                      key={n}
+                      key={g.name}
                       type="button"
-                      onClick={() => setForm({ ...form, [`p${which}_name`]: n })}
+                      onClick={() => pickGfe(g.name, g.voucher)}
                       className="text-[11px] px-2 py-0.5 rounded-full bg-background hover:bg-primary hover:text-primary-foreground border border-border transition"
                     >
-                      {n}
+                      {g.name}{g.voucher ? ` · ${g.voucher}` : ""}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">From C&amp;G ({gfeSourceWanted === "cng-tmg" ? "TMG" : "glider"} bookings)</p>
+                <p className="text-[10px] text-muted-foreground mt-1">From C&amp;G ({gfeSourceWanted === "cng-tmg" ? "TMG" : "glider"} bookings) — tapping a name fills the voucher number into Comments</p>
               </>
             )}
           </div>
