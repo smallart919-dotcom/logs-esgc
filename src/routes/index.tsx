@@ -1607,8 +1607,23 @@ function FlightDialog({
     const gfeSourceWanted = currentReg === "G-KIAU" ? "cng-tmg" : "cng";
     const gfeSuggestions = dailyGfes
       .filter((g) => g.source === gfeSourceWanted && !g.checked && g.passenger_name)
-      .map((g) => g.passenger_name!.trim())
-      .filter(Boolean);
+      .map((g) => ({
+        name: g.passenger_name!.trim(),
+        voucher: (g.ref ?? "").match(/\d{3,}/)?.[0] ?? "",
+      }))
+      .filter((g) => g.name);
+    // Pick a GFE passenger: sets the name and auto-fills their voucher number
+    // into the comments box (only if that number isn't already there).
+    const pickGfe = (name: string, voucher: string) => {
+      setForm((f) => {
+        const cur = (f.notes ?? "").trim();
+        const nextNotes = voucher && !cur.includes(voucher)
+          ? (cur ? `${cur} ${voucher}` : voucher)
+          : f.notes;
+        return { ...f, [`p${which}_name`]: name, notes: nextNotes };
+      });
+    };
+
     return (
       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40">
         <div className="md:col-span-2 flex items-center justify-between gap-2 flex-wrap">
