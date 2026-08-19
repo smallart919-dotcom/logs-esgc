@@ -237,13 +237,14 @@ export function GfeCard({ date }: { date: string }) {
             {gfeRows.length > 0 && (
               <>
                 <p className="text-xs text-muted-foreground mb-2">
-                  {gfeDone}/{gfeRows.length} completed
+                  {gfeDone}/{gfeLive} completed
                 </p>
                 <ul className="divide-y divide-border/60 -my-2">
                   {gfeRows.map((r) => (
-                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} />
+                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} onCancel={handleCancel} />
                   ))}
                 </ul>
+
               </>
             )}
 
