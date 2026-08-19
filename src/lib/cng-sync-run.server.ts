@@ -71,14 +71,14 @@ export async function runCngSync(input: { date?: string } = {}): Promise<CngSync
   type Keep = {
     checked: boolean; checked_at: string | null;
     cancelled: boolean; cancelled_at: string | null; cancel_reason: string | null;
-    assigned_glider_id: string | null; launch_time: string | null;
+    assigned_glider_id: string | null; launch_time: string | null; weight_kg: number | null;
   };
   const keyOf = (r: { source?: string | null; ref?: string | null; passenger_name?: string | null; time_text?: string | null }) =>
     [r.source ?? "", (r.ref ?? "").trim().toLowerCase(), (r.passenger_name ?? "").trim().toLowerCase(), (r.time_text ?? "").trim()].join("|");
 
   const { data: existingGfes } = await supabaseAdmin
     .from("daily_gfes")
-    .select("source, ref, passenger_name, time_text, checked, checked_at, cancelled, cancelled_at, cancel_reason, assigned_glider_id, launch_time")
+    .select("source, ref, passenger_name, time_text, checked, checked_at, cancelled, cancelled_at, cancel_reason, assigned_glider_id, launch_time, weight_kg")
     .eq("flight_date", date);
 
   const preserved = new Map<string, Keep>();
@@ -86,7 +86,7 @@ export async function runCngSync(input: { date?: string } = {}): Promise<CngSync
     preserved.set(keyOf(r), {
       checked: !!r.checked, checked_at: r.checked_at ?? null,
       cancelled: !!r.cancelled, cancelled_at: r.cancelled_at ?? null, cancel_reason: r.cancel_reason ?? null,
-      assigned_glider_id: r.assigned_glider_id ?? null, launch_time: r.launch_time ?? null,
+      assigned_glider_id: r.assigned_glider_id ?? null, launch_time: r.launch_time ?? null, weight_kg: r.weight_kg ?? null,
     });
   }
 
@@ -117,6 +117,7 @@ export async function runCngSync(input: { date?: string } = {}): Promise<CngSync
         cancel_reason: keep?.cancel_reason ?? null,
         assigned_glider_id: keep?.assigned_glider_id ?? null,
         launch_time: keep?.launch_time ?? null,
+        weight_kg: keep?.weight_kg ?? null,
       };
     });
     const { error: gErr } = await supabaseAdmin.from("daily_gfes").insert(rows);
