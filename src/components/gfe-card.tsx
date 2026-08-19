@@ -336,3 +336,100 @@ function GfeRowItem({ row: r, onToggle, onCancel }: {
 
   );
 }
+
+function AddGfeDialog({ date, open, onOpenChange, nextPosition, onAdded }: {
+  date: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  nextPosition: number;
+  onAdded: () => void | Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [time, setTime] = useState("");
+  const [type, setType] = useState("");
+  const [ref, setRef] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const reset = () => {
+    setName(""); setTime(""); setType(""); setRef(""); setPhone(""); setNotes("");
+  };
+
+  const submit = async () => {
+    if (!name.trim()) { toast.error("Enter a passenger name"); return; }
+    setSaving(true);
+    const raw = [time.trim(), name.trim(), type.trim(), ref.trim()].filter(Boolean).join(" ");
+    const { error } = await supabase.from("daily_gfes").insert({
+      flight_date: date,
+      position: nextPosition,
+      time_text: time.trim() || null,
+      passenger_name: name.trim(),
+      gfe_type: type.trim() || null,
+      ref: ref.trim() || null,
+      phone: phone.trim() || null,
+      notes: notes.trim() || null,
+      raw_text: raw || name.trim(),
+      source: "manual",
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("GFE added");
+    reset();
+    onOpenChange(false);
+    await onAdded();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="secondary">
+          <Plus className="size-4 mr-1" />
+          Add GFE
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add a GFE</DialogTitle>
+          <DialogDescription>
+            Office only. Adds a booking to {fmtUKDate(date)} that isn&apos;t in Click n&apos; Glide.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="gfe-name">Passenger name</Label>
+            <Input id="gfe-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Smith" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="gfe-time">Time</Label>
+              <Input id="gfe-time" value={time} onChange={(e) => setTime(e.target.value)} placeholder="11:30" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="gfe-type">Type</Label>
+              <Input id="gfe-type" value={type} onChange={(e) => setType(e.target.value)} placeholder="Trial flight" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="gfe-ref">Voucher / ref</Label>
+              <Input id="gfe-ref" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="1234" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="gfe-phone">Phone</Label>
+              <Input id="gfe-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07…" />
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="gfe-notes">Notes</Label>
+            <Input id="gfe-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button onClick={submit} disabled={saving}>{saving ? "Adding…" : "Add GFE"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
