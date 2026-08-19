@@ -3,11 +3,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Plane, Phone } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import { RefreshCw, Plane, Phone, X, Undo2, Plus, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { cngSyncNow } from "@/lib/cng-sync.functions";
 import { fmtUKDate } from "@/lib/uktime";
+
+/** Club event days that get their own banner/title on the GFE list. */
+const EVENT_DAYS: Record<string, { title: string; blurb: string }> = {
+  "2026-08-22": {
+    title: "Friends & Family Day",
+    blurb: "Club open day — friends and family flights. Keep the list ticked off as each one flies.",
+  },
+};
 
 type GfeRow = {
   id: string;
@@ -22,6 +35,8 @@ type GfeRow = {
   source: string;
   checked: boolean;
   checked_at: string | null;
+  cancelled: boolean;
+  cancelled_at: string | null;
 };
 
 function sortByTime(rows: GfeRow[]): GfeRow[] {
@@ -33,12 +48,23 @@ function sortByTime(rows: GfeRow[]): GfeRow[] {
   });
 }
 
+
 export function GfeCard({ date }: { date: string }) {
   const [rows, setRows] = useState<GfeRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [isOffice, setIsOffice] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const sync = useServerFn(cngSyncNow);
+  const event = EVENT_DAYS[date];
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsOffice((data.user?.email || "").toLowerCase() === "office@esgc.local");
+    });
+  }, []);
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -122,10 +148,29 @@ export function GfeCard({ date }: { date: string }) {
     }
   };
 
-  const gfeRows = sortByTime(rows.filter((r) => r.source === "cng"));
+  const handleCancel = async (id: string, val: boolean) => {
+    const nowIso = new Date().toISOString();
+    setRows((prev) => prev.map((x) =>
+      x.id === id ? { ...x, cancelled: val, cancelled_at: val ? nowIso : null } : x,
+    ));
+    const { error } = await supabase
+      .from("daily_gfes")
+      .update({ cancelled: val, cancelled_at: val ? nowIso : null })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      void load();
+    } else {
+      toast.success(val ? "Marked as cancelled" : "Cancellation undone");
+    }
+  };
+
+  const gfeRows = sortByTime(rows.filter((r) => r.source !== "cng-tmg"));
   const tmgRows = sortByTime(rows.filter((r) => r.source === "cng-tmg"));
   const gfeDone = gfeRows.filter((r) => r.checked).length;
   const tmgDone = tmgRows.filter((r) => r.checked).length;
+  const gfeLive = gfeRows.filter((r) => !r.cancelled).length;
+  const cancelledCount = rows.filter((r) => r.cancelled).length;
 
   return (
     <Card>
@@ -134,10 +179,15 @@ export function GfeCard({ date }: { date: string }) {
           <CardTitle className="flex items-center gap-2 text-base flex-wrap">
             <Plane className="size-4 shrink-0" />
             <span className="truncate">GFEs — {fmtUKDate(date)}</span>
-            <Badge variant="secondary" className="text-xs">{gfeRows.length} glider</Badge>
+            <Badge variant="secondary" className="text-xs">{gfeLive} glider</Badge>
             {tmgRows.length > 0 && (
               <Badge variant="outline" className="text-xs text-amber-600 border-amber-400">
                 {tmgRows.length} TMG
+              </Badge>
+            )}
+            {cancelledCount > 0 && (
+              <Badge variant="outline" className="text-xs text-destructive border-destructive/40">
+                {cancelledCount} cancelled
               </Badge>
             )}
           </CardTitle>
@@ -148,13 +198,34 @@ export function GfeCard({ date }: { date: string }) {
               : "Not yet synced"}
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={onSync} disabled={syncing} className="shrink-0">
-          <RefreshCw className={`size-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing…" : "Sync now"}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {isOffice && (
+            <AddGfeDialog
+              date={date}
+              open={addOpen}
+              onOpenChange={setAddOpen}
+              nextPosition={(rows.reduce((m, r) => Math.max(m, r.position || 0), 0)) + 1}
+              onAdded={load}
+            />
+          )}
+          <Button size="sm" variant="outline" onClick={onSync} disabled={syncing}>
+            <RefreshCw className={`size-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing…" : "Sync now"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
+        {event && (
+          <div className="mb-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <PartyPopper className="size-4 text-primary shrink-0" />
+              {event.title}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{event.blurb}</p>
+          </div>
+        )}
         <p className="text-xs italic text-muted-foreground mb-3">Jeffries as Russ says</p>
+
 
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
@@ -166,13 +237,14 @@ export function GfeCard({ date }: { date: string }) {
             {gfeRows.length > 0 && (
               <>
                 <p className="text-xs text-muted-foreground mb-2">
-                  {gfeDone}/{gfeRows.length} completed
+                  {gfeDone}/{gfeLive} completed
                 </p>
                 <ul className="divide-y divide-border/60 -my-2">
                   {gfeRows.map((r) => (
-                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} />
+                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} onCancel={handleCancel} />
                   ))}
                 </ul>
+
               </>
             )}
 
@@ -189,7 +261,8 @@ export function GfeCard({ date }: { date: string }) {
                 </p>
                 <ul className="divide-y divide-border/60 -my-2">
                   {tmgRows.map((r) => (
-                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} />
+                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} onCancel={handleCancel} />
+
                   ))}
                 </ul>
               </div>
@@ -201,33 +274,43 @@ export function GfeCard({ date }: { date: string }) {
   );
 }
 
-function GfeRowItem({ row: r, onToggle }: { row: GfeRow; onToggle: (id: string, val: boolean) => void }) {
+function GfeRowItem({ row: r, onToggle, onCancel }: {
+  row: GfeRow;
+  onToggle: (id: string, val: boolean) => void;
+  onCancel: (id: string, val: boolean) => void;
+}) {
   const hasName = !!r.passenger_name?.trim();
   const meta = [r.gfe_type, r.ref].filter(Boolean).join(" · ");
   const telHref = r.phone ? `tel:${r.phone.replace(/[^\d+]/g, "")}` : null;
+  const struck = r.checked || r.cancelled;
   return (
-    <li className={`flex items-start gap-3 py-2 text-sm transition-opacity ${r.checked ? "opacity-50" : ""}`}>
+    <li className={`flex items-start gap-3 py-2 text-sm transition-opacity ${struck ? "opacity-50" : ""}`}>
       <input
         type="checkbox"
         checked={r.checked}
+        disabled={r.cancelled}
         aria-label={`Mark ${r.passenger_name ?? "GFE"} as flown`}
         onChange={(e) => onToggle(r.id, e.target.checked)}
-        className="mt-1 size-4 rounded shrink-0 cursor-pointer accent-primary"
+        className="mt-1 size-4 rounded shrink-0 cursor-pointer accent-primary disabled:cursor-not-allowed"
       />
-      <span className={`font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 tabular-nums ${r.checked ? "line-through" : ""}`}>
+      <span className={`font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 tabular-nums ${struck ? "line-through" : ""}`}>
         {r.time_text?.trim() || "—"}
       </span>
       <div className="flex-1 min-w-0">
-        <div className={`font-medium break-words ${r.checked ? "line-through text-muted-foreground" : ""} ${!hasName ? "italic text-muted-foreground" : ""}`}>
+        <div className={`font-medium break-words ${struck ? "line-through text-muted-foreground" : ""} ${!hasName ? "italic text-muted-foreground" : ""}`}>
           {hasName ? r.passenger_name : (r.raw_text?.trim() || "No details")}
         </div>
         {meta && <div className="text-xs text-muted-foreground break-words">{meta}</div>}
         {r.notes && (
           <div className="text-xs text-muted-foreground/90 italic break-words mt-0.5">{r.notes}</div>
         )}
+        {r.cancelled && (
+          <div className="text-xs font-medium text-destructive mt-0.5">Cancelled</div>
+        )}
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0">
         {r.source === "cng-tmg" && <Badge variant="secondary">TMG</Badge>}
+        {r.source === "manual" && <Badge variant="secondary">Added</Badge>}
         {telHref ? (
           <Button asChild size="sm" variant="outline" className="h-7 px-2 gap-1">
             <a href={telHref} aria-label={`Call ${r.passenger_name ?? "passenger"}`}>
@@ -238,7 +321,115 @@ function GfeRowItem({ row: r, onToggle }: { row: GfeRow; onToggle: (id: string, 
         ) : (
           <span className="text-xs text-muted-foreground/60">no phone</span>
         )}
+        <Button
+          size="sm"
+          variant={r.cancelled ? "outline" : "ghost"}
+          className={`h-7 px-2 gap-1 text-xs ${r.cancelled ? "" : "text-destructive hover:text-destructive"}`}
+          onClick={() => onCancel(r.id, !r.cancelled)}
+          aria-label={r.cancelled ? "Undo cancellation" : `Cancel ${r.passenger_name ?? "GFE"}`}
+        >
+          {r.cancelled ? <Undo2 className="size-3" /> : <X className="size-3" />}
+          {r.cancelled ? "Undo" : "Cancel"}
+        </Button>
       </div>
     </li>
+
+  );
+}
+
+function AddGfeDialog({ date, open, onOpenChange, nextPosition, onAdded }: {
+  date: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  nextPosition: number;
+  onAdded: () => void | Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [time, setTime] = useState("");
+  const [type, setType] = useState("");
+  const [ref, setRef] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const reset = () => {
+    setName(""); setTime(""); setType(""); setRef(""); setPhone(""); setNotes("");
+  };
+
+  const submit = async () => {
+    if (!name.trim()) { toast.error("Enter a passenger name"); return; }
+    setSaving(true);
+    const raw = [time.trim(), name.trim(), type.trim(), ref.trim()].filter(Boolean).join(" ");
+    const { error } = await supabase.from("daily_gfes").insert({
+      flight_date: date,
+      position: nextPosition,
+      time_text: time.trim() || null,
+      passenger_name: name.trim(),
+      gfe_type: type.trim() || null,
+      ref: ref.trim() || null,
+      phone: phone.trim() || null,
+      notes: notes.trim() || null,
+      raw_text: raw || name.trim(),
+      source: "manual",
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("GFE added");
+    reset();
+    onOpenChange(false);
+    await onAdded();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="secondary">
+          <Plus className="size-4 mr-1" />
+          Add GFE
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add a GFE</DialogTitle>
+          <DialogDescription>
+            Office only. Adds a booking to {fmtUKDate(date)} that isn&apos;t in Click n&apos; Glide.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="gfe-name">Passenger name</Label>
+            <Input id="gfe-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Smith" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="gfe-time">Time</Label>
+              <Input id="gfe-time" value={time} onChange={(e) => setTime(e.target.value)} placeholder="11:30" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="gfe-type">Type</Label>
+              <Input id="gfe-type" value={type} onChange={(e) => setType(e.target.value)} placeholder="Trial flight" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="gfe-ref">Voucher / ref</Label>
+              <Input id="gfe-ref" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="1234" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="gfe-phone">Phone</Label>
+              <Input id="gfe-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07…" />
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="gfe-notes">Notes</Label>
+            <Input id="gfe-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button onClick={submit} disabled={saving}>{saving ? "Adding…" : "Add GFE"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

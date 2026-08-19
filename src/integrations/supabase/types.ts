@@ -154,6 +154,9 @@ export type Database = {
       }
       daily_gfes: {
         Row: {
+          cancel_reason: string | null
+          cancelled: boolean
+          cancelled_at: string | null
           checked: boolean
           checked_at: string | null
           created_at: string
@@ -170,6 +173,9 @@ export type Database = {
           time_text: string | null
         }
         Insert: {
+          cancel_reason?: string | null
+          cancelled?: boolean
+          cancelled_at?: string | null
           checked?: boolean
           checked_at?: string | null
           created_at?: string
@@ -186,6 +192,9 @@ export type Database = {
           time_text?: string | null
         }
         Update: {
+          cancel_reason?: string | null
+          cancelled?: boolean
+          cancelled_at?: string | null
           checked?: boolean
           checked_at?: string | null
           created_at?: string
