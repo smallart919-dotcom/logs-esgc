@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { PartyPopper, Plane, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
-import { fmtUKDate, todayUKDate } from "@/lib/uktime";
+import { fmtUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/event")({
   head: () => ({
@@ -46,12 +46,15 @@ type Gfe = {
   checked: boolean;
   assigned_glider_id: string | null;
   launch_time: string | null;
+  weight_kg: number | null;
 };
 
 const UNASSIGNED = "__none__";
+/** Friends & Family Day — the planner is only used for this one event day. */
+const EVENT_DATE = "2026-08-22";
 
 function EventPage() {
-  const [date, setDate] = useState<string>(() => todayUKDate());
+  const date = EVENT_DATE;
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [gfes, setGfes] = useState<Gfe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,21 +128,14 @@ function EventPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <header className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight flex items-center gap-2">
-          <PartyPopper className="size-7 text-primary" /> Event Day Planner
+          <PartyPopper className="size-7 text-primary" /> Friends &amp; Family Day Planner
         </h1>
         <p className="text-muted-foreground">
-          Name each glider, set the pilot flying it, then slot each voucher passenger into a glider and launch time.
+          Friends &amp; Family Day only. Name each glider, set the pilot flying it, then slot each voucher
+          passenger into a glider with their launch time and weight.
         </p>
         <div className="flex flex-wrap items-center gap-3 pt-2">
-          <Label htmlFor="event-date" className="text-sm">Day</Label>
-          <Input
-            id="event-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-auto"
-          />
-          <span className="text-sm text-muted-foreground">{fmtUKDate(date)}</span>
+          <Badge className="text-sm">{fmtUKDate(date)}</Badge>
           <Badge variant="secondary">{live.length} flying</Badge>
         </div>
       </header>
@@ -195,7 +191,7 @@ function EventPage() {
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium">{r.passenger_name || r.gfe_type || "Passenger"}</div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {[r.ref, r.time_text].filter(Boolean).join(" · ") || "—"}
+                          {[r.ref, r.time_text, r.weight_kg ? `${r.weight_kg} kg` : null].filter(Boolean).join(" · ") || "—"}
                         </div>
                       </div>
                       <Input
@@ -204,6 +200,19 @@ function EventPage() {
                         className="w-[7.5rem]"
                         value={r.launch_time ?? ""}
                         onChange={(e) => void patchGfe(r.id, { launch_time: e.target.value || null })}
+                      />
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={200}
+                        aria-label="Passenger weight in kilograms"
+                        placeholder="kg"
+                        className="w-[5.5rem]"
+                        value={r.weight_kg ?? ""}
+                        onChange={(e) =>
+                          void patchGfe(r.id, { weight_kg: e.target.value === "" ? null : Number(e.target.value) })
+                        }
                       />
                       <Button variant="ghost" size="sm" onClick={() => void patchGfe(r.id, { assigned_glider_id: null })}>
                         Remove
@@ -238,7 +247,7 @@ function EventPage() {
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{r.passenger_name || r.gfe_type || "Passenger"}</div>
                 <div className="truncate text-xs text-muted-foreground">
-                  {[r.ref, r.time_text].filter(Boolean).join(" · ") || "—"}
+                  {[r.ref, r.time_text, r.weight_kg ? `${r.weight_kg} kg` : null].filter(Boolean).join(" · ") || "—"}
                 </div>
               </div>
               <Select
@@ -261,6 +270,19 @@ function EventPage() {
                 className="w-[7.5rem]"
                 value={r.launch_time ?? ""}
                 onChange={(e) => void patchGfe(r.id, { launch_time: e.target.value || null })}
+              />
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={200}
+                aria-label="Passenger weight in kilograms"
+                placeholder="kg"
+                className="w-[5.5rem]"
+                value={r.weight_kg ?? ""}
+                onChange={(e) =>
+                  void patchGfe(r.id, { weight_kg: e.target.value === "" ? null : Number(e.target.value) })
+                }
               />
             </div>
           ))}
