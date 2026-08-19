@@ -14,6 +14,7 @@ import { Route as AuditRouteImport } from './routes/audit'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CurrencyRouteImport } from './routes/currency'
+import { Route as EventRouteImport } from './routes/event'
 import { Route as FleetRouteImport } from './routes/fleet'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -51,6 +52,11 @@ const BillingRoute = BillingRouteImport.update({
 const CurrencyRoute = CurrencyRouteImport.update({
   id: '/currency',
   path: '/currency',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventRoute = EventRouteImport.update({
+  id: '/event',
+  path: '/event',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FleetRoute = FleetRouteImport.update({
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/billing': typeof BillingRoute
   '/currency': typeof CurrencyRoute
+  '/event': typeof EventRoute
   '/fleet': typeof FleetRoute
   '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/billing': typeof BillingRoute
   '/currency': typeof CurrencyRoute
+  '/event': typeof EventRoute
   '/fleet': typeof FleetRoute
   '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/billing': typeof BillingRoute
   '/currency': typeof CurrencyRoute
+  '/event': typeof EventRoute
   '/fleet': typeof FleetRoute
   '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
@@ -190,6 +199,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/billing'
     | '/currency'
+    | '/event'
     | '/fleet'
     | '/help'
     | '/history'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/billing'
     | '/currency'
+    | '/event'
     | '/fleet'
     | '/help'
     | '/history'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/billing'
     | '/currency'
+    | '/event'
     | '/fleet'
     | '/help'
     | '/history'
@@ -251,6 +263,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BillingRoute: typeof BillingRoute
   CurrencyRoute: typeof CurrencyRoute
+  EventRoute: typeof EventRoute
   FleetRoute: typeof FleetRoute
   HelpRoute: typeof HelpRoute
   HistoryRoute: typeof HistoryRoute
@@ -301,6 +314,13 @@ declare module '@tanstack/react-router' {
       path: '/currency'
       fullPath: '/currency'
       preLoaderRoute: typeof CurrencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/event': {
+      id: '/event'
+      path: '/event'
+      fullPath: '/event'
+      preLoaderRoute: typeof EventRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fleet': {
@@ -403,6 +423,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BillingRoute: BillingRoute,
   CurrencyRoute: CurrencyRoute,
+  EventRoute: EventRoute,
   FleetRoute: FleetRoute,
   HelpRoute: HelpRoute,
   HistoryRoute: HistoryRoute,
