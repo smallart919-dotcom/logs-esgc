@@ -13,7 +13,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/members")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Members — ESGC Logs" }, { name: "description", content: "Club member directory." }] }),
+  head: () => ({
+    meta: [
+      { title: "Members — ESGC Logs" },
+      { name: "description", content: "Club member directory." },
+      { property: "og:title", content: "Members — ESGC Logs" },
+      { property: "og:description", content: "Club member directory and membership numbers." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/members" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/members" }],
+  }),
   component: MembersPage,
 });
 

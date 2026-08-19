@@ -12,7 +12,18 @@ import { Plus, Trash2, Plane } from "lucide-react";
 
 export const Route = createFileRoute("/fleet")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Fleet — ESGC Logs" }, { name: "description", content: "Manage club gliders and FLARM IDs." }] }),
+  head: () => ({
+    meta: [
+      { title: "Fleet — ESGC Logs" },
+      { name: "description", content: "Manage club gliders and FLARM IDs." },
+      { property: "og:title", content: "Fleet — ESGC Logs" },
+      { property: "og:description", content: "Registrations, callsigns and FLARM IDs for the club fleet." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/fleet" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/fleet" }],
+  }),
   component: FleetPage,
 });
 
@@ -93,7 +104,7 @@ function FleetPage() {
                   <TableCell>{g.callsign || "—"}</TableCell>
                   <TableCell className="font-mono">{g.flarm_id || <span className="text-muted-foreground">no FLARM</span>}</TableCell>
                   <TableCell>{g.glider_type || "—"}</TableCell>
-                  <TableCell className="text-right">{isOffice && <Button size="icon" variant="ghost" onClick={() => remove(g.id)}><Trash2 className="size-4" /></Button>}</TableCell>
+                  <TableCell className="text-right">{isOffice && <Button size="icon" variant="ghost" aria-label={`Remove ${g.registration}`} title="Remove glider" onClick={() => remove(g.id)}><Trash2 className="size-4" /></Button>}</TableCell>
                 </TableRow>
               ))}
               {items.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No gliders yet</TableCell></TableRow>}

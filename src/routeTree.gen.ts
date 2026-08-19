@@ -22,6 +22,7 @@ import { Route as LogbookRouteImport } from './routes/logbook'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as MembersRouteImport } from './routes/members'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as WeatherRouteImport } from './routes/weather'
 import { Route as ApiPublicHooksAutoSendLogsRouteImport } from './routes/api/public/hooks/auto-send-logs'
@@ -94,6 +95,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -141,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/map': typeof MapRoute
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/weather': typeof WeatherRoute
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/map': typeof MapRoute
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/weather': typeof WeatherRoute
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/map': typeof MapRoute
   '/members': typeof MembersRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/weather': typeof WeatherRoute
   '/api/public/hooks/auto-send-logs': typeof ApiPublicHooksAutoSendLogsRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/members'
     | '/settings'
+    | '/sitemap.xml'
     | '/stats'
     | '/weather'
     | '/api/public/hooks/auto-send-logs'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/members'
     | '/settings'
+    | '/sitemap.xml'
     | '/stats'
     | '/weather'
     | '/api/public/hooks/auto-send-logs'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/members'
     | '/settings'
+    | '/sitemap.xml'
     | '/stats'
     | '/weather'
     | '/api/public/hooks/auto-send-logs'
@@ -271,6 +283,7 @@ export interface RootRouteChildren {
   MapRoute: typeof MapRoute
   MembersRoute: typeof MembersRoute
   SettingsRoute: typeof SettingsRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
   WeatherRoute: typeof WeatherRoute
   ApiPublicHooksAutoSendLogsRoute: typeof ApiPublicHooksAutoSendLogsRoute
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stats': {
       id: '/stats'
       path: '/stats'
@@ -431,6 +451,7 @@ const rootRouteChildren: RootRouteChildren = {
   MapRoute: MapRoute,
   MembersRoute: MembersRoute,
   SettingsRoute: SettingsRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
   WeatherRoute: WeatherRoute,
   ApiPublicHooksAutoSendLogsRoute: ApiPublicHooksAutoSendLogsRoute,

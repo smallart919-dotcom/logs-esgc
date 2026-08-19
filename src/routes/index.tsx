@@ -63,7 +63,18 @@ function FlightsErrorComponent({ error, reset }: { error: Error; reset: () => vo
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Daily Flight Log — ESGC Logs" }, { name: "description", content: "Daily flight log with OGN integration." }] }),
+  head: () => ({
+    meta: [
+      { title: "Daily Flight Log — ESGC Logs" },
+      { name: "description", content: "Daily flight log with OGN integration." },
+      { property: "og:title", content: "Daily Flight Log — ESGC Logs" },
+      { property: "og:description", content: "Record launches, landings and duty crew for the day, with live OGN matching." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/" }],
+  }),
   component: FlightsPage,
   errorComponent: FlightsErrorComponent,
 });
@@ -894,8 +905,8 @@ function FlightsPage() {
                     <TableCell className="font-mono text-xs">{f.logged_by || <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell><OgnSourceCell flight={f} /></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <Button size="icon" variant="ghost" onClick={() => setEditing(f)}><Pencil className="size-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => remove(f.id)}><Trash2 className="size-4" /></Button>
+                      <Button size="icon" variant="ghost" aria-label="Edit flight" title="Edit flight" onClick={() => setEditing(f)}><Pencil className="size-4" /></Button>
+                      <Button size="icon" variant="ghost" aria-label="Delete flight" title="Delete flight" onClick={() => remove(f.id)}><Trash2 className="size-4" /></Button>
                     </TableCell>
                   </TableRow>
                 );
@@ -1078,8 +1089,8 @@ function MotorGliderCosts({ flights, offsetSec, onEdit, onDelete }: { flights: F
                       <TableCell className="text-right font-medium">{fmtGBP(std.total)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{fmtGBP(u21.total)}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Button size="icon" variant="ghost" onClick={() => onEdit(f)}><Pencil className="size-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => onDelete(f.id)}><Trash2 className="size-4" /></Button>
+                        <Button size="icon" variant="ghost" aria-label="Edit flight" title="Edit flight" onClick={() => onEdit(f)}><Pencil className="size-4" /></Button>
+                        <Button size="icon" variant="ghost" aria-label="Delete flight" title="Delete flight" onClick={() => onDelete(f.id)}><Trash2 className="size-4" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}

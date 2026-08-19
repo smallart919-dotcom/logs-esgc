@@ -12,7 +12,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import esgcLogo from "@/assets/esgc-logo.png";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign in — ESGC Logs" }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign in — ESGC Logs" },
+      { name: "description", content: "Sign in to the ESGC Logs daily flight log with your office or caravan club account." },
+      { property: "og:title", content: "Sign in — ESGC Logs" },
+      { property: "og:description", content: "Sign in to the club flight log." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/auth" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/auth" }],
+  }),
   component: AuthPage,
 });
 
