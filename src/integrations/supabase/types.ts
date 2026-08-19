@@ -173,6 +173,7 @@ export type Database = {
           ref: string | null
           source: string
           time_text: string | null
+          weight_kg: number | null
         }
         Insert: {
           assigned_glider_id?: string | null
@@ -194,6 +195,7 @@ export type Database = {
           ref?: string | null
           source?: string
           time_text?: string | null
+          weight_kg?: number | null
         }
         Update: {
           assigned_glider_id?: string | null
@@ -215,6 +217,7 @@ export type Database = {
           ref?: string | null
           source?: string
           time_text?: string | null
+          weight_kg?: number | null
         }
         Relationships: [
           {
