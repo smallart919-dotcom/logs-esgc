@@ -764,7 +764,7 @@ function FlightsPage() {
           <div className="w-full sm:w-auto">
             <Label className="text-xs">Date</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full sm:w-44"
-              max={todayStr()} min={isOffice ? undefined : todayStr()} />
+              max={isOffice ? undefined : todayStr()} min={isOffice ? undefined : todayStr()} />
           </div>
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <Button
