@@ -148,10 +148,29 @@ export function GfeCard({ date }: { date: string }) {
     }
   };
 
-  const gfeRows = sortByTime(rows.filter((r) => r.source === "cng"));
+  const handleCancel = async (id: string, val: boolean) => {
+    const nowIso = new Date().toISOString();
+    setRows((prev) => prev.map((x) =>
+      x.id === id ? { ...x, cancelled: val, cancelled_at: val ? nowIso : null } : x,
+    ));
+    const { error } = await supabase
+      .from("daily_gfes")
+      .update({ cancelled: val, cancelled_at: val ? nowIso : null })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      void load();
+    } else {
+      toast.success(val ? "Marked as cancelled" : "Cancellation undone");
+    }
+  };
+
+  const gfeRows = sortByTime(rows.filter((r) => r.source !== "cng-tmg"));
   const tmgRows = sortByTime(rows.filter((r) => r.source === "cng-tmg"));
   const gfeDone = gfeRows.filter((r) => r.checked).length;
   const tmgDone = tmgRows.filter((r) => r.checked).length;
+  const gfeLive = gfeRows.filter((r) => !r.cancelled).length;
+  const cancelledCount = rows.filter((r) => r.cancelled).length;
 
   return (
     <Card>
@@ -160,10 +179,15 @@ export function GfeCard({ date }: { date: string }) {
           <CardTitle className="flex items-center gap-2 text-base flex-wrap">
             <Plane className="size-4 shrink-0" />
             <span className="truncate">GFEs — {fmtUKDate(date)}</span>
-            <Badge variant="secondary" className="text-xs">{gfeRows.length} glider</Badge>
+            <Badge variant="secondary" className="text-xs">{gfeLive} glider</Badge>
             {tmgRows.length > 0 && (
               <Badge variant="outline" className="text-xs text-amber-600 border-amber-400">
                 {tmgRows.length} TMG
+              </Badge>
+            )}
+            {cancelledCount > 0 && (
+              <Badge variant="outline" className="text-xs text-destructive border-destructive/40">
+                {cancelledCount} cancelled
               </Badge>
             )}
           </CardTitle>
@@ -174,13 +198,34 @@ export function GfeCard({ date }: { date: string }) {
               : "Not yet synced"}
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={onSync} disabled={syncing} className="shrink-0">
-          <RefreshCw className={`size-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing…" : "Sync now"}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {isOffice && (
+            <AddGfeDialog
+              date={date}
+              open={addOpen}
+              onOpenChange={setAddOpen}
+              nextPosition={(rows.reduce((m, r) => Math.max(m, r.position || 0), 0)) + 1}
+              onAdded={load}
+            />
+          )}
+          <Button size="sm" variant="outline" onClick={onSync} disabled={syncing}>
+            <RefreshCw className={`size-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing…" : "Sync now"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
+        {event && (
+          <div className="mb-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <PartyPopper className="size-4 text-primary shrink-0" />
+              {event.title}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{event.blurb}</p>
+          </div>
+        )}
         <p className="text-xs italic text-muted-foreground mb-3">Jeffries as Russ says</p>
+
 
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
