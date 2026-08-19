@@ -14,6 +14,7 @@ import {
   BarChart3,
   Map as MapIcon,
   CloudSun,
+  PartyPopper,
   Settings as SettingsIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -276,6 +277,7 @@ function RootComponent() {
           { to: "/logbook", label: "Logbook", icon: <BookOpen className="size-5" /> },
           { to: "/map", label: "Map", icon: <MapIcon className="size-5" /> },
           { to: "/weather", label: "Weather", icon: <CloudSun className="size-5" /> },
+          { to: "/event", label: "Event Day", icon: <PartyPopper className="size-5" /> },
           { to: "/stats", label: "Stats", icon: <BarChart3 className="size-5" /> },
           { to: "/help", label: "Help", icon: <BookOpen className="size-5" /> },
           ...(isOffice
