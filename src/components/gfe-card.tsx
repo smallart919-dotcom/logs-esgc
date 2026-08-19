@@ -274,33 +274,43 @@ export function GfeCard({ date }: { date: string }) {
   );
 }
 
-function GfeRowItem({ row: r, onToggle }: { row: GfeRow; onToggle: (id: string, val: boolean) => void }) {
+function GfeRowItem({ row: r, onToggle, onCancel }: {
+  row: GfeRow;
+  onToggle: (id: string, val: boolean) => void;
+  onCancel: (id: string, val: boolean) => void;
+}) {
   const hasName = !!r.passenger_name?.trim();
   const meta = [r.gfe_type, r.ref].filter(Boolean).join(" · ");
   const telHref = r.phone ? `tel:${r.phone.replace(/[^\d+]/g, "")}` : null;
+  const struck = r.checked || r.cancelled;
   return (
-    <li className={`flex items-start gap-3 py-2 text-sm transition-opacity ${r.checked ? "opacity-50" : ""}`}>
+    <li className={`flex items-start gap-3 py-2 text-sm transition-opacity ${struck ? "opacity-50" : ""}`}>
       <input
         type="checkbox"
         checked={r.checked}
+        disabled={r.cancelled}
         aria-label={`Mark ${r.passenger_name ?? "GFE"} as flown`}
         onChange={(e) => onToggle(r.id, e.target.checked)}
-        className="mt-1 size-4 rounded shrink-0 cursor-pointer accent-primary"
+        className="mt-1 size-4 rounded shrink-0 cursor-pointer accent-primary disabled:cursor-not-allowed"
       />
-      <span className={`font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 tabular-nums ${r.checked ? "line-through" : ""}`}>
+      <span className={`font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 tabular-nums ${struck ? "line-through" : ""}`}>
         {r.time_text?.trim() || "—"}
       </span>
       <div className="flex-1 min-w-0">
-        <div className={`font-medium break-words ${r.checked ? "line-through text-muted-foreground" : ""} ${!hasName ? "italic text-muted-foreground" : ""}`}>
+        <div className={`font-medium break-words ${struck ? "line-through text-muted-foreground" : ""} ${!hasName ? "italic text-muted-foreground" : ""}`}>
           {hasName ? r.passenger_name : (r.raw_text?.trim() || "No details")}
         </div>
         {meta && <div className="text-xs text-muted-foreground break-words">{meta}</div>}
         {r.notes && (
           <div className="text-xs text-muted-foreground/90 italic break-words mt-0.5">{r.notes}</div>
         )}
+        {r.cancelled && (
+          <div className="text-xs font-medium text-destructive mt-0.5">Cancelled</div>
+        )}
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0">
         {r.source === "cng-tmg" && <Badge variant="secondary">TMG</Badge>}
+        {r.source === "manual" && <Badge variant="secondary">Added</Badge>}
         {telHref ? (
           <Button asChild size="sm" variant="outline" className="h-7 px-2 gap-1">
             <a href={telHref} aria-label={`Call ${r.passenger_name ?? "passenger"}`}>
@@ -311,7 +321,18 @@ function GfeRowItem({ row: r, onToggle }: { row: GfeRow; onToggle: (id: string, 
         ) : (
           <span className="text-xs text-muted-foreground/60">no phone</span>
         )}
+        <Button
+          size="sm"
+          variant={r.cancelled ? "outline" : "ghost"}
+          className={`h-7 px-2 gap-1 text-xs ${r.cancelled ? "" : "text-destructive hover:text-destructive"}`}
+          onClick={() => onCancel(r.id, !r.cancelled)}
+          aria-label={r.cancelled ? "Undo cancellation" : `Cancel ${r.passenger_name ?? "GFE"}`}
+        >
+          {r.cancelled ? <Undo2 className="size-3" /> : <X className="size-3" />}
+          {r.cancelled ? "Undo" : "Cancel"}
+        </Button>
       </div>
     </li>
+
   );
 }
