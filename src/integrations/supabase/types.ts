@@ -154,6 +154,7 @@ export type Database = {
       }
       daily_gfes: {
         Row: {
+          assigned_glider_id: string | null
           cancel_reason: string | null
           cancelled: boolean
           cancelled_at: string | null
@@ -163,6 +164,7 @@ export type Database = {
           flight_date: string
           gfe_type: string | null
           id: string
+          launch_time: string | null
           notes: string | null
           passenger_name: string | null
           phone: string | null
@@ -173,6 +175,7 @@ export type Database = {
           time_text: string | null
         }
         Insert: {
+          assigned_glider_id?: string | null
           cancel_reason?: string | null
           cancelled?: boolean
           cancelled_at?: string | null
@@ -182,6 +185,7 @@ export type Database = {
           flight_date: string
           gfe_type?: string | null
           id?: string
+          launch_time?: string | null
           notes?: string | null
           passenger_name?: string | null
           phone?: string | null
@@ -192,6 +196,7 @@ export type Database = {
           time_text?: string | null
         }
         Update: {
+          assigned_glider_id?: string | null
           cancel_reason?: string | null
           cancelled?: boolean
           cancelled_at?: string | null
@@ -201,6 +206,7 @@ export type Database = {
           flight_date?: string
           gfe_type?: string | null
           id?: string
+          launch_time?: string | null
           notes?: string | null
           passenger_name?: string | null
           phone?: string | null
@@ -210,7 +216,15 @@ export type Database = {
           source?: string
           time_text?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "daily_gfes_assigned_glider_id_fkey"
+            columns: ["assigned_glider_id"]
+            isOneToOne: false
+            referencedRelation: "event_gliders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_logs: {
         Row: {
@@ -281,6 +295,36 @@ export type Database = {
           to_email?: string
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      event_gliders: {
+        Row: {
+          created_at: string
+          flight_date: string
+          id: string
+          name: string
+          pilot_name: string | null
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          flight_date: string
+          id?: string
+          name?: string
+          pilot_name?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          flight_date?: string
+          id?: string
+          name?: string
+          pilot_name?: string | null
+          position?: number
+          updated_at?: string
         }
         Relationships: []
       }
