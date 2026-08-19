@@ -65,23 +65,64 @@ export async function runCngSync(input: { date?: string } = {}): Promise<CngSync
     ...snapshot.gfes.map((g) => ({ ...g, source: "cng" })),
     ...snapshot.tmg_gfes.map((g) => ({ ...g, source: "cng-tmg" })),
   ];
-  await supabaseAdmin.from("daily_gfes").delete().eq("flight_date", date);
+
+  // Preserve locally-set state (tick-off, cancellation, event-day assignment)
+  // across syncs — the sync rebuilds the CnG rows, it must not wipe user edits.
+  type Keep = {
+    checked: boolean; checked_at: string | null;
+    cancelled: boolean; cancelled_at: string | null; cancel_reason: string | null;
+    assigned_glider_id: string | null; launch_time: string | null;
+  };
+  const keyOf = (r: { source?: string | null; ref?: string | null; passenger_name?: string | null; time_text?: string | null }) =>
+    [r.source ?? "", (r.ref ?? "").trim().toLowerCase(), (r.passenger_name ?? "").trim().toLowerCase(), (r.time_text ?? "").trim()].join("|");
+
+  const { data: existingGfes } = await supabaseAdmin
+    .from("daily_gfes")
+    .select("source, ref, passenger_name, time_text, checked, checked_at, cancelled, cancelled_at, cancel_reason, assigned_glider_id, launch_time")
+    .eq("flight_date", date);
+
+  const preserved = new Map<string, Keep>();
+  for (const r of (existingGfes ?? []) as any[]) {
+    preserved.set(keyOf(r), {
+      checked: !!r.checked, checked_at: r.checked_at ?? null,
+      cancelled: !!r.cancelled, cancelled_at: r.cancelled_at ?? null, cancel_reason: r.cancel_reason ?? null,
+      assigned_glider_id: r.assigned_glider_id ?? null, launch_time: r.launch_time ?? null,
+    });
+  }
+
+  // Only rebuild rows that came from Click n' Glide; manually added ones stay.
+  await supabaseAdmin
+    .from("daily_gfes")
+    .delete()
+    .eq("flight_date", date)
+    .in("source", ["cng", "cng-tmg"]);
   if (allGfes.length > 0) {
-    const rows = allGfes.map((g, i) => ({
-      flight_date: date,
-      position: i + 1,
-      time_text: g.time_text,
-      passenger_name: g.passenger_name,
-      gfe_type: g.gfe_type,
-      ref: g.ref,
-      phone: g.phone,
-      notes: g.notes,
-      raw_text: g.raw_text,
-      source: g.source,
-    }));
+    const rows = allGfes.map((g, i) => {
+      const keep = preserved.get(keyOf(g));
+      return {
+        flight_date: date,
+        position: i + 1,
+        time_text: g.time_text,
+        passenger_name: g.passenger_name,
+        gfe_type: g.gfe_type,
+        ref: g.ref,
+        phone: g.phone,
+        notes: g.notes,
+        raw_text: g.raw_text,
+        source: g.source,
+        checked: keep?.checked ?? false,
+        checked_at: keep?.checked_at ?? null,
+        cancelled: keep?.cancelled ?? false,
+        cancelled_at: keep?.cancelled_at ?? null,
+        cancel_reason: keep?.cancel_reason ?? null,
+        assigned_glider_id: keep?.assigned_glider_id ?? null,
+        launch_time: keep?.launch_time ?? null,
+      };
+    });
     const { error: gErr } = await supabaseAdmin.from("daily_gfes").insert(rows);
     if (gErr) return { error: `daily_gfes insert: ${gErr.message}` };
   }
+
 
   await supabaseAdmin.from("cng_settings")
     .update({ last_sync_at: snapshot.fetched_at, last_sync_error: null })
