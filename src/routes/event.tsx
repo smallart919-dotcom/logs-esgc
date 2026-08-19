@@ -216,7 +216,7 @@ function EventPage() {
                     <p className="p-3 text-sm text-muted-foreground">No passengers assigned yet.</p>
                   )}
                   {list.map((r) => (
-                    <div key={r.id} className="flex items-center gap-2 p-2">
+                    <div key={r.id} className="flex flex-wrap items-center gap-2 p-2">
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium">{r.passenger_name || r.gfe_type || "Passenger"}</div>
                         <div className="truncate text-xs text-muted-foreground">
