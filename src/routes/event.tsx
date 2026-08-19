@@ -47,6 +47,7 @@ type Gfe = {
   assigned_glider_id: string | null;
   launch_time: string | null;
   weight_kg: number | null;
+  member_name: string | null;
 };
 
 const UNASSIGNED = "__none__";
@@ -58,6 +59,14 @@ function EventPage() {
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [gfes, setGfes] = useState<Gfe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [memberNames, setMemberNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase.from("club_members").select("full_name").order("full_name");
+      setMemberNames(((data ?? []) as { full_name: string }[]).map((m) => m.full_name).filter(Boolean));
+    })();
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -123,6 +132,26 @@ function EventPage() {
         .sort((a, b) => (a.launch_time || "zz").localeCompare(b.launch_time || "zz")),
     [live],
   );
+
+  const memberKey = (r: Gfe) => (r.member_name ?? "").trim();
+  const groups = useMemo(() => {
+    const map = new Map<string, Gfe[]>();
+    for (const r of unassigned) {
+      const k = memberKey(r) || "";
+      map.set(k, [...(map.get(k) ?? []), r]);
+    }
+    return [...map.entries()].sort((a, b) => (a[0] || "zzz").localeCompare(b[0] || "zzz"));
+  }, [unassigned]);
+
+  const assignGroup = async (rows: Gfe[], gliderId: string) => {
+    setGfes((prev) => prev.map((r) => (rows.some((x) => x.id === r.id) ? { ...r, assigned_glider_id: gliderId } : r)));
+    const { error } = await supabase
+      .from("daily_gfes")
+      .update({ assigned_glider_id: gliderId } as never)
+      .in("id", rows.map((r) => r.id));
+    if (error) toast.error(error.message);
+    else toast.success("Group assigned");
+  };
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -191,9 +220,18 @@ function EventPage() {
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium">{r.passenger_name || r.gfe_type || "Passenger"}</div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {[r.ref, r.time_text, r.weight_kg ? `${r.weight_kg} kg` : null].filter(Boolean).join(" · ") || "—"}
+                          {[r.member_name ? `with ${r.member_name}` : null, r.ref, r.time_text, r.weight_kg ? `${r.weight_kg} kg` : null].filter(Boolean).join(" · ") || "—"}
                         </div>
                       </div>
+                      <Input
+                        list="event-member-names"
+                        aria-label="Club member they are flying with"
+                        placeholder="Member"
+                        className="w-[9rem]"
+                        value={r.member_name ?? ""}
+                        onChange={(e) => setGfes((p) => p.map((x) => (x.id === r.id ? { ...x, member_name: e.target.value } : x)))}
+                        onBlur={(e) => void patchGfe(r.id, { member_name: e.target.value.trim() || null })}
+                      />
                       <Input
                         type="time"
                         aria-label="Launch time"
@@ -242,50 +280,86 @@ function EventPage() {
           {!loading && unassigned.length === 0 && (
             <p className="text-sm text-muted-foreground">Everyone is assigned to a glider.</p>
           )}
-          {unassigned.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg border p-2">
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{r.passenger_name || r.gfe_type || "Passenger"}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {[r.ref, r.time_text, r.weight_kg ? `${r.weight_kg} kg` : null].filter(Boolean).join(" · ") || "—"}
-                </div>
+          {groups.map(([member, rows]) => (
+            <div key={member || "__no_member__"} className="rounded-lg border">
+              <div className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-2 py-1.5">
+                <span className="text-sm font-medium">
+                  {member || "No member linked"}
+                </span>
+                <Badge variant="secondary">{rows.length}</Badge>
+                {gliders.length > 0 && member && (
+                  <Select onValueChange={(v) => void assignGroup(rows, v)}>
+                    <SelectTrigger className="ml-auto w-[12rem]" aria-label={`Assign all of ${member} to a glider`}>
+                      <SelectValue placeholder="Assign whole group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gliders.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
-              <Select
-                value={r.assigned_glider_id ?? UNASSIGNED}
-                onValueChange={(v) => void patchGfe(r.id, { assigned_glider_id: v === UNASSIGNED ? null : v })}
-              >
-                <SelectTrigger className="w-[11rem]" aria-label="Assign to glider">
-                  <SelectValue placeholder="Assign to glider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
-                  {gliders.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                type="time"
-                aria-label="Launch time"
-                className="w-[7.5rem]"
-                value={r.launch_time ?? ""}
-                onChange={(e) => void patchGfe(r.id, { launch_time: e.target.value || null })}
-              />
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={200}
-                aria-label="Passenger weight in kilograms"
-                placeholder="kg"
-                className="w-[5.5rem]"
-                value={r.weight_kg ?? ""}
-                onChange={(e) =>
-                  void patchGfe(r.id, { weight_kg: e.target.value === "" ? null : Number(e.target.value) })
-                }
-              />
+              <div className="divide-y">
+                {rows.map((r) => (
+                  <div key={r.id} className="flex flex-wrap items-center gap-2 p-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">{r.passenger_name || r.gfe_type || "Passenger"}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {[r.ref, r.time_text].filter(Boolean).join(" · ") || "—"}
+                      </div>
+                    </div>
+                    <Input
+                      list="event-member-names"
+                      aria-label="Club member they are flying with"
+                      placeholder="Member name"
+                      className="w-[11rem]"
+                      value={r.member_name ?? ""}
+                      onChange={(e) => setGfes((p) => p.map((x) => (x.id === r.id ? { ...x, member_name: e.target.value } : x)))}
+                      onBlur={(e) => void patchGfe(r.id, { member_name: e.target.value.trim() || null })}
+                    />
+                    <Select
+                      value={r.assigned_glider_id ?? UNASSIGNED}
+                      onValueChange={(v) => void patchGfe(r.id, { assigned_glider_id: v === UNASSIGNED ? null : v })}
+                    >
+                      <SelectTrigger className="w-[11rem]" aria-label="Assign to glider">
+                        <SelectValue placeholder="Assign to glider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                        {gliders.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="time"
+                      aria-label="Launch time"
+                      className="w-[7.5rem]"
+                      value={r.launch_time ?? ""}
+                      onChange={(e) => void patchGfe(r.id, { launch_time: e.target.value || null })}
+                    />
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={200}
+                      aria-label="Passenger weight in kilograms"
+                      placeholder="kg"
+                      className="w-[5.5rem]"
+                      value={r.weight_kg ?? ""}
+                      onChange={(e) =>
+                        void patchGfe(r.id, { weight_kg: e.target.value === "" ? null : Number(e.target.value) })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
+          <datalist id="event-member-names">
+            {memberNames.map((n) => <option key={n} value={n} />)}
+          </datalist>
           {gliders.length === 0 && (
             <p className="text-xs text-muted-foreground">Add a glider first to start assigning.</p>
           )}
