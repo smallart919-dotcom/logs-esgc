@@ -54,7 +54,17 @@ export function GfeCard({ date }: { date: string }) {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [isOffice, setIsOffice] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const sync = useServerFn(cngSyncNow);
+  const event = EVENT_DAYS[date];
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsOffice((data.user?.email || "").toLowerCase() === "office@esgc.local");
+    });
+  }, []);
+
 
   const load = useCallback(async () => {
     setLoading(true);
