@@ -97,11 +97,20 @@ export async function runCngSync(input: { date?: string } = {}): Promise<CngSync
     .eq("flight_date", date)
     .in("source", ["cng", "cng-tmg"]);
   if (allGfes.length > 0) {
+    // Manually added rows keep their positions — start CnG rows after the
+    // highest remaining position so the unique (flight_date, position) holds.
+    const { data: remaining } = await supabaseAdmin
+      .from("daily_gfes")
+      .select("position")
+      .eq("flight_date", date)
+      .order("position", { ascending: false })
+      .limit(1);
+    const base = remaining?.[0]?.position ?? 0;
     const rows = allGfes.map((g, i) => {
       const keep = preserved.get(keyOf(g));
       return {
         flight_date: date,
-        position: i + 1,
+        position: base + i + 1,
         time_text: g.time_text,
         passenger_name: g.passenger_name,
         gfe_type: g.gfe_type,
