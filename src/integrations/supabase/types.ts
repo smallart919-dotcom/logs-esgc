@@ -165,6 +165,7 @@ export type Database = {
           gfe_type: string | null
           id: string
           launch_time: string | null
+          member_name: string | null
           notes: string | null
           passenger_name: string | null
           phone: string | null
@@ -187,6 +188,7 @@ export type Database = {
           gfe_type?: string | null
           id?: string
           launch_time?: string | null
+          member_name?: string | null
           notes?: string | null
           passenger_name?: string | null
           phone?: string | null
@@ -209,6 +211,7 @@ export type Database = {
           gfe_type?: string | null
           id?: string
           launch_time?: string | null
+          member_name?: string | null
           notes?: string | null
           passenger_name?: string | null
           phone?: string | null

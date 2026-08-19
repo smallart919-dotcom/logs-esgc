@@ -1,0 +1,1 @@
+ALTER TABLE public.daily_gfes ADD COLUMN IF NOT EXISTS member_name text;
