@@ -3,11 +3,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Plane, Phone } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import { RefreshCw, Plane, Phone, X, Undo2, Plus, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { cngSyncNow } from "@/lib/cng-sync.functions";
 import { fmtUKDate } from "@/lib/uktime";
+
+/** Club event days that get their own banner/title on the GFE list. */
+const EVENT_DAYS: Record<string, { title: string; blurb: string }> = {
+  "2026-08-22": {
+    title: "Friends & Family Day",
+    blurb: "Club open day — friends and family flights. Keep the list ticked off as each one flies.",
+  },
+};
 
 type GfeRow = {
   id: string;
@@ -22,6 +35,8 @@ type GfeRow = {
   source: string;
   checked: boolean;
   checked_at: string | null;
+  cancelled: boolean;
+  cancelled_at: string | null;
 };
 
 function sortByTime(rows: GfeRow[]): GfeRow[] {
@@ -32,6 +47,7 @@ function sortByTime(rows: GfeRow[]): GfeRow[] {
     return a.time_text.localeCompare(b.time_text);
   });
 }
+
 
 export function GfeCard({ date }: { date: string }) {
   const [rows, setRows] = useState<GfeRow[]>([]);
