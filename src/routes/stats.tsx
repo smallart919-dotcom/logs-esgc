@@ -19,7 +19,18 @@ import { computeFlightCharge, fmtGBP } from "@/lib/pricing";
 
 export const Route = createFileRoute("/stats")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Statistics — ESGC Logs" }, { name: "description", content: "Club-wide flight statistics and trends." }] }),
+  head: () => ({
+    meta: [
+      { title: "Statistics — ESGC Logs" },
+      { name: "description", content: "Club-wide flight statistics and trends." },
+      { property: "og:title", content: "Statistics — ESGC Logs" },
+      { property: "og:description", content: "Launch counts, flight hours and trends across the club." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/stats" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/stats" }],
+  }),
   component: StatsPage,
 });
 

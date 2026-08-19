@@ -18,7 +18,18 @@ import { PageSkeleton } from "@/components/page-skeleton";
 
 export const Route = createFileRoute("/billing")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Billing — ESGC Logs" }, { name: "description", content: "Per-member billing from the daily flight log." }] }),
+  head: () => ({
+    meta: [
+      { title: "Billing — ESGC Logs" },
+      { name: "description", content: "Per-member billing from the daily flight log." },
+      { property: "og:title", content: "Billing — ESGC Logs" },
+      { property: "og:description", content: "Generate per-member charges straight from the daily log." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/billing" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/billing" }],
+  }),
   component: BillingPage,
 });
 

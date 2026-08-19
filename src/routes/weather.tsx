@@ -8,7 +8,11 @@ export const Route = createFileRoute("/weather")({
       { name: "description", content: "METAR, TAF, Windy and RASP forecasts for Ringmer, Deanland and nearby aerodromes." },
       { property: "og:title", content: "Weather — ESGC" },
       { property: "og:description", content: "METAR, TAF, Windy and RASP for the day." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/weather" },
+      { name: "twitter:card", content: "summary" },
     ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/weather" }],
   }),
   component: WeatherPage,
 });

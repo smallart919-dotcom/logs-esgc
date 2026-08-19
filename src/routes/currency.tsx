@@ -15,7 +15,18 @@ import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/currency")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "Currency — ESGC Logs" }, { name: "description", content: "Pilot launch currency tracking against BGA recommendations." }] }),
+  head: () => ({
+    meta: [
+      { title: "Currency — ESGC Logs" },
+      { name: "description", content: "Pilot launch currency tracking against BGA recommendations." },
+      { property: "og:title", content: "Currency — ESGC Logs" },
+      { property: "og:description", content: "See which pilots are current, in caution or lapsed." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/currency" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/currency" }],
+  }),
   component: CurrencyPage,
 });
 

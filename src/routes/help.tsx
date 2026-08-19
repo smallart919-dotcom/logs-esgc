@@ -19,8 +19,14 @@ export const Route = createFileRoute("/help")({
   head: () => ({
     meta: [
       { title: "Help — ESGC Logs" },
-      { name: "description", content: "How to log flights from the caravan." },
+      { name: "description", content: "Step-by-step guide to logging flights from the caravan, in plain language with large text options." },
+      { property: "og:title", content: "Help — ESGC Logs" },
+      { property: "og:description", content: "A plain-language guide to running the daily log." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/help" },
+      { name: "twitter:card", content: "summary" },
     ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/help" }],
   }),
 });
 

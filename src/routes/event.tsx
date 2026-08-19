@@ -21,8 +21,10 @@ export const Route = createFileRoute("/event")({
       { property: "og:title", content: "Event Day Planner — ESGC Logs" },
       { property: "og:description", content: "Assign voucher passengers to gliders and launch times for club event days." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/event" },
       { name: "twitter:card", content: "summary" },
     ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/event" }],
   }),
   component: EventPage,
 });

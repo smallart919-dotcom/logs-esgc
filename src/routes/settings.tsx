@@ -22,7 +22,18 @@ export const Route = createFileRoute("/settings")({
       throw redirect({ to: "/" });
     }
   },
-  head: () => ({ meta: [{ title: "Settings — ESGC Logs" }] }),
+  head: () => ({
+    meta: [
+      { title: "Settings — ESGC Logs" },
+      { name: "description", content: "Configure sync intervals, clock offset, email delivery and account permissions for ESGC Logs." },
+      { property: "og:title", content: "Settings — ESGC Logs" },
+      { property: "og:description", content: "Configure sync, email and account permissions." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/settings" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/settings" }],
+  }),
   component: SettingsPage,
 });
 

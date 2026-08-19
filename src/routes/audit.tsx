@@ -20,7 +20,18 @@ export const Route = createFileRoute("/audit")({
       throw redirect({ to: "/" });
     }
   },
-  head: () => ({ meta: [{ title: "Audit log — ESGC Logs" }, { name: "description", content: "Who edited which flight, and when." }] }),
+  head: () => ({
+    meta: [
+      { title: "Audit log — ESGC Logs" },
+      { name: "description", content: "Who edited which flight, and when." },
+      { property: "og:title", content: "Audit log — ESGC Logs" },
+      { property: "og:description", content: "Full change history for every flight record." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/audit" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/audit" }],
+  }),
   component: AuditPage,
 });
 

@@ -11,7 +11,18 @@ import { dateToUKShortLabel, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/history")({
   beforeLoad: requireAuth,
-  head: () => ({ meta: [{ title: "History — ESGC Logs" }, { name: "description", content: "Historical daily flight logs." }] }),
+  head: () => ({
+    meta: [
+      { title: "History — ESGC Logs" },
+      { name: "description", content: "Historical daily flight logs." },
+      { property: "og:title", content: "History — ESGC Logs" },
+      { property: "og:description", content: "Browse past days of club flying." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://esgclogs.uk/history" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://esgclogs.uk/history" }],
+  }),
   component: HistoryPage,
 });
 
