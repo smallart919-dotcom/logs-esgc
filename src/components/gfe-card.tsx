@@ -261,7 +261,8 @@ export function GfeCard({ date }: { date: string }) {
                 </p>
                 <ul className="divide-y divide-border/60 -my-2">
                   {tmgRows.map((r) => (
-                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} />
+                    <GfeRowItem key={r.id} row={r} onToggle={handleToggle} onCancel={handleCancel} />
+
                   ))}
                 </ul>
               </div>
