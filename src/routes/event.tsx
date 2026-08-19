@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { PartyPopper, Plane, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
-import { fmtUKDate, todayUK } from "@/lib/uktime";
+import { fmtUKDate, todayUKDate } from "@/lib/uktime";
 
 export const Route = createFileRoute("/event")({
   head: () => ({
@@ -51,7 +51,7 @@ type Gfe = {
 const UNASSIGNED = "__none__";
 
 function EventPage() {
-  const [date, setDate] = useState<string>(() => todayUK());
+  const [date, setDate] = useState<string>(() => todayUKDate());
   const [gliders, setGliders] = useState<Glider[]>([]);
   const [gfes, setGfes] = useState<Gfe[]>([]);
   const [loading, setLoading] = useState(true);
