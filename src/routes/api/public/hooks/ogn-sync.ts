@@ -215,7 +215,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
         // never create OGN duplicates of an already-logged flight.
         const { data: existingDay } = await supabaseAdmin
           .from("flights")
-          .select("id, flarm_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft, manual")
+          .select("id, flarm_id, glider_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft, manual")
           .eq("flight_date", date);
         const dayFlights = existingDay ?? [];
 
@@ -381,7 +381,10 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
             if (landing && !existing.landing_time) patch.landing_time = landing;
             if (flarm && !existing.flarm_id) patch.flarm_id = flarm;
             if (matchedReg && !existing.glider_registration) patch.glider_registration = matchedReg;
-            if (matchedId) patch.glider_id = matchedId;
+            // Only touch glider_id when it is actually missing or different —
+            // setting it unconditionally made every sync rewrite every row,
+            // flooding the audit log and hammering the database.
+            if (matchedId && existing.glider_id !== matchedId) patch.glider_id = matchedId;
             if (launchType && !existing.launch_type) patch.launch_type = launchType;
             if (towHeightFt && !existing.aerotow_height_ft) patch.aerotow_height_ft = towHeightFt;
             // If nothing actually changed besides ogn_source, skip
@@ -389,6 +392,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
               skipped++;
               continue;
             }
+
             const { error: upErr } = await supabaseAdmin.from("flights").update(patch).eq("id", existing.id);
             if (upErr) { errors.push({ flarm, registration: matchedReg, message: upErr.message }); continue; }
             // keep cached row in sync for subsequent iterations
@@ -408,7 +412,7 @@ export const Route = createFileRoute("/api/public/hooks/ogn-sync")({
               aerotow_height_ft: towHeightFt,
               ogn_source: sourceMeta,
             };
-            const { data: inserted, error: insErr } = await supabaseAdmin.from("flights").insert(insertRow).select("id, flarm_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft, manual").single();
+            const { data: inserted, error: insErr } = await supabaseAdmin.from("flights").insert(insertRow).select("id, flarm_id, glider_id, glider_registration, takeoff_time, landing_time, ogn_source, launch_type, aerotow_height_ft, manual").single();
             if (insErr) {
               if (insErr.code === "23505") {
                 skipped++;
