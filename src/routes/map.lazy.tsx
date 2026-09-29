@@ -525,15 +525,8 @@ function MapPage() {
       const updates: Array<[string, { url: string; photographer?: string; link?: string } | null]> = [];
       for (const a of toFetch) {
         try {
-          const r = await fetch(`https://api.planespotters.net/pub/photos/hex/${a.id}`);
-          if (!r.ok) { updates.push([a.id, null]); continue; }
-          const j = await r.json() as { photos?: Array<{ thumbnail_large?: { src: string }; photographer?: string; link?: string }> };
-          const p = j.photos?.[0];
-          if (p?.thumbnail_large?.src) {
-            updates.push([a.id, { url: p.thumbnail_large.src, photographer: p.photographer, link: p.link }]);
-          } else {
-            updates.push([a.id, null]);
-          }
+          const p = await getAircraftPhoto({ data: { hex: a.id } });
+          updates.push([a.id, p ? { url: p.url, photographer: p.photographer || undefined, link: p.link || undefined } : null]);
         } catch { updates.push([a.id, null]); }
       }
       if (cancelled || updates.length === 0) return;
