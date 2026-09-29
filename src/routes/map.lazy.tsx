@@ -1,4 +1,5 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
+import { getAircraftPhoto } from "@/lib/aircraft-photo.functions";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, ZoomControl, GeoJSON, Circle, Polyline, Polygon, ImageOverlay, useMap, useMapEvents } from "react-leaflet";
