@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getAviationWeather } from "@/lib/aviation-weather.functions";
 
 export type MetarRecord = { id: string; raw: string; obs: string };
 export type TafRecord = { id: string; raw: string };
@@ -17,9 +18,7 @@ export function useAviationWeather(icaos: string[]) {
     let cancelled = false;
     const fetchMetar = async () => {
       try {
-        const r = await fetch(`https://aviationweather.gov/api/data/metar?ids=${key}&format=json&hours=2`);
-        if (!r.ok) return;
-        const json = await r.json() as Array<{ icaoId: string; rawOb: string; reportTime: string }>;
+        const json = await getAviationWeather({ data: { kind: "metar", ids: key } });
         if (cancelled || !Array.isArray(json)) return;
         const latest = new Map<string, MetarRecord>();
         for (const m of json) {
@@ -38,9 +37,7 @@ export function useAviationWeather(icaos: string[]) {
     let cancelled = false;
     const fetchTaf = async () => {
       try {
-        const r = await fetch(`https://aviationweather.gov/api/data/taf?ids=${key}&format=json`);
-        if (!r.ok) return;
-        const json = await r.json() as Array<{ icaoId: string; rawTAF: string }>;
+        const json = await getAviationWeather({ data: { kind: "taf", ids: key } });
         if (cancelled || !Array.isArray(json)) return;
         const latest = new Map<string, TafRecord>();
         for (const t of json) {
